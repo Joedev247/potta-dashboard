@@ -23,9 +23,9 @@ export default function FindBusinessPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b mt-20 border-gray-200 bg-white flex-shrink-0">
         <div className="max-w-4xl mx-auto px-8 py-6">
           <div className="flex items-center justify-between mb-4">
             <button
@@ -48,7 +48,8 @@ export default function FindBusinessPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-8 py-12">
+      <div className="flex-1">
+        <div className="w-full max-w-4xl mx-auto px-8 pt-8 pb-12">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Business legal name
@@ -68,7 +69,7 @@ export default function FindBusinessPage() {
                 }
               }}
               placeholder="Search by business name"
-              className="w-full pl-12 pr-12 py-3 border-2 border-green-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200"
+              className="w-full pl-12 pr-12 py-3 border-2 border-green-500  focus:outline-none focus:ring-2 focus:ring-green-200"
             />
             {searchQuery && (
               <button
@@ -93,13 +94,14 @@ export default function FindBusinessPage() {
             </p>
             <button
               onClick={handleAddManually}
-              className="px-6 py-3 border-2 border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+              className="px-6 py-3 border-2 border-gray-200 text-gray-700 font-semibold  hover:bg-gray-50 transition-colors flex items-center gap-2"
             >
               <span>+</span>
               Add Manually
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

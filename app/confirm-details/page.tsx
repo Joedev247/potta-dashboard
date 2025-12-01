@@ -42,9 +42,9 @@ export default function ConfirmDetailsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 mt-20 bg-white flex-shrink-0">
         <div className="max-w-4xl mx-auto px-8 py-6">
           <div className="flex items-center justify-between mb-4">
             <button
@@ -67,8 +67,9 @@ export default function ConfirmDetailsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-8 py-12">
-        <div className="bg-white rounded-xl border-2 border-gray-200 p-8 space-y-6">
+      <div className="flex-1">
+        <div className="w-full max-w-4xl mx-auto px-8 pt-8 pb-12">
+        <div className="bg-white  border-2 border-gray-200 p-8 space-y-6">
           {/* Business Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -80,7 +81,7 @@ export default function ConfirmDetailsPage() {
               value={formData.businessName}
               onChange={handleChange}
               placeholder="Search by business name"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500"
+              className="w-full px-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500"
             />
           </div>
 
@@ -92,7 +93,7 @@ export default function ConfirmDetailsPage() {
             <button
               type="button"
               onClick={() => setShowLegalFormDropdown(!showLegalFormDropdown)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 flex items-center justify-between text-left"
+              className="w-full px-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500 flex items-center justify-between text-left"
             >
               <span className={formData.legalForm ? 'text-gray-900' : 'text-gray-400'}>
                 {formData.legalForm || 'Please select the legal form'}
@@ -100,7 +101,7 @@ export default function ConfirmDetailsPage() {
               <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showLegalFormDropdown ? 'rotate-180' : ''}`} />
             </button>
             {showLegalFormDropdown && (
-              <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200  shadow-lg max-h-60 overflow-y-auto">
                 {legalForms.map((form) => (
                   <button
                     key={form}
@@ -129,7 +130,7 @@ export default function ConfirmDetailsPage() {
               value={formData.kvkNumber}
               onChange={handleChange}
               placeholder="E.g. 12345678"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500"
+              className="w-full px-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500"
             />
           </div>
 
@@ -144,7 +145,7 @@ export default function ConfirmDetailsPage() {
               value={formData.address}
               onChange={handleChange}
               placeholder="Enter address"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500"
+              className="w-full px-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500"
             />
           </div>
 
@@ -160,7 +161,7 @@ export default function ConfirmDetailsPage() {
                 value={formData.postalCode}
                 onChange={handleChange}
                 placeholder="1234 AB"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500"
+                className="w-full px-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500"
               />
             </div>
             <div>
@@ -173,7 +174,7 @@ export default function ConfirmDetailsPage() {
                 value={formData.city}
                 onChange={handleChange}
                 placeholder="Enter city"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500"
+                className="w-full px-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500"
               />
             </div>
           </div>
@@ -200,10 +201,11 @@ export default function ConfirmDetailsPage() {
           <button
             onClick={handleContinue}
             disabled={!agreed || !formData.businessName || !formData.legalForm || !formData.kvkNumber}
-            className="w-full py-3 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 bg-green-500 text-white font-semibold  hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continue
           </button>
+        </div>
         </div>
       </div>
     </div>

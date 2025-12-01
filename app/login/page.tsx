@@ -49,7 +49,7 @@ export default function LoginPage() {
       {/* Left Column - Form */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Sign in</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Sign in</h1>
           
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
@@ -65,7 +65,7 @@ export default function LoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 pr-12"
+                  className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500 pr-12"
                 />
                 <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               </div>
@@ -84,7 +84,7 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 pr-12"
+                  className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500 pr-12"
                 />
                 <button
                   type="button"
@@ -103,7 +103,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>

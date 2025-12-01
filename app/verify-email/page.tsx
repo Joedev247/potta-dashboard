@@ -11,7 +11,6 @@ export default function VerifyEmailPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
-  const [testCode, setTestCode] = useState<string>('');
 
   useEffect(() => {
     if (!user) {
@@ -20,13 +19,7 @@ export default function VerifyEmailPage() {
     }
     setEmail(user.email);
     // Auto-send OTP on mount
-    sendOTP(user.email).then(() => {
-      // Get the test code from localStorage
-      const storedOTP = localStorage.getItem('otp');
-      if (storedOTP) {
-        setTestCode(storedOTP);
-      }
-    });
+    sendOTP(user.email);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, router]);
 
@@ -97,20 +90,11 @@ export default function VerifyEmailPage() {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-8">
       <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Verify email</h1>
-        <p className="text-gray-600 mb-4">
+        <h1 className="text-3xl font-bold text-gray-900 mb-4 text-center">Verify email</h1>
+        <p className="text-gray-600 mb-4 text-center">
           The code will be sent to {email || 'your email'}.
         </p>
         
-        {/* Test Code Display */}
-        {testCode && (
-          <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-lg">
-            <p className="text-sm text-gray-700 mb-2 font-medium">Test Verification Code:</p>
-            <p className="text-2xl font-bold text-green-600 font-mono">{testCode}</p>
-            <p className="text-xs text-gray-500 mt-2">Use this code for testing purposes</p>
-          </div>
-        )}
-
         <div className="space-y-6">
           {/* OTP Input */}
           <div className="flex gap-3 justify-center">
@@ -125,7 +109,7 @@ export default function VerifyEmailPage() {
                 onChange={(e) => handleOtpChange(index, e.target.value.replace(/\D/g, ''))}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
-                className="w-14 h-14 text-center text-2xl font-semibold border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500"
+                className="w-14 h-14 text-center text-2xl font-semibold border-2 border-gray-200  focus:outline-none focus:border-green-500"
               />
             ))}
           </div>
@@ -137,7 +121,7 @@ export default function VerifyEmailPage() {
           <button
             onClick={handleVerify}
             disabled={loading || otp.join('').length !== 6}
-            className="w-full py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 bg-green-500 text-white font-semibold  hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Verifying...' : 'Verify email'}
           </button>

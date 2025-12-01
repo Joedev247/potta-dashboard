@@ -587,7 +587,7 @@ export default function StatisticsPage() {
               {/* Tooltip */}
               {hoveredIndex !== null && currentPeriodData[hoveredIndex] && (
                 <div
-                  className="absolute bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl z-20 pointer-events-none"
+                  className="absolute bg-gray-900 text-white text-xs  px-3 py-2 shadow-xl z-20 pointer-events-none"
                   style={{
                     left: `${(hoveredIndex / Math.max(currentPeriodData.length - 1, 1)) * 100}%`,
                     top: `${(scaleY(currentPeriodData[hoveredIndex].revenue) / graphHeight) * 100 - 10}%`,

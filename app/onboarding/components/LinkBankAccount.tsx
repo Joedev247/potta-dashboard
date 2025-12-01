@@ -139,7 +139,7 @@ export default function LinkBankAccount({ onNext, onPrevious }: LinkBankAccountP
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 border border-blue-200  p-4">
           <p className="text-sm text-blue-800">
             <strong>Security:</strong> Your bank account information is encrypted and securely stored. 
             We use bank-level security to protect your financial data.
