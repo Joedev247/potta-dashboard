@@ -157,7 +157,7 @@ export default function LinkBankAccount({ onNext, onPrevious }: LinkBankAccountP
           <button
             type="submit"
             disabled={!formData.accountHolderName || !formData.accountNumber || !formData.routingNumber || !formData.bankName || !formData.accountType}
-            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Link account
           </button>

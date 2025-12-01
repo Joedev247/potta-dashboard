@@ -78,7 +78,7 @@ export default function SignupPage() {
                   value={formData.username}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white shadow-sm hover:border-gray-300"
+                  className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
                 />
                 <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
               </div>
@@ -99,7 +99,7 @@ export default function SignupPage() {
                     value={formData.firstName}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white shadow-sm hover:border-gray-300"
+                    className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
                   />
                   <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
                 </div>
@@ -118,7 +118,7 @@ export default function SignupPage() {
                     value={formData.lastName}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white shadow-sm hover:border-gray-300"
+                    className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
                   />
                   <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
                 </div>
@@ -138,7 +138,7 @@ export default function SignupPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white shadow-sm hover:border-gray-300"
+                  className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
                 />
                 <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
               </div>
@@ -157,7 +157,7 @@ export default function SignupPage() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white shadow-sm hover:border-gray-300"
+                  className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
                 />
                 <button
                   type="button"
@@ -178,7 +178,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold  hover:from-green-600 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
+              className="w-full py-3.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold  hover:from-green-600 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 disabled:transform-none"
             >
               {loading ? 'Creating...' : 'Create Account'}
             </button>

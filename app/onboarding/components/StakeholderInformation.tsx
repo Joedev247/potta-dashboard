@@ -213,7 +213,7 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
           </button>
           <button
             type="submit"
-            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors shadow-sm"
+            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors"
           >
             Continue
           </button>

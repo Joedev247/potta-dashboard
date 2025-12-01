@@ -139,7 +139,7 @@ export default function IDDocument({ onNext, onPrevious }: IDDocumentProps) {
           <button
             type="submit"
             disabled={!documentType || !uploadedFile}
-            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continue
           </button>

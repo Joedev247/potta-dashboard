@@ -228,7 +228,7 @@ export default function InvoicingPage() {
                   onClick={() => setVatDisplay('including')}
                   className={`px-4 py-1.5 text-sm font-medium transition-colors ${
                     vatDisplay === 'including'
-                      ? 'bg-white text-gray-900 shadow-sm'
+                      ? 'bg-white text-gray-900'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -238,7 +238,7 @@ export default function InvoicingPage() {
                   onClick={() => setVatDisplay('excluding')}
                   className={`px-4 py-1.5 text-sm font-medium transition-colors ${
                     vatDisplay === 'excluding'
-                      ? 'bg-white text-gray-900 shadow-sm'
+                      ? 'bg-white text-gray-900'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >

@@ -7,7 +7,7 @@ export default function TestModeBanner() {
 
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
-      <div className="bg-white border border-gray-200 rounded-full px-4 py-2 flex items-center gap-3 shadow-lg pointer-events-auto">
+      <div className="bg-white border border-gray-200 rounded-full px-4 py-2 flex items-center gap-3 pointer-events-auto">
         <span className="text-sm text-gray-700 font-medium">Test mode is enabled</span>
         <div
           className={`w-10 h-6 rounded-full transition-colors cursor-pointer ${

@@ -101,7 +101,7 @@ export default function ConfirmDetailsPage() {
               <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showLegalFormDropdown ? 'rotate-180' : ''}`} />
             </button>
             {showLegalFormDropdown && (
-              <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200  shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 max-h-60 overflow-y-auto">
                 {legalForms.map((form) => (
                   <button
                     key={form}

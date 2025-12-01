@@ -106,7 +106,7 @@ export default function PaymentMethods({ onNext, onPrevious }: PaymentMethodsPro
           <button
             type="submit"
             disabled={selectedMethods.length === 0}
-            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continue
           </button>

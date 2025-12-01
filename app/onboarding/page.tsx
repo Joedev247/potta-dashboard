@@ -54,7 +54,7 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Progress Bar */}
-      <div className="bg-gradient-to-r from-gray-50 to-white border-b-2 border-gray-200 shadow-sm">
+      <div className="bg-gradient-to-r from-gray-50 to-white border-b-2 border-gray-200">
         <div className="max-w-4xl mx-auto px-8 py-6">
           <div className="flex items-center justify-between mb-4">
             <button
