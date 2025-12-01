@@ -27,7 +27,7 @@ export default function BrowsePage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
             <Eye className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900">API keys</h1>
@@ -173,7 +173,7 @@ export default function BrowsePage() {
           </div>
 
           {/* Access Tokens List */}
-          <div className="bg-white border border-gray-200  overflow-hidden shadow-sm">
+          <div className="bg-white border border-gray-200  overflow-hidden">
             <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
               <div className="grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
                 <div>Name</div>
@@ -231,7 +231,7 @@ export default function BrowsePage() {
           </div>
 
           {/* Webhooks List */}
-          <div className="bg-white border border-gray-200  overflow-hidden shadow-sm">
+          <div className="bg-white border border-gray-200  overflow-hidden">
             <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
               <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
                 <div>URL</div>
@@ -305,7 +305,7 @@ export default function BrowsePage() {
           </div>
 
           {/* API Logs Table */}
-          <div className="bg-white border border-gray-200  overflow-hidden shadow-sm">
+          <div className="bg-white border border-gray-200  overflow-hidden">
             <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
               <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
                 <div>Time</div>
@@ -391,7 +391,7 @@ export default function BrowsePage() {
                 redirectUri: 'https://dev.example.com/callback'
               },
             ].map((app, index) => (
-              <div key={index} className="bg-white border border-gray-200  p-6 shadow-sm hover:border-green-300 transition-colors">
+              <div key={index} className="bg-white border border-gray-200  p-6 hover:border-green-300 transition-colors">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">{app.name}</h3>

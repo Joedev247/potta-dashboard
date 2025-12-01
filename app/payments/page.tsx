@@ -8,7 +8,7 @@ export default function PaymentsPage() {
   const [showCreateLink, setShowCreateLink] = useState(false);
   const [showExtraOptions, setShowExtraOptions] = useState(true);
   const [reusable, setReusable] = useState(false);
-  const [saveUrl, setSaveUrl] = useState(false);
+  const [savXAFl, setSavXAFl] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState(['IDEAL']);
 
   const tabs = [
@@ -22,7 +22,7 @@ export default function PaymentsPage() {
     <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
             <Plus className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900">Payments</h1>
@@ -58,22 +58,22 @@ export default function PaymentsPage() {
               <input
                 type="text"
                 placeholder="Search here"
-                className="pl-10 pr-4 py-1 bg-white border-2 border-gray-200 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-green-500  w-64 shadow-sm transition-all"
+                className="pl-10 pr-4 py-1 bg-white border-2 border-gray-200 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-green-500  w-64 transition-all"
               />
             </div>
-            <button className="px-4 py-1 bg-white border-2 border-gray-200 text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all  shadow-sm font-medium">
+            <button className="px-4 py-1 bg-white border-2 border-gray-200 text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all font-medium">
               Amount
             </button>
-            <button className="px-4 py-1 bg-white border-2 border-gray-200 text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all  shadow-sm font-medium">
+            <button className="px-4 py-1 bg-white border-2 border-gray-200 text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all font-medium">
               Period
             </button>
-            <button className="px-4 py-1 bg-white border-2 border-gray-200 text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all  shadow-sm font-medium">
+            <button className="px-4 py-1 bg-white border-2 border-gray-200 text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all font-medium">
               Status
             </button>
           </div>
           <button 
             onClick={() => setShowCreateLink(true)}
-            className="flex items-center gap-2 px-5 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all shadow-lg  transform hover:scale-105"
+            className="flex items-center gap-2 px-5 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all transform hover:scale-105"
           >
             <Plus className="w-4 h-4" />
             Create payment
@@ -123,7 +123,7 @@ export default function PaymentsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
               <div className="relative">
                 <select className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10">
-                  <option>EUR</option>
+                  <option>XAF</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -176,8 +176,8 @@ export default function PaymentsPage() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={saveUrl}
-                onChange={(e) => setSaveUrl(e.target.checked)}
+                checked={savXAFl}
+                onChange={(e) => setSavXAFl(e.target.checked)}
                 className="w-4 h-4 text-green-500 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
               />
               <span className="text-sm text-gray-700">Save URL for all future links</span>
@@ -246,7 +246,7 @@ export default function PaymentsPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-4">
-            <button className="px-6 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors shadow-sm">
+            <button className="px-6 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors">
               Create link
             </button>
             <button 
@@ -295,9 +295,9 @@ export default function PaymentsPage() {
                 {/* Table Body */}
                 <div className="divide-y divide-gray-200">
                   {[
-                    { id: 're_abc123', paymentId: 'tr_xyz789', amount: 'XAF 25.00', status: 'completed', date: '2024-01-15', currency: 'EUR' },
-                    { id: 're_def456', paymentId: 'tr_uvw012', amount: 'XAF 50.00', status: 'pending', date: '2024-01-14', currency: 'EUR' },
-                    { id: 're_ghi789', paymentId: 'tr_rst345', amount: 'XAF 100.00', status: 'processing', date: '2024-01-13', currency: 'EUR' },
+                    { id: 're_abc123', paymentId: 'tr_xyz789', amount: 'XAF 25.00', status: 'completed', date: '2024-01-15', currency: 'XAF' },
+                    { id: 're_def456', paymentId: 'tr_uvw012', amount: 'XAF 50.00', status: 'pending', date: '2024-01-14', currency: 'XAF' },
+                    { id: 're_ghi789', paymentId: 'tr_rst345', amount: 'XAF 100.00', status: 'processing', date: '2024-01-13', currency: 'XAF' },
                   ].map((refund) => (
                     <div key={refund.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                       <div className="grid grid-cols-6 gap-4 items-center">
@@ -360,9 +360,9 @@ export default function PaymentsPage() {
                 {/* Table Body */}
                 <div className="divide-y divide-gray-200">
                   {[
-                    { id: 'ch_cb123', paymentId: 'tr_xyz789', amount: 'XAF 75.00', status: 'open', date: '2024-01-15', currency: 'EUR' },
-                    { id: 'ch_cb456', paymentId: 'tr_uvw012', amount: 'XAF 120.00', status: 'won', date: '2024-01-10', currency: 'EUR' },
-                    { id: 'ch_cb789', paymentId: 'tr_rst345', amount: 'XAF 200.00', status: 'lost', date: '2024-01-05', currency: 'EUR' },
+                    { id: 'ch_cb123', paymentId: 'tr_xyz789', amount: 'XAF 75.00', status: 'open', date: '2024-01-15', currency: 'XAF' },
+                    { id: 'ch_cb456', paymentId: 'tr_uvw012', amount: 'XAF 120.00', status: 'won', date: '2024-01-10', currency: 'XAF' },
+                    { id: 'ch_cb789', paymentId: 'tr_rst345', amount: 'XAF 200.00', status: 'lost', date: '2024-01-05', currency: 'XAF' },
                   ].map((chargeback) => (
                     <div key={chargeback.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                       <div className="grid grid-cols-6 gap-4 items-center">

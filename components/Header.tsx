@@ -1,15 +1,18 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Bell, User, Search, HelpCircle, Settings, LogOut, Download, MessageSquare, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationTab, setNotificationTab] = useState<'primary' | 'notification'>('primary');
   const [testMode, setTestMode] = useState(true);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -34,7 +37,7 @@ export default function Header() {
   }, [showUserMenu, showNotifications]);
 
   return (
-    <header className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-gray-200 z-30 flex items-center justify-between px-6 shadow-sm">
+    <header className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-gray-200 z-30 flex items-center justify-between px-6">
       {/* Right side - Search, Help (for invoicing), Notifications, User */}
       <div className="flex items-center gap-4 ml-auto">
        
@@ -55,19 +58,40 @@ export default function Header() {
 
           {/* Notifications Popup */}
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-96 bg-white  border border-gray-200 shadow-xl z-50">
+            <div className="absolute right-0 top-full mt-2 w-96 bg-white  border border-gray-200 z-50">
               <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50">
                 <div className="flex gap-2">
-                  <button className="px-3 py-1 text-sm font-medium text-green-600 border-b-2 border-green-600">
+                  <button 
+                    onClick={() => setNotificationTab('primary')}
+                    className={`px-3 py-1 text-sm font-medium transition-colors ${
+                      notificationTab === 'primary'
+                        ? 'text-green-600 border-b-2 border-green-600'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
                     Primary
                   </button>
-                  <button className="px-3 py-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                  <button 
+                    onClick={() => setNotificationTab('notification')}
+                    className={`px-3 py-1 text-sm font-medium transition-colors ${
+                      notificationTab === 'notification'
+                        ? 'text-green-600 border-b-2 border-green-600'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
                     Notifications
                   </button>
                 </div>
-                <button className="text-sm text-green-600 hover:text-green-700 hover:underline font-medium">
+                <Link
+                  href="/notifications"
+                  onClick={() => {
+                    setShowNotifications(false);
+                    // Set the tab in URL or state if needed
+                  }}
+                  className="text-sm text-green-600 hover:text-green-700 hover:underline font-medium"
+                >
                   View all
-                </button>
+                </Link>
               </div>
               <div className="p-8 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-green-100  flex items-center justify-center">
@@ -76,9 +100,16 @@ export default function Header() {
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">You're all set!</h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 mb-4">
                   We keep you updated on any future notifications for your organization or account.
                 </p>
+                <Link
+                  href="/notifications"
+                  onClick={() => setShowNotifications(false)}
+                  className="inline-block px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all"
+                >
+                  Go to Notifications
+                </Link>
               </div>
             </div>
           )}
@@ -93,7 +124,7 @@ export default function Header() {
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-white  border border-gray-200 shadow-xl overflow-hidden z-50">
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white  border border-gray-200 overflow-hidden z-50">
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
                 <p className="font-semibold text-gray-900">
                   {user ? `${user.firstName.toUpperCase()} ${user.lastName.toUpperCase()}` : 'User'}
@@ -101,10 +132,14 @@ export default function Header() {
                 <p className="text-sm text-gray-600">{user?.email || 'user@example.com'}</p>
               </div>
               <div className="py-2">
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
+                <Link 
+                  href="/settings"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  onClick={() => setShowUserMenu(false)}
+                >
                   <Settings className="w-4 h-4" />
                   <span className="text-sm font-medium">Settings</span>
-                </button>
+                </Link>
                 <button className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <ExternalLink className="w-4 h-4" />
@@ -126,23 +161,39 @@ export default function Header() {
                     />
                   </div>
                 </button>
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
+                <Link 
+                  href="/help-center"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  onClick={() => setShowUserMenu(false)}
+                >
                   <HelpCircle className="w-4 h-4" />
                   <span className="text-sm font-medium">Help Center</span>
                   <ExternalLink className="w-3 h-3 ml-auto" />
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
+                </Link>
+                <Link 
+                  href="/support"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  onClick={() => setShowUserMenu(false)}
+                >
                   <MessageSquare className="w-4 h-4" />
                   <span className="text-sm font-medium">Get support</span>
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
+                </Link>
+                <Link 
+                  href="/feedback"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  onClick={() => setShowUserMenu(false)}
+                >
                   <MessageSquare className="w-4 h-4" />
                   <span className="text-sm font-medium">Give feedback</span>
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
+                </Link>
+                <Link 
+                  href="/download"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  onClick={() => setShowUserMenu(false)}
+                >
                   <Download className="w-4 h-4" />
                   <span className="text-sm font-medium">Download App</span>
-                </button>
+                </Link>
                 <button 
                   onClick={logout}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-red-600 hover:bg-red-50 transition-colors"

@@ -176,12 +176,12 @@ export default function ReportsPage() {
     <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
             <FileText className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900">Reports</h1>
         </div>
-        <button className="px-5 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all  shadow-lg flex items-center gap-2 transform hover:scale-105">
+        <button className="px-5 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 transform hover:scale-105">
           <Download className="w-4 h-4" />
           Export Report
         </button>
@@ -231,7 +231,7 @@ export default function ReportsPage() {
 
       {/* Content based on active tab */}
       {activeTab === 'settlements' && (
-        <div className="bg-white border border-gray-200  overflow-hidden shadow-sm">
+        <div className="bg-white border border-gray-200  overflow-hidden">
           <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
             <div className="grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
               <div>Settlement ID</div>
@@ -276,7 +276,7 @@ export default function ReportsPage() {
       )}
 
       {activeTab === 'invoices' && (
-        <div className="bg-white border border-gray-200  overflow-hidden shadow-sm">
+        <div className="bg-white border border-gray-200  overflow-hidden">
           <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
             <div className="grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
               <div>Invoice ID</div>
@@ -351,7 +351,7 @@ export default function ReportsPage() {
 
             {/* Date Picker Dropdown */}
             {showDatePicker && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 w-[420px]">
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded z-50 w-[420px]">
                 {/* Top Bar - Current Period Display */}
                 <div className="px-2 py-1.5 border-b border-gray-200">
                   <div className="flex items-center gap-1.5 text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-1">
@@ -492,7 +492,7 @@ export default function ReportsPage() {
           </div>
 
           {/* Balance Report Table */}
-          <div className="bg-white border border-gray-200  overflow-hidden shadow-sm">
+          <div className="bg-white border border-gray-200  overflow-hidden">
             <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
               <div className="grid grid-cols-3 gap-4 text-sm font-medium text-gray-700">
                 <div>Category</div>

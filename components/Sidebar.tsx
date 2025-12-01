@@ -50,15 +50,15 @@ export default function Sidebar() {
   }, [showOrgMenu]);
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 shadow-sm z-40">
+    <aside className="fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-green-50 to-emerald-50 border-r border-green-100 z-40">
       <div className="flex flex-col h-full">
         {/* Logo with Organization Selector */}
-        <div className="p-3 border-b border-gray-200 relative" ref={orgMenuRef}>
+        <div className="p-3 border-b border-green-100 relative" ref={orgMenuRef}>
           <button
             onClick={() => setShowOrgMenu(!showOrgMenu)}
-            className="flex items-center gap-3 cursor-pointer group w-full hover:bg-gray-50  p-2 -m-2 transition-colors"
+            className="flex items-center gap-3 cursor-pointer group w-full hover:bg-green-100/50  p-2 -m-2 transition-colors"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600  flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
               <span className="text-white text-sm font-bold">CO</span>
             </div>
             <div className="flex-1 text-left">
@@ -69,11 +69,11 @@ export default function Sidebar() {
           </button>
 
           {showOrgMenu && (
-            <div className="absolute left-0 top-full mt-2 w-72 bg-white  border border-gray-200 shadow-lg overflow-hidden z-50">
+            <div className="absolute left-0 top-full mt-2 w-72 bg-white  border border-gray-200 overflow-hidden z-50">
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600  flex items-center justify-center">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
                       <span className="text-white text-xs font-bold">CO</span>
                     </div>
                     <div>
@@ -117,8 +117,8 @@ export default function Sidebar() {
                     className={`
                       flex items-center gap-3 px-4 py-3  transition-all group relative
                       ${isActive
-                        ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md shadow-green-500/20'
-                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                        : 'text-gray-700 hover:bg-green-100/70 hover:text-gray-900'
                       }
                     `}
                   >
@@ -138,9 +138,9 @@ export default function Sidebar() {
         </nav>
 
         {/* Bottom section */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-green-100">
           <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50  border border-green-100">
-            <div className="w-8 h-8 bg-green-500  flex items-center justify-center">
+            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
               <span className="text-white text-xs font-bold">N</span>
             </div>
             <div className="flex-1">

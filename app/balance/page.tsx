@@ -11,10 +11,10 @@ export default function BalancePage() {
         {/* Balance Display */}
         <div>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
-              <span className="text-white text-xs font-bold">EUR</span>
+            <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
+              <span className="text-white text-xs font-bold">XAF</span>
             </div>
-            <span className="text-sm text-gray-600 font-medium">EUR</span>
+            <span className="text-sm text-gray-600 font-medium">XAF</span>
           </div>
           <div className="text-6xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">XAF 0.00</div>
           <div className="text-sm text-gray-600 font-medium">Pending: XAF 0.00</div>
@@ -22,10 +22,13 @@ export default function BalancePage() {
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <button className="px-5 py-1 text-gray-700 text-sm font-semibold hover:text-gray-900 transition-colors">
+          <Link 
+            href="/settings"
+            className="px-5 py-1 text-gray-700 text-sm font-semibold hover:text-gray-900 transition-colors"
+          >
             Settings
-          </button>
-          <button className="px-5 py-1 bg-gradient-to-br from-green-400 to-green-600 text-white text-sm font-semibold hover:from-gray-800 hover:to-gray-700 transition-all flex items-center gap-2 shadow-lg transform hover:scale-105">
+          </Link>
+          <button className="px-5 py-1 bg-gradient-to-br from-green-400 to-green-600 text-white text-sm font-semibold hover:from-gray-800 hover:to-gray-700 transition-all flex items-center gap-2 transform hover:scale-105">
             Request payout
             <ArrowUpRight className="w-4 h-4" />
           </button>
@@ -41,7 +44,7 @@ export default function BalancePage() {
           <h2 className="text-2xl font-bold text-gray-900">Payouts</h2>
         </div>
         
-        <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 p-6 shadow-lg relative">
+        <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 p-6 relative">
           {/* Add Bank Account Link - Top Right */}
           <div className="absolute top-6 right-6">
             <Link href="/" className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1">
@@ -55,8 +58,8 @@ export default function BalancePage() {
           <div className="text-sm text-gray-600 mb-6">Next payout - Blocked</div>
 
           {/* Information Banner */}
-          <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 border-2 border-green-200 p-4 mb-6 flex items-start gap-3 shadow-md">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center rounded-full flex-shrink-0 shadow-md">
+          <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 border-2 border-green-200 p-4 mb-6 flex items-start gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center rounded-full flex-shrink-0">
               <Info className="w-5 h-5 text-white" />
             </div>
             <p className="text-sm text-gray-700 font-medium">
@@ -79,7 +82,7 @@ export default function BalancePage() {
       </div>
 
       {/* Transactions Section - Placeholder */}
-      <div className="bg-white border border-gray-200 p-12 shadow-sm">
+      <div className="bg-white border border-gray-200 p-12">
         <div className="flex flex-col items-center justify-center text-center">
           {/* Placeholder Graphic - Three Stacked Rectangles */}
           <div className="mb-6 space-y-2">

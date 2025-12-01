@@ -337,7 +337,7 @@ export default function StatisticsPage() {
   return (
     <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+        <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
           <TrendingUp className="w-6 h-6 text-white" />
         </div>
         <h1 className="text-4xl font-bold text-gray-900">Statistics</h1>
@@ -419,7 +419,7 @@ export default function StatisticsPage() {
         </div>
 
         {/* Chart Area */}
-        <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200  p-6 shadow-lg relative">
+        <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200  p-6 relative">
           {/* Toggle at top right */}
           <div className="absolute top-6 right-6 flex items-center gap-2 z-10">
             <span className="text-xs text-gray-600 whitespace-nowrap">Show previous period</span>
@@ -587,7 +587,7 @@ export default function StatisticsPage() {
               {/* Tooltip */}
               {hoveredIndex !== null && currentPeriodData[hoveredIndex] && (
                 <div
-                  className="absolute bg-gray-900 text-white text-xs  px-3 py-2 shadow-xl z-20 pointer-events-none"
+                  className="absolute bg-gray-900 text-white text-xs  px-3 py-2 z-20 pointer-events-none"
                   style={{
                     left: `${(hoveredIndex / Math.max(currentPeriodData.length - 1, 1)) * 100}%`,
                     top: `${(scaleY(currentPeriodData[hoveredIndex].revenue) / graphHeight) * 100 - 10}%`,
@@ -633,14 +633,14 @@ export default function StatisticsPage() {
       <div className="mb-8">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Totals</h2>
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-gradient-to-br from-white to-gray-50 p-6 border-2 border-gray-200  shadow-md hover:border-green-400 transition-all">
+          <div className="bg-gradient-to-br from-white to-gray-50 p-6 border-2 border-gray-200  hover:border-green-400 transition-all">
             <div className="text-sm font-medium text-gray-900 mb-3">Revenue</div>
             <div className="text-2xl font-bold text-gray-900 mb-2">{formatCurrency(totalRevenue)}</div>
             <div className="text-sm text-gray-600">
               <span className="font-medium">Transactions</span> {totalTransactions.toLocaleString()}
             </div>
           </div>
-          <div className="bg-white p-6 border border-gray-200  shadow-sm">
+          <div className="bg-white p-6 border border-gray-200">
             <div className="flex items-center gap-2 mb-3">
               <div className="text-sm font-medium text-gray-900">Refunds</div>
               <Info className="w-3.5 h-3.5 text-gray-500" />
@@ -650,7 +650,7 @@ export default function StatisticsPage() {
               <span className="font-medium">Transactions</span> {Math.floor(totalRefunds / 1000)}
             </div>
           </div>
-          <div className="bg-white p-6 border border-gray-200  shadow-sm">
+          <div className="bg-white p-6 border border-gray-200">
             <div className="text-sm font-medium text-gray-900 mb-3">Chargebacks</div>
             <div className="text-2xl font-bold text-gray-900 mb-2">{formatCurrency(totalChargebacks)}</div>
             <div className="text-sm text-gray-600">
@@ -663,7 +663,7 @@ export default function StatisticsPage() {
       {/* Per day Section */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Per day</h2>
-        <div className="bg-white border border-gray-200  p-12 shadow-sm">
+        <div className="bg-white border border-gray-200  p-12">
           <div className="flex flex-col items-center justify-center text-center">
             <Grid3x3 className="w-8 h-8 text-gray-400 mb-3" />
             <p className="text-sm text-gray-500">No statistics found for this period</p>

@@ -227,7 +227,7 @@ export default function SelectCountryPage() {
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-8">
-      <div className="w-full max-w-lg bg-white  shadow-xl border border-gray-200 p-8">
+      <div className="w-full max-w-lg bg-white border border-gray-200 p-8">
         {/* Progress Indicator */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">

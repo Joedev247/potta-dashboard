@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Settings, ArrowLeft, ChevronDown, Info, FileText, Eye, Download, Search, Filter, Calendar } from 'lucide-react';
+import Link from 'next/link';
 
 export default function InvoicingPage() {
   const [activeTab, setActiveTab] = useState('invoices');
@@ -22,19 +23,22 @@ export default function InvoicingPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
             <FileText className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900">Invoices</h1>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-1 bg-white border-2 border-gray-200 text-gray-700 text-sm font-semibold hover:border-green-400 hover:bg-green-50 transition-all  shadow-sm flex items-center gap-2">
+          <Link 
+            href="/settings"
+            className="px-4 py-1 bg-white border-2 border-gray-200 text-gray-700 text-sm font-semibold hover:border-green-400 hover:bg-green-50 transition-all flex items-center gap-2"
+          >
             <Settings className="w-4 h-4" />
             Settings
-          </button>
+          </Link>
           <button 
             onClick={() => setShowCreateInvoice(true)}
-            className="px-5 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all  shadow-lg flex items-center gap-2 transform hover:scale-105"
+            className="px-5 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 transform hover:scale-105"
           >
             <Plus className="w-4 h-4" />
             Create
@@ -115,7 +119,7 @@ export default function InvoicingPage() {
                     onClick={() => setInvoiceType('one-off')}
                     className={`px-4 py-1.5 text-sm font-medium transition-colors ${
                       invoiceType === 'one-off'
-                        ? 'bg-white text-gray-900 shadow-sm'
+                        ? 'bg-white text-gray-900'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -125,7 +129,7 @@ export default function InvoicingPage() {
                     onClick={() => setInvoiceType('recurring')}
                     className={`px-4 py-1.5 text-sm font-medium transition-colors ${
                       invoiceType === 'recurring'
-                        ? 'bg-white text-gray-900 shadow-sm'
+                        ? 'bg-white text-gray-900'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -133,7 +137,7 @@ export default function InvoicingPage() {
                   </button>
                 </div>
               </div>
-              <button className="px-6 py-1.5 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors shadow-sm">
+              <button className="px-6 py-1.5 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors">
                 Create
               </button>
             </div>
@@ -273,7 +277,7 @@ export default function InvoicingPage() {
                     />
                   </div>
                   <div className="col-span-2 flex items-center gap-2">
-                    <span className="text-sm text-gray-600">EUR</span>
+                    <span className="text-sm text-gray-600">XAF</span>
                     <input
                       type="text"
                       placeholder="0.00"
@@ -323,7 +327,7 @@ export default function InvoicingPage() {
         <>
           {/* Invoices List */}
           {activeTab === 'invoices' && (
-            <div className="bg-white border border-gray-200  overflow-hidden shadow-sm">
+            <div className="bg-white border border-gray-200  overflow-hidden">
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
                 <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
                   <div>Invoice #</div>
@@ -377,7 +381,7 @@ export default function InvoicingPage() {
 
           {/* Recurring Tab */}
           {activeTab === 'recurring' && (
-            <div className="bg-white border border-gray-200  overflow-hidden shadow-sm">
+            <div className="bg-white border border-gray-200  overflow-hidden">
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
                 <div className="grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
                   <div>Recurring Invoice</div>
@@ -414,7 +418,7 @@ export default function InvoicingPage() {
 
           {/* Credit Notes Tab */}
           {activeTab === 'credit-notes' && (
-            <div className="bg-white border border-gray-200  overflow-hidden shadow-sm">
+            <div className="bg-white border border-gray-200  overflow-hidden">
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
                 <div className="grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
                   <div>Credit Note #</div>
@@ -450,7 +454,7 @@ export default function InvoicingPage() {
 
           {/* Customers Tab */}
           {activeTab === 'customers' && (
-            <div className="bg-white border border-gray-200  overflow-hidden shadow-sm">
+            <div className="bg-white border border-gray-200  overflow-hidden">
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
                 <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
                   <div>Customer</div>
@@ -485,7 +489,7 @@ export default function InvoicingPage() {
 
           {/* Products Tab */}
           {activeTab === 'products' && (
-            <div className="bg-white border border-gray-200  overflow-hidden shadow-sm">
+            <div className="bg-white border border-gray-200  overflow-hidden">
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
                 <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
                   <div>Product</div>
