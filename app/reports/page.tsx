@@ -9,8 +9,8 @@ export default function ReportsPage() {
   const [selectedRange, setSelectedRange] = useState({ start: '27/11/2025', end: '28/11/2025' });
   const [calendarMonth, setCalendarMonth] = useState(11); // November
   const [calendarYear, setCalendarYear] = useState(2025);
-  const [selectedDates, setSelectedDates] = useState({ start: null, end: null });
-  const [predefinedRange, setPredefinedRange] = useState(null);
+  const [selectedDates, setSelectedDates] = useState<{ start: string | null; end: string | null }>({ start: null, end: null });
+  const [predefinedRange, setPredefinedRange] = useState<string | null>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
 
   const tabs = [
@@ -97,13 +97,15 @@ export default function ReportsPage() {
     } else {
       // Complete selection
       const start = selectedDates.start;
-      const end = dateStr;
-      if (new Date(end.split('/').reverse().join('-')) < new Date(start.split('/').reverse().join('-'))) {
-        setSelectedDates({ start: end, end: start });
-        setSelectedRange({ start: end, end: start });
-      } else {
-        setSelectedDates({ start, end });
-        setSelectedRange({ start, end });
+      if (start) {
+        const end = dateStr;
+        if (new Date(end.split('/').reverse().join('-')) < new Date(start.split('/').reverse().join('-'))) {
+          setSelectedDates({ start: end, end: start });
+          setSelectedRange({ start: end, end: start });
+        } else {
+          setSelectedDates({ start, end });
+          setSelectedRange({ start, end });
+        }
       }
     }
     setPredefinedRange(null);
