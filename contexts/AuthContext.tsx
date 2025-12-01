@@ -32,9 +32,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Dummy user data for development
+const dummyUser: User = {
+  id: '1',
+  email: 'john.doe@example.com',
+  username: 'johndoe',
+  firstName: 'John',
+  lastName: 'Doe',
+  isVerified: true,
+  role: 'customer',
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(dummyUser);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
 
   // Load user from localStorage on mount
   useEffect(() => {
@@ -43,13 +54,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (storedUser && storedAuth === 'true') {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
         setIsAuthenticated(true);
       } catch (error) {
         console.error('Error parsing stored user:', error);
         localStorage.removeItem('user');
         localStorage.removeItem('isAuthenticated');
+        // Fall back to dummy user
+        setUser(dummyUser);
+        setIsAuthenticated(true);
       }
+    } else {
+      // Set dummy user if no stored user
+      setUser(dummyUser);
+      setIsAuthenticated(true);
     }
   }, []);
 
@@ -58,10 +77,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // For now, use mock authentication
       // In production, this would call your API
       if (email && password) {
+        // Extract name from email for dummy data
+        const emailParts = email.split('@')[0].split('.');
+        const firstName = emailParts[0]?.charAt(0).toUpperCase() + emailParts[0]?.slice(1) || 'User';
+        const lastName = emailParts[1]?.charAt(0).toUpperCase() + emailParts[1]?.slice(1) || '';
+        
         const newUser: User = {
           id: '1',
           email,
+          username: email.split('@')[0],
+          firstName,
+          lastName: lastName || 'Doe',
           isVerified: false,
+          role: 'customer',
         };
         
         setUser(newUser);

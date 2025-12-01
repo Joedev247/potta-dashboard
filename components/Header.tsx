@@ -127,7 +127,9 @@ export default function Header() {
             <div className="absolute right-0 top-full mt-2 w-64 bg-white  border border-gray-200 overflow-hidden z-50">
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
                 <p className="font-semibold text-gray-900">
-                  {user ? `${user.firstName.toUpperCase()} ${user.lastName.toUpperCase()}` : 'User'}
+                  {user && user.firstName && user.lastName 
+                    ? `${user.firstName.toUpperCase()} ${user.lastName.toUpperCase()}`
+                    : user?.email?.split('@')[0]?.toUpperCase() || 'User'}
                 </p>
                 <p className="text-sm text-gray-600">{user?.email || 'user@example.com'}</p>
               </div>
