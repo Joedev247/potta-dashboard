@@ -28,6 +28,7 @@ interface AuthContextType {
   signup: (data: SignupData) => Promise<boolean>;
   sendOTP: (email: string) => Promise<void>;
   verifyOTP: (otp: string) => Promise<boolean>;
+  updateUser: (userData: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -177,6 +178,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser: User = {
+        ...user,
+        ...userData,
+      };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -187,6 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         sendOTP,
         verifyOTP,
+        updateUser,
       }}
     >
       {children}

@@ -1,15 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Settings as SettingsIcon, 
   User, 
   Shield, 
   Bell, 
   Building2, 
-  Key, 
-  CreditCard,
-  Globe,
   Mail,
   Lock,
   Eye,
@@ -18,40 +15,46 @@ import {
   Check
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const { organization, updateOrganization } = useOrganization();
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [testMode, setTestMode] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [marketingEmails, setMarketingEmails] = useState(false);
   const [twoFactorAuth, setTwoFactorAuth] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.email || '',
     phone: '',
-    language: 'en',
-    timezone: 'UTC',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
 
+  const [orgFormData, setOrgFormData] = useState({
+    name: organization?.name || '',
+    address: organization?.address || '',
+    city: organization?.city || '',
+    region: organization?.region || '',
+  });
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
-    { id: 'account', label: 'Account', icon: SettingsIcon },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'organization', label: 'Organization', icon: Building2 },
-    { id: 'api', label: 'API', icon: Key },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -62,10 +65,165 @@ export default function SettingsPage() {
     setSaved(false);
   };
 
-  const handleSave = () => {
-    // Save logic here
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  // Load organization data on mount
+  useEffect(() => {
+    if (organization) {
+      setOrgFormData({
+        name: organization.name || '',
+        address: organization.address || '',
+        city: organization.city || '',
+        region: organization.region || '',
+      });
+    }
+  }, [organization]);
+
+  // Load notification settings on mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('notificationSettings');
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        setEmailNotifications(settings.emailNotifications ?? true);
+        setPushNotifications(settings.pushNotifications ?? true);
+        setMarketingEmails(settings.marketingEmails ?? false);
+      } catch (error) {
+        console.error('Error loading notification settings:', error);
+      }
+    }
+  }, []);
+
+  const handleSaveProfile = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      setError('Please fill in all required fields.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Update user in context
+      if (updateUser && user) {
+        updateUser({
+          ...user,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+        });
+      }
+      
+      // Update localStorage
+      const updatedUser = { ...user, firstName: formData.firstName, lastName: formData.lastName, email: formData.email };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      setSuccess('Profile updated successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Failed to update profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    
+    if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
+      setError('Please fill in all password fields.');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      setError('New password and confirm password do not match.');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.newPassword.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setSuccess('Password updated successfully!');
+      setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Failed to update password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Save to localStorage
+      localStorage.setItem('notificationSettings', JSON.stringify({
+        emailNotifications,
+        pushNotifications,
+        marketingEmails,
+      }));
+      
+      setSuccess('Notification preferences saved successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Failed to save preferences. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveOrganization = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    
+    if (!orgFormData.name.trim()) {
+      setError('Organization name is required.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Update organization in context
+      if (organization && updateOrganization) {
+        updateOrganization({
+          name: orgFormData.name,
+          address: orgFormData.address,
+          city: orgFormData.city,
+          region: orgFormData.region,
+        });
+      }
+      
+      setSuccess('Organization settings updated successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Failed to update organization. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
@@ -186,92 +344,28 @@ export default function SettingsPage() {
               />
             </div>
 
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded">
+                {success}
+              </div>
+            )}
             <div className="flex justify-end pt-4 border-t border-gray-200">
               <button
-                onClick={handleSave}
-                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2"
+                onClick={handleSaveProfile}
+                disabled={loading}
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saved ? (
+                {loading ? (
                   <>
-                    <Check className="w-4 h-4" />
-                    Saved
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Saving...
                   </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    Save Changes
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Account Tab */}
-        {activeTab === 'account' && (
-          <div className="bg-white border-2 border-gray-200 p-8 space-y-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
-                <SettingsIcon className="w-5 h-5 text-green-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">Account Settings</h2>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Language
-              </label>
-              <select
-                name="language"
-                value={formData.language}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500"
-              >
-                <option value="en">English</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-                <option value="de">German</option>
-                <option value="nl">Dutch</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Timezone
-              </label>
-              <select
-                name="timezone"
-                value={formData.timezone}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500"
-              >
-                <option value="UTC">UTC</option>
-                <option value="EST">Eastern Time (EST)</option>
-                <option value="PST">Pacific Time (PST)</option>
-                <option value="CET">Central European Time (CET)</option>
-                <option value="GMT">Greenwich Mean Time (GMT)</option>
-              </select>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <Globe className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Test Mode</div>
-                  <div className="text-sm text-gray-600">Enable test mode for development</div>
-                </div>
-              </div>
-              <ToggleSwitch enabled={testMode} onChange={() => setTestMode(!testMode)} />
-            </div>
-
-            <div className="flex justify-end pt-4 border-t border-gray-200">
-              <button
-                onClick={handleSave}
-                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2"
-              >
-                {saved ? (
+                ) : saved || success ? (
                   <>
                     <Check className="w-4 h-4" />
                     Saved
@@ -376,12 +470,28 @@ export default function SettingsPage() {
               <ToggleSwitch enabled={twoFactorAuth} onChange={() => setTwoFactorAuth(!twoFactorAuth)} />
             </div>
 
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded">
+                {success}
+              </div>
+            )}
             <div className="flex justify-end pt-4 border-t border-gray-200">
               <button
-                onClick={handleSave}
-                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2"
+                onClick={handleUpdatePassword}
+                disabled={loading}
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saved ? (
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Updating...
+                  </>
+                ) : saved || success ? (
                   <>
                     <Check className="w-4 h-4" />
                     Saved
@@ -442,12 +552,28 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded">
+                {success}
+              </div>
+            )}
             <div className="flex justify-end pt-4 border-t border-gray-200">
               <button
-                onClick={handleSave}
-                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2"
+                onClick={handleSaveNotifications}
+                disabled={loading}
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saved ? (
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Saving...
+                  </>
+                ) : saved || success ? (
                   <>
                     <Check className="w-4 h-4" />
                     Saved
@@ -473,18 +599,24 @@ export default function SettingsPage() {
               <h2 className="text-2xl font-bold text-gray-900">Organization Settings</h2>
             </div>
 
-            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">CO</span>
+            {organization && (
+              <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">
+                      {organization.name ? organization.name.substring(0, 2).toUpperCase() : 'OR'}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="font-bold text-gray-900">{organization.name || 'Organization'}</div>
+                    <div className="text-sm text-gray-600">Organization</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-bold text-gray-900">Codev</div>
-                  <div className="text-sm text-gray-600">Organization</div>
-                </div>
+                {organization.registrationNumber && (
+                  <div className="text-sm text-gray-600 mb-2">Registration: {organization.registrationNumber}</div>
+                )}
               </div>
-              <div className="text-sm text-gray-600 mb-2">Organization ID: #19395753</div>
-            </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -492,28 +624,75 @@ export default function SettingsPage() {
               </label>
               <input
                 type="text"
-                defaultValue="Codev"
+                value={orgFormData.name}
+                onChange={(e) => setOrgFormData({ ...orgFormData, name: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500"
+                placeholder="Enter organization name"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Organization Email
+                Address
               </label>
               <input
-                type="email"
-                defaultValue="contact@codev.com"
+                type="text"
+                value={orgFormData.address}
+                onChange={(e) => setOrgFormData({ ...orgFormData, address: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500"
+                placeholder="Enter organization address"
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  City
+                </label>
+                <input
+                  type="text"
+                  value={orgFormData.city}
+                  onChange={(e) => setOrgFormData({ ...orgFormData, city: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500"
+                  placeholder="Enter city"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Region / Province
+                </label>
+                <input
+                  type="text"
+                  value={orgFormData.region}
+                  onChange={(e) => setOrgFormData({ ...orgFormData, region: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500"
+                  placeholder="Enter region"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded">
+                {success}
+              </div>
+            )}
             <div className="flex justify-end pt-4 border-t border-gray-200">
               <button
-                onClick={handleSave}
-                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2"
+                onClick={handleSaveOrganization}
+                disabled={loading}
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saved ? (
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Saving...
+                  </>
+                ) : saved || success ? (
                   <>
                     <Check className="w-4 h-4" />
                     Saved
@@ -524,48 +703,6 @@ export default function SettingsPage() {
                     Save Changes
                   </>
                 )}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* API Tab */}
-        {activeTab === 'api' && (
-          <div className="bg-white border-2 border-gray-200 p-8 space-y-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
-                <Key className="w-5 h-5 text-green-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">API Settings</h2>
-            </div>
-
-            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100">
-              <div className="text-sm text-gray-600 mb-4">
-                Manage your API keys and access tokens. Keep your keys secure and never share them publicly.
-              </div>
-              <button className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all">
-                View API Keys
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Billing Tab */}
-        {activeTab === 'billing' && (
-          <div className="bg-white border-2 border-gray-200 p-8 space-y-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-green-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">Billing & Subscription</h2>
-            </div>
-
-            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100">
-              <div className="text-sm text-gray-600 mb-4">
-                Manage your billing information and subscription settings.
-              </div>
-              <button className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all">
-                Manage Billing
               </button>
             </div>
           </div>

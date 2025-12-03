@@ -18,7 +18,7 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
     nationality: '',
     address: '',
     city: '',
-    postalCode: '',
+    region: '',
     country: '',
   });
 
@@ -96,7 +96,7 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
-            placeholder="+1 234 567 8900"
+            placeholder="+237 6 12 34 56 78"
           />
         </div>
 
@@ -126,11 +126,19 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
                 className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10"
               >
                 <option value="">Select nationality</option>
-                <option value="US">United States</option>
-                <option value="GB">United Kingdom</option>
-                <option value="NL">Netherlands</option>
-                <option value="DE">Germany</option>
+                <option value="CM">Cameroon</option>
+                <option value="NG">Nigeria</option>
+                <option value="TD">Chad</option>
+                <option value="CF">Central African Republic</option>
+                <option value="CG">Congo</option>
+                <option value="CD">Congo (DRC)</option>
+                <option value="GA">Gabon</option>
+                <option value="GQ">Equatorial Guinea</option>
                 <option value="FR">France</option>
+                <option value="GB">United Kingdom</option>
+                <option value="US">United States</option>
+                <option value="DE">Germany</option>
+                <option value="OTHER">Other</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
@@ -151,7 +159,7 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               City <span className="text-red-500">*</span>
@@ -162,21 +170,7 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
               value={formData.city}
               onChange={(e) => setFormData({ ...formData, city: e.target.value })}
               className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
-              placeholder="City"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Postal code <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.postalCode}
-              onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-              className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
-              placeholder="12345"
+              placeholder="Douala, Yaoundé, etc."
             />
           </div>
 
@@ -192,14 +186,48 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
                 className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10"
               >
                 <option value="">Select country</option>
-                <option value="US">United States</option>
-                <option value="GB">United Kingdom</option>
-                <option value="NL">Netherlands</option>
-                <option value="DE">Germany</option>
+                <option value="CM">Cameroon</option>
+                <option value="NG">Nigeria</option>
+                <option value="TD">Chad</option>
+                <option value="CF">Central African Republic</option>
+                <option value="CG">Congo</option>
+                <option value="CD">Congo (DRC)</option>
+                <option value="GA">Gabon</option>
+                <option value="GQ">Equatorial Guinea</option>
                 <option value="FR">France</option>
+                <option value="GB">United Kingdom</option>
+                <option value="US">United States</option>
+                <option value="DE">Germany</option>
+                <option value="OTHER">Other</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Region / Province <span className="text-gray-500">(Optional)</span>
+          </label>
+          <div className="relative">
+            <select
+              value={formData.region}
+              onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+              className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10"
+            >
+              <option value="">Select region (optional)</option>
+              <option value="AD">Adamawa</option>
+              <option value="CE">Centre</option>
+              <option value="ES">East</option>
+              <option value="EN">Far North</option>
+              <option value="LT">Littoral</option>
+              <option value="NO">North</option>
+              <option value="NW">North West</option>
+              <option value="SU">South</option>
+              <option value="SW">South West</option>
+              <option value="OU">West</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
         </div>
 

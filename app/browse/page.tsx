@@ -1,12 +1,76 @@
 'use client';
 
-import { useState } from 'react';
-import { Eye, EyeOff, Copy, Info, RefreshCw, Plus, Trash2, ExternalLink, Search, Filter, Calendar, CheckCircle2, XCircle, Clock, Globe } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Eye, EyeOff, Copy, Info, RefreshCw, Plus, Trash2, ExternalLink, Search, Filter, Calendar, CheckCircle2, XCircle, Clock, Globe, X, Edit, AlertCircle } from 'lucide-react';
+import { useOrganization } from '@/contexts/OrganizationContext';
 
 export default function BrowsePage() {
+  const { organization } = useOrganization();
   const [activeTab, setActiveTab] = useState('api-keys');
   const [showLiveKey, setShowLiveKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  
+  // API Keys states
+  const [liveApiKey, setLiveApiKey] = useState('live_25wDKPwhNySv8pwgt35Wh6AJeMfJUc');
+  const [testApiKey, setTestApiKey] = useState('test_25wDKPwhNySv8pwgt35Wh6AJeMfJUc');
+  const [showResetConfirm, setShowResetConfirm] = useState<string | null>(null);
+  
+  // Access Tokens states
+  const [showCreateToken, setShowCreateToken] = useState(false);
+  const [tokens, setTokens] = useState([
+    { id: '1', name: 'My App Token', created: '2024-01-15', expires: '2025-01-15', status: 'active', token: 'token_abc123xyz789' },
+    { id: '2', name: 'Development Token', created: '2024-01-10', expires: '2024-12-31', status: 'active', token: 'token_def456uvw012' },
+  ]);
+  const [selectedToken, setSelectedToken] = useState<any>(null);
+  const [tokenFormData, setTokenFormData] = useState({ name: '', expiresIn: '365' });
+  const [tokenLoading, setTokenLoading] = useState(false);
+  const [tokenSuccess, setTokenSuccess] = useState('');
+  const [tokenError, setTokenError] = useState('');
+  const [showRevokeTokenConfirm, setShowRevokeTokenConfirm] = useState<string | null>(null);
+  
+  // Webhooks states
+  const [showWebhookModal, setShowWebhookModal] = useState(false);
+  const [editingWebhook, setEditingWebhook] = useState<any>(null);
+  const [webhooks, setWebhooks] = useState([
+    { id: '1', url: 'https://api.example.com/webhook', events: ['payment.*'], status: 'active' },
+    { id: '2', url: 'https://webhook.example.com/instanvi', events: ['payment.paid'], status: 'inactive' },
+  ]);
+  const [webhookFormData, setWebhookFormData] = useState({ url: '', events: [] as string[] });
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookSuccess, setWebhookSuccess] = useState('');
+  const [webhookError, setWebhookError] = useState('');
+  const [showDeleteWebhookConfirm, setShowDeleteWebhookConfirm] = useState<string | null>(null);
+  
+  // API Logs states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('');
+  const [selectedDateFilter, setSelectedDateFilter] = useState('Last 7 days');
+  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
+  const dateRef = useRef<HTMLDivElement>(null);
+  
+  const mockApiLogs = [
+    { id: '1', time: '2024-01-15 14:32:15', method: 'GET', endpoint: '/payments', status: 200, responseTime: '45ms', requestBody: null, responseBody: { data: [] } },
+    { id: '2', time: '2024-01-15 14:31:42', method: 'POST', endpoint: '/payments', status: 201, responseTime: '120ms', requestBody: { amount: 1000, currency: 'XAF' }, responseBody: { id: 'tr_abc123' } },
+    { id: '3', time: '2024-01-15 14:30:18', method: 'GET', endpoint: '/payments/tr_abc123', status: 200, responseTime: '32ms', requestBody: null, responseBody: { id: 'tr_abc123', status: 'paid' } },
+    { id: '4', time: '2024-01-15 14:29:05', method: 'GET', endpoint: '/methods', status: 200, responseTime: '28ms', requestBody: null, responseBody: { methods: ['mtn-momo', 'orange-money'] } },
+    { id: '5', time: '2024-01-15 14:28:30', method: 'POST', endpoint: '/refunds', status: 400, responseTime: '50ms', requestBody: { paymentId: 'tr_abc123' }, responseBody: { error: 'Invalid request' } },
+  ];
+  
+  // Your Apps states
+  const [showCreateApp, setShowCreateApp] = useState(false);
+  const [editingApp, setEditingApp] = useState<any>(null);
+  const [apps, setApps] = useState([
+    { id: '1', name: 'My E-commerce App', description: 'Main application for processing payments', status: 'active', created: '2024-01-10', redirectUri: 'https://app.example.com/callback', clientId: 'client_abc123', clientSecret: 'secret_xyz789' },
+    { id: '2', name: 'Development App', description: 'Testing and development environment', status: 'active', created: '2024-01-05', redirectUri: 'https://dev.example.com/callback', clientId: 'client_def456', clientSecret: 'secret_uvw012' },
+  ]);
+  const [appFormData, setAppFormData] = useState({ name: '', description: '', redirectUri: '' });
+  const [appLoading, setAppLoading] = useState(false);
+  const [appSuccess, setAppSuccess] = useState('');
+  const [appError, setAppError] = useState('');
+  const [showDeleteAppConfirm, setShowDeleteAppConfirm] = useState<string | null>(null);
 
   const tabs = [
     { id: 'api-keys', label: 'API keys' },
@@ -22,6 +86,322 @@ export default function BrowsePage() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  // API Keys handlers
+  const handleResetApiKey = async (type: 'live' | 'test') => {
+    setShowResetConfirm(null);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const newKey = type === 'live' 
+        ? `live_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
+        : `test_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      if (type === 'live') {
+        setLiveApiKey(newKey);
+      } else {
+        setTestApiKey(newKey);
+      }
+    } catch (error) {
+      console.error('Failed to reset API key:', error);
+    }
+  };
+
+  // Access Tokens handlers
+  const handleCreateToken = async () => {
+    setTokenLoading(true);
+    setTokenError('');
+    setTokenSuccess('');
+    
+    if (!tokenFormData.name.trim()) {
+      setTokenError('Token name is required.');
+      setTokenLoading(false);
+      return;
+    }
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const newToken = {
+        id: Date.now().toString(),
+        name: tokenFormData.name,
+        created: new Date().toISOString().split('T')[0],
+        expires: new Date(Date.now() + parseInt(tokenFormData.expiresIn) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: 'active' as const,
+        token: `token_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 10)}`,
+      };
+      setTokens([newToken, ...tokens]);
+      setTokenSuccess(`Token created successfully! Token: ${newToken.token}`);
+      setTokenFormData({ name: '', expiresIn: '365' });
+      setTimeout(() => {
+        setShowCreateToken(false);
+        setTokenSuccess('');
+      }, 3000);
+    } catch (error) {
+      setTokenError('Failed to create token. Please try again.');
+    } finally {
+      setTokenLoading(false);
+    }
+  };
+
+  const handleRevokeToken = async (tokenId: string) => {
+    setShowRevokeTokenConfirm(tokenId);
+  };
+
+  const confirmRevokeToken = async () => {
+    if (!showRevokeTokenConfirm) return;
+    const tokenId = showRevokeTokenConfirm;
+    setShowRevokeTokenConfirm(null);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setTokens(tokens.filter(t => t.id !== tokenId));
+    } catch (error) {
+      console.error('Failed to revoke token:', error);
+    }
+  };
+
+  // Webhooks handlers
+  const handleCreateWebhook = async () => {
+    setWebhookLoading(true);
+    setWebhookError('');
+    setWebhookSuccess('');
+    
+    if (!webhookFormData.url.trim()) {
+      setWebhookError('Webhook URL is required.');
+      setWebhookLoading(false);
+      return;
+    }
+    if (webhookFormData.events.length === 0) {
+      setWebhookError('At least one event must be selected.');
+      setWebhookLoading(false);
+      return;
+    }
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const newWebhook = {
+        id: Date.now().toString(),
+        url: webhookFormData.url,
+        events: webhookFormData.events,
+        status: 'active' as const,
+      };
+      setWebhooks([newWebhook, ...webhooks]);
+      setWebhookSuccess('Webhook created successfully!');
+      setWebhookFormData({ url: '', events: [] });
+      setTimeout(() => {
+        setShowWebhookModal(false);
+        setWebhookSuccess('');
+        setEditingWebhook(null);
+      }, 2000);
+    } catch (error) {
+      setWebhookError('Failed to create webhook. Please try again.');
+    } finally {
+      setWebhookLoading(false);
+    }
+  };
+
+  const handleUpdateWebhook = async () => {
+    if (!editingWebhook) return;
+    setWebhookLoading(true);
+    setWebhookError('');
+    setWebhookSuccess('');
+    
+    if (!webhookFormData.url.trim()) {
+      setWebhookError('Webhook URL is required.');
+      setWebhookLoading(false);
+      return;
+    }
+    if (webhookFormData.events.length === 0) {
+      setWebhookError('At least one event must be selected.');
+      setWebhookLoading(false);
+      return;
+    }
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setWebhooks(webhooks.map(w => 
+        w.id === editingWebhook.id 
+          ? { ...w, url: webhookFormData.url, events: webhookFormData.events }
+          : w
+      ));
+      setWebhookSuccess('Webhook updated successfully!');
+      setWebhookFormData({ url: '', events: [] });
+      setTimeout(() => {
+        setShowWebhookModal(false);
+        setWebhookSuccess('');
+        setEditingWebhook(null);
+      }, 2000);
+    } catch (error) {
+      setWebhookError('Failed to update webhook. Please try again.');
+    } finally {
+      setWebhookLoading(false);
+    }
+  };
+
+  const handleDeleteWebhook = async (webhookId: string) => {
+    setShowDeleteWebhookConfirm(webhookId);
+  };
+
+  const confirmDeleteWebhook = async () => {
+    if (!showDeleteWebhookConfirm) return;
+    const webhookId = showDeleteWebhookConfirm;
+    setShowDeleteWebhookConfirm(null);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setWebhooks(webhooks.filter(w => w.id !== webhookId));
+    } catch (error) {
+      console.error('Failed to delete webhook:', error);
+    }
+  };
+
+  const handleEditWebhook = (webhook: any) => {
+    setEditingWebhook(webhook);
+    setWebhookFormData({ url: webhook.url, events: webhook.events });
+    setShowWebhookModal(true);
+  };
+
+  // API Logs handlers
+  const getFilteredLogs = () => {
+    let filtered = [...mockApiLogs];
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(log => 
+        log.method.toLowerCase().includes(query) ||
+        log.endpoint.toLowerCase().includes(query) ||
+        log.status.toString().includes(query)
+      );
+    }
+
+    if (selectedFilter) {
+      if (selectedFilter === 'success') {
+        filtered = filtered.filter(log => log.status >= 200 && log.status < 300);
+      } else if (selectedFilter === 'error') {
+        filtered = filtered.filter(log => log.status >= 400);
+      } else if (selectedFilter === 'method') {
+        filtered = filtered.sort((a, b) => a.method.localeCompare(b.method));
+      }
+    }
+
+    if (selectedDateFilter !== 'All') {
+      const now = new Date();
+      const days = selectedDateFilter === 'Last 7 days' ? 7 : selectedDateFilter === 'Last 30 days' ? 30 : 90;
+      const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      filtered = filtered.filter(log => {
+        const logDate = new Date(log.time);
+        return logDate >= cutoffDate;
+      });
+    }
+
+    return filtered;
+  };
+
+  // Your Apps handlers
+  const handleCreateApp = async () => {
+    setAppLoading(true);
+    setAppError('');
+    setAppSuccess('');
+    
+    if (!appFormData.name.trim() || !appFormData.redirectUri.trim()) {
+      setAppError('Name and redirect URI are required.');
+      setAppLoading(false);
+      return;
+    }
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const newApp = {
+        id: Date.now().toString(),
+        name: appFormData.name,
+        description: appFormData.description || '',
+        status: 'active' as const,
+        created: new Date().toISOString().split('T')[0],
+        redirectUri: appFormData.redirectUri,
+        clientId: `client_${Math.random().toString(36).substring(2, 15)}`,
+        clientSecret: `secret_${Math.random().toString(36).substring(2, 15)}`,
+      };
+      setApps([newApp, ...apps]);
+      setAppSuccess('App created successfully!');
+      setAppFormData({ name: '', description: '', redirectUri: '' });
+      setTimeout(() => {
+        setShowCreateApp(false);
+        setAppSuccess('');
+      }, 2000);
+    } catch (error) {
+      setAppError('Failed to create app. Please try again.');
+    } finally {
+      setAppLoading(false);
+    }
+  };
+
+  const handleUpdateApp = async () => {
+    if (!editingApp) return;
+    setAppLoading(true);
+    setAppError('');
+    setAppSuccess('');
+    
+    if (!appFormData.name.trim() || !appFormData.redirectUri.trim()) {
+      setAppError('Name and redirect URI are required.');
+      setAppLoading(false);
+      return;
+    }
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setApps(apps.map(a => 
+        a.id === editingApp.id 
+          ? { ...a, name: appFormData.name, description: appFormData.description, redirectUri: appFormData.redirectUri }
+          : a
+      ));
+      setAppSuccess('App updated successfully!');
+      setAppFormData({ name: '', description: '', redirectUri: '' });
+      setTimeout(() => {
+        setShowCreateApp(false);
+        setAppSuccess('');
+        setEditingApp(null);
+      }, 2000);
+    } catch (error) {
+      setAppError('Failed to update app. Please try again.');
+    } finally {
+      setAppLoading(false);
+    }
+  };
+
+  const handleDeleteApp = async (appId: string) => {
+    setShowDeleteAppConfirm(appId);
+  };
+
+  const confirmDeleteApp = async () => {
+    if (!showDeleteAppConfirm) return;
+    const appId = showDeleteAppConfirm;
+    setShowDeleteAppConfirm(null);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setApps(apps.filter(a => a.id !== appId));
+    } catch (error) {
+      console.error('Failed to delete app:', error);
+    }
+  };
+
+  const handleEditApp = (app: any) => {
+    setEditingApp(app);
+    setAppFormData({ name: app.name, description: app.description, redirectUri: app.redirectUri });
+    setShowCreateApp(true);
+  };
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setShowFilterDropdown(false);
+      }
+      if (dateRef.current && !dateRef.current.contains(event.target as Node)) {
+        setShowDateDropdown(false);
+      }
+    };
+
+    if (showFilterDropdown || showDateDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showFilterDropdown, showDateDropdown]);
+
   return (
     <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Header */}
@@ -30,7 +410,13 @@ export default function BrowsePage() {
           <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
             <Eye className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900">API keys</h1>
+          <h1 className="text-4xl font-bold text-gray-900">
+            {activeTab === 'api-keys' ? 'API keys' :
+             activeTab === 'access-tokens' ? 'Access tokens' :
+             activeTab === 'webhooks' ? 'Webhooks' :
+             activeTab === 'api-logs' ? 'API logs' :
+             activeTab === 'your-apps' ? 'Your apps' : 'API keys'}
+          </h1>
         </div>
         
         {/* Tabs */}
@@ -68,10 +454,10 @@ export default function BrowsePage() {
             <div className="bg-gray-50 border border-gray-200  p-4 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                  CO
+                  {organization?.name ? organization.name.substring(0, 2).toUpperCase() : 'CO'}
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900">Codev</div>
+                  <div className="font-semibold text-gray-900">{organization?.name || 'Codev'}</div>
                   <div className="text-sm text-gray-600">https://my.instanvi.com/</div>
                 </div>
               </div>
@@ -87,7 +473,7 @@ export default function BrowsePage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 bg-white border border-gray-200  px-4 py-1 font-mono text-sm text-gray-900">
-                    {showLiveKey ? 'live_25wDKPwhNySv8pwgt35Wh6AJeMfJUc' : 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
+                    {showLiveKey ? liveApiKey : 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
                   </div>
                   <button
                     onClick={() => setShowLiveKey(!showLiveKey)}
@@ -96,13 +482,16 @@ export default function BrowsePage() {
                     {showLiveKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                   <button
-                    onClick={() => handleCopy('live_25wDKPwhNySv8pwgt35Wh6AJeMfJUc', 'live')}
+                    onClick={() => handleCopy(liveApiKey, 'live')}
                     className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
                   >
                     <Copy className="w-4 h-4" />
                     {copiedKey === 'live' ? 'Copied!' : 'Copy'}
                   </button>
-                  <button className="px-4 py-2 bg-white border border-gray-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-2">
+                  <button
+                    onClick={() => setShowResetConfirm('live')}
+                    className="px-4 py-2 bg-white border border-gray-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-2"
+                  >
                     <RefreshCw className="w-4 h-4" />
                     Reset
                   </button>
@@ -117,16 +506,19 @@ export default function BrowsePage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 bg-white border border-gray-200 rounded px-4 py-1 font-mono text-sm text-gray-900">
-                    test_25wDKPwhNySv8pwgt35Wh6AJeMfJUc
+                    {testApiKey}
                   </div>
                   <button
-                    onClick={() => handleCopy('test_25wDKPwhNySv8pwgt35Wh6AJeMfJUc', 'test')}
+                    onClick={() => handleCopy(testApiKey, 'test')}
                     className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
                   >
                     <Copy className="w-4 h-4" />
                     {copiedKey === 'test' ? 'Copied!' : 'Copy'}
                   </button>
-                  <button className="px-4 py-2 bg-white border border-gray-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-2">
+                  <button
+                    onClick={() => setShowResetConfirm('test')}
+                    className="px-4 py-2 bg-white border border-gray-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-2"
+                  >
                     <RefreshCw className="w-4 h-4" />
                     Reset
                   </button>
@@ -156,6 +548,32 @@ export default function BrowsePage() {
         </>
       )}
 
+      {/* Reset API Key Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Reset API Key</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to reset your {showResetConfirm === 'live' ? 'live' : 'test'} API key? This action cannot be undone and will invalidate the current key.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowResetConfirm(null)}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleResetApiKey(showResetConfirm as 'live' | 'test')}
+                className="px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Access Tokens Tab */}
       {activeTab === 'access-tokens' && (
         <div>
@@ -166,7 +584,15 @@ export default function BrowsePage() {
                 Manage OAuth access tokens for third-party applications.
               </p>
             </div>
-            <button className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded flex items-center gap-2">
+            <button
+              onClick={() => {
+                setShowCreateToken(true);
+                setTokenFormData({ name: '', expiresIn: '365' });
+                setTokenError('');
+                setTokenSuccess('');
+              }}
+              className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded flex items-center gap-2"
+            >
               <Plus className="w-4 h-4" />
               Create token
             </button>
@@ -184,11 +610,8 @@ export default function BrowsePage() {
               </div>
             </div>
             <div className="divide-y divide-gray-200">
-              {[
-                { name: 'My App Token', created: '2024-01-15', expires: '2025-01-15', status: 'active' },
-                { name: 'Development Token', created: '2024-01-10', expires: '2024-12-31', status: 'active' },
-              ].map((token, index) => (
-                <div key={index} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+              {tokens.map((token) => (
+                <div key={token.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                   <div className="grid grid-cols-5 gap-4 items-center">
                     <div className="font-medium text-gray-900">{token.name}</div>
                     <div className="text-sm text-gray-600">{token.created}</div>
@@ -199,16 +622,171 @@ export default function BrowsePage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="text-green-600 hover:text-green-700 text-sm font-medium">
+                      <button
+                        onClick={() => setSelectedToken(token)}
+                        className="text-green-600 hover:text-green-700 text-sm font-medium"
+                      >
                         View
                       </button>
-                      <button className="text-red-600 hover:text-red-700 text-sm font-medium">
+                      <button
+                        onClick={() => handleRevokeToken(token.id)}
+                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                      >
                         Revoke
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Token Modal */}
+      {showCreateToken && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Create Access Token</h3>
+              <button
+                onClick={() => {
+                  setShowCreateToken(false);
+                  setTokenFormData({ name: '', expiresIn: '365' });
+                  setTokenError('');
+                  setTokenSuccess('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {tokenSuccess && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded">
+                {tokenSuccess}
+              </div>
+            )}
+            {tokenError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+                {tokenError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Token Name</label>
+                <input
+                  type="text"
+                  value={tokenFormData.name}
+                  onChange={(e) => setTokenFormData({ ...tokenFormData, name: e.target.value })}
+                  placeholder="Enter token name"
+                  className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Expires In (days)</label>
+                <select
+                  value={tokenFormData.expiresIn}
+                  onChange={(e) => setTokenFormData({ ...tokenFormData, expiresIn: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-green-500"
+                >
+                  <option value="30">30 days</option>
+                  <option value="90">90 days</option>
+                  <option value="180">180 days</option>
+                  <option value="365">365 days</option>
+                  <option value="730">2 years</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowCreateToken(false);
+                  setTokenFormData({ name: '', expiresIn: '365' });
+                  setTokenError('');
+                  setTokenSuccess('');
+                }}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateToken}
+                disabled={tokenLoading}
+                className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {tokenLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Token'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Token Modal */}
+      {selectedToken && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Token Details</h3>
+              <button
+                onClick={() => setSelectedToken(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <p className="text-gray-900">{selectedToken.name}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Token</label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded font-mono text-sm text-gray-900">
+                    {selectedToken.token}
+                  </div>
+                  <button
+                    onClick={() => handleCopy(selectedToken.token, 'token')}
+                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Created</label>
+                <p className="text-gray-900">{selectedToken.created}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Expires</label>
+                <p className="text-gray-900">{selectedToken.expires}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <span className="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700">
+                  {selectedToken.status}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setSelectedToken(null)}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -224,7 +802,16 @@ export default function BrowsePage() {
                 Configure webhooks to receive real-time notifications about payment events.
               </p>
             </div>
-            <button className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded flex items-center gap-2">
+            <button
+              onClick={() => {
+                setShowWebhookModal(true);
+                setEditingWebhook(null);
+                setWebhookFormData({ url: '', events: [] });
+                setWebhookError('');
+                setWebhookSuccess('');
+              }}
+              className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded flex items-center gap-2"
+            >
               <Plus className="w-4 h-4" />
               Add webhook
             </button>
@@ -241,14 +828,11 @@ export default function BrowsePage() {
               </div>
             </div>
             <div className="divide-y divide-gray-200">
-              {[
-                { url: 'https://api.example.com/webhook', events: 'payment.*', status: 'active' },
-                { url: 'https://webhook.example.com/instanvi', events: 'payment.paid', status: 'inactive' },
-              ].map((webhook, index) => (
-                <div key={index} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+              {webhooks.map((webhook) => (
+                <div key={webhook.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                   <div className="grid grid-cols-4 gap-4 items-center">
                     <div className="font-mono text-sm text-gray-900">{webhook.url}</div>
-                    <div className="text-sm text-gray-600">{webhook.events}</div>
+                    <div className="text-sm text-gray-600">{webhook.events.join(', ')}</div>
                     <div>
                       <span className={`px-2 py-1 text-xs font-medium rounded ${
                         webhook.status === 'active' 
@@ -259,16 +843,122 @@ export default function BrowsePage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="text-green-600 hover:text-green-700 text-sm font-medium">
+                      <button
+                        onClick={() => handleEditWebhook(webhook)}
+                        className="text-green-600 hover:text-green-700 text-sm font-medium"
+                      >
                         Edit
                       </button>
-                      <button className="text-red-600 hover:text-red-700 text-sm font-medium">
+                      <button
+                        onClick={() => handleDeleteWebhook(webhook.id)}
+                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                      >
                         Delete
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Webhook Modal */}
+      {showWebhookModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {editingWebhook ? 'Edit Webhook' : 'Add Webhook'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowWebhookModal(false);
+                  setEditingWebhook(null);
+                  setWebhookFormData({ url: '', events: [] });
+                  setWebhookError('');
+                  setWebhookSuccess('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {webhookSuccess && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded">
+                {webhookSuccess}
+              </div>
+            )}
+            {webhookError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+                {webhookError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Webhook URL</label>
+                <input
+                  type="url"
+                  value={webhookFormData.url}
+                  onChange={(e) => setWebhookFormData({ ...webhookFormData, url: e.target.value })}
+                  placeholder="https://api.example.com/webhook"
+                  className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Events</label>
+                <div className="space-y-2">
+                  {['payment.*', 'payment.paid', 'payment.failed', 'payment.refunded', 'chargeback.*'].map((event) => (
+                    <label key={event} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={webhookFormData.events.includes(event)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setWebhookFormData({ ...webhookFormData, events: [...webhookFormData.events, event] });
+                          } else {
+                            setWebhookFormData({ ...webhookFormData, events: webhookFormData.events.filter(e => e !== event) });
+                          }
+                        }}
+                        className="rounded border-gray-300 text-green-500 focus:ring-green-500"
+                      />
+                      <span className="text-sm text-gray-700">{event}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowWebhookModal(false);
+                  setEditingWebhook(null);
+                  setWebhookFormData({ url: '', events: [] });
+                  setWebhookError('');
+                  setWebhookSuccess('');
+                }}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={editingWebhook ? handleUpdateWebhook : handleCreateWebhook}
+                disabled={webhookLoading}
+                className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {webhookLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    {editingWebhook ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  editingWebhook ? 'Update Webhook' : 'Create Webhook'
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -290,17 +980,71 @@ export default function BrowsePage() {
                 <input
                   type="text"
                   placeholder="Search logs..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded text-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-green-500"
                 />
               </div>
-              <button className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-2">
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
-              <button className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Last 7 days
-              </button>
+              <div className="relative" ref={filterRef}>
+                <button
+                  onClick={() => {
+                    setShowFilterDropdown(!showFilterDropdown);
+                    setShowDateDropdown(false);
+                  }}
+                  className={`px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-2 ${
+                    selectedFilter ? 'border-green-500 bg-green-50' : ''
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  {selectedFilter || 'Filter'}
+                </button>
+                {showFilterDropdown && (
+                  <div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 shadow-lg z-50 min-w-[150px] rounded">
+                    {['All', 'success', 'error', 'method'].map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => {
+                          setSelectedFilter(filter === 'All' ? '' : filter);
+                          setShowFilterDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
+                      >
+                        {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="relative" ref={dateRef}>
+                <button
+                  onClick={() => {
+                    setShowDateDropdown(!showDateDropdown);
+                    setShowFilterDropdown(false);
+                  }}
+                  className={`px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-2 ${
+                    selectedDateFilter !== 'All' ? 'border-green-500 bg-green-50' : ''
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  {selectedDateFilter}
+                </button>
+                {showDateDropdown && (
+                  <div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 shadow-lg z-50 min-w-[150px] rounded">
+                    {['All', 'Last 7 days', 'Last 30 days', 'Last 90 days'].map((period) => (
+                      <button
+                        key={period}
+                        onClick={() => {
+                          setSelectedDateFilter(period);
+                          setShowDateDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
+                      >
+                        {period}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -317,18 +1061,15 @@ export default function BrowsePage() {
               </div>
             </div>
             <div className="divide-y divide-gray-200">
-              {[
-                { time: '2024-01-15 14:32:15', method: 'GET', endpoint: '/payments', status: 200, responseTime: '45ms' },
-                { time: '2024-01-15 14:31:42', method: 'POST', endpoint: '/payments', status: 201, responseTime: '120ms' },
-                { time: '2024-01-15 14:30:18', method: 'GET', endpoint: '/payments/tr_abc123', status: 200, responseTime: '32ms' },
-                { time: '2024-01-15 14:29:05', method: 'GET', endpoint: '/methods', status: 200, responseTime: '28ms' },
-              ].map((log, index) => (
-                <div key={index} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+              {getFilteredLogs().map((log) => (
+                <div key={log.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                   <div className="grid grid-cols-6 gap-4 items-center">
                     <div className="text-sm text-gray-600">{log.time}</div>
                     <div>
                       <span className={`px-2 py-1 text-xs font-medium rounded ${
-                        log.method === 'GET' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                        log.method === 'GET' ? 'bg-blue-100 text-blue-700' : 
+                        log.method === 'POST' ? 'bg-green-100 text-green-700' :
+                        'bg-yellow-100 text-yellow-700'
                       }`}>
                         {log.method}
                       </span>
@@ -345,13 +1086,89 @@ export default function BrowsePage() {
                     </div>
                     <div className="text-sm text-gray-600">{log.responseTime}</div>
                     <div>
-                      <button className="text-green-600 hover:text-green-700 text-sm font-medium">
+                      <button
+                        onClick={() => setSelectedLog(log)}
+                        className="text-green-600 hover:text-green-700 text-sm font-medium"
+                      >
                         View
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Log Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">API Log Details</h3>
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                <p className="text-gray-900">{selectedLog.time}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Method</label>
+                <span className={`px-2 py-1 text-xs font-medium rounded ${
+                  selectedLog.method === 'GET' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  {selectedLog.method}
+                </span>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Endpoint</label>
+                <p className="text-gray-900 font-mono text-sm">{selectedLog.endpoint}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <span className={`px-2 py-1 text-xs font-medium rounded ${
+                  selectedLog.status >= 200 && selectedLog.status < 300 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {selectedLog.status}
+                </span>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Response Time</label>
+                <p className="text-gray-900">{selectedLog.responseTime}</p>
+              </div>
+              {selectedLog.requestBody && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Request Body</label>
+                  <pre className="bg-gray-50 border border-gray-200 rounded p-3 text-xs text-gray-900 overflow-x-auto">
+                    {JSON.stringify(selectedLog.requestBody, null, 2)}
+                  </pre>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Response Body</label>
+                <pre className="bg-gray-50 border border-gray-200 rounded p-3 text-xs text-gray-900 overflow-x-auto">
+                  {JSON.stringify(selectedLog.responseBody, null, 2)}
+                </pre>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -367,7 +1184,16 @@ export default function BrowsePage() {
                 Manage OAuth applications that have access to your account.
               </p>
             </div>
-            <button className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded flex items-center gap-2">
+            <button
+              onClick={() => {
+                setShowCreateApp(true);
+                setEditingApp(null);
+                setAppFormData({ name: '', description: '', redirectUri: '' });
+                setAppError('');
+                setAppSuccess('');
+              }}
+              className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded flex items-center gap-2"
+            >
               <Plus className="w-4 h-4" />
               Create app
             </button>
@@ -375,23 +1201,8 @@ export default function BrowsePage() {
 
           {/* Apps List */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { 
-                name: 'My E-commerce App', 
-                description: 'Main application for processing payments',
-                status: 'active',
-                created: '2024-01-10',
-                redirectUri: 'https://app.example.com/callback'
-              },
-              { 
-                name: 'Development App', 
-                description: 'Testing and development environment',
-                status: 'active',
-                created: '2024-01-05',
-                redirectUri: 'https://dev.example.com/callback'
-              },
-            ].map((app, index) => (
-              <div key={index} className="bg-white border border-gray-200  p-6 hover:border-green-300 transition-colors">
+            {apps.map((app) => (
+              <div key={app.id} className="bg-white border border-gray-200  p-6 hover:border-green-300 transition-colors">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">{app.name}</h3>
@@ -413,16 +1224,245 @@ export default function BrowsePage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
-                  <button className="flex-1 px-3 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded">
+                  <button
+                    onClick={() => handleEditApp(app)}
+                    className="flex-1 px-3 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+                  >
                     Edit
                   </button>
-                  <button className="flex-1 px-3 py-2 bg-white border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors rounded flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => handleDeleteApp(app.id)}
+                    className="flex-1 px-3 py-2 bg-white border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors rounded flex items-center justify-center gap-2"
+                  >
                     <Trash2 className="w-4 h-4" />
                     Delete
                   </button>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit App Modal */}
+      {showCreateApp && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {editingApp ? 'Edit App' : 'Create App'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCreateApp(false);
+                  setEditingApp(null);
+                  setAppFormData({ name: '', description: '', redirectUri: '' });
+                  setAppError('');
+                  setAppSuccess('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {appSuccess && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded">
+                {appSuccess}
+              </div>
+            )}
+            {appError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+                {appError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">App Name</label>
+                <input
+                  type="text"
+                  value={appFormData.name}
+                  onChange={(e) => setAppFormData({ ...appFormData, name: e.target.value })}
+                  placeholder="Enter app name"
+                  className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={appFormData.description}
+                  onChange={(e) => setAppFormData({ ...appFormData, description: e.target.value })}
+                  placeholder="Enter app description"
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Redirect URI</label>
+                <input
+                  type="url"
+                  value={appFormData.redirectUri}
+                  onChange={(e) => setAppFormData({ ...appFormData, redirectUri: e.target.value })}
+                  placeholder="https://app.example.com/callback"
+                  className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-green-500"
+                />
+              </div>
+              {editingApp && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-4 space-y-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded font-mono text-sm text-gray-900">
+                        {editingApp.clientId}
+                      </div>
+                      <button
+                        onClick={() => handleCopy(editingApp.clientId, 'client-id')}
+                        className="p-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Client Secret</label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded font-mono text-sm text-gray-900">
+                        {editingApp.clientSecret}
+                      </div>
+                      <button
+                        onClick={() => handleCopy(editingApp.clientSecret, 'client-secret')}
+                        className="p-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowCreateApp(false);
+                  setEditingApp(null);
+                  setAppFormData({ name: '', description: '', redirectUri: '' });
+                  setAppError('');
+                  setAppSuccess('');
+                }}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={editingApp ? handleUpdateApp : handleCreateApp}
+                disabled={appLoading}
+                className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {appLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    {editingApp ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  editingApp ? 'Update App' : 'Create App'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Revoke Token Confirmation Modal */}
+      {showRevokeTokenConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Revoke Token</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to revoke this token? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowRevokeTokenConfirm(null)}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRevokeToken}
+                className="px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
+              >
+                Revoke
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Webhook Confirmation Modal */}
+      {showDeleteWebhookConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete Webhook</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this webhook?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteWebhookConfirm(null)}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteWebhook}
+                className="px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete App Confirmation Modal */}
+      {showDeleteAppConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete App</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this app? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteAppConfirm(null)}
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteApp}
+                className="px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

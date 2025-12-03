@@ -1,30 +1,57 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
+import { useOrganization } from '@/contexts/OrganizationContext';
 
 export default function ConfirmDetailsPage() {
   const router = useRouter();
+  const { setOrganization } = useOrganization();
   const [formData, setFormData] = useState({
     businessName: '',
     legalForm: '',
-    kvkNumber: '',
+    registrationNumber: '',
     address: '',
-    postalCode: '',
+    region: '',
     city: '',
   });
   const [agreed, setAgreed] = useState(false);
   const [showLegalFormDropdown, setShowLegalFormDropdown] = useState(false);
+  const [showRegionDropdown, setShowRegionDropdown] = useState(false);
 
   const legalForms = [
-    'BV (Besloten Vennootschap)',
-    'NV (Naamloze Vennootschap)',
-    'VOF (Vennootschap Onder Firma)',
-    'Eenmanszaak',
-    'Stichting',
-    'Vereniging',
+    'Sole Proprietorship',
+    'SARL (Limited Liability Company)',
+    'SA (Public Limited Company)',
+    'SNC (General Partnership)',
+    'SCS (Limited Partnership)',
+    'SCA (Partnership Limited by Shares)',
+    'Economic Interest Grouping (GIE)',
+    'Association',
   ];
+
+  const cameroonRegions = [
+    'Adamaoua',
+    'Centre',
+    'Est',
+    'Extrême-Nord',
+    'Littoral',
+    'Nord',
+    'Nord-Ouest',
+    'Ouest',
+    'Sud',
+    'Sud-Ouest',
+  ];
+
+  // Load searched business name on mount
+  useEffect(() => {
+    const searchedName = localStorage.getItem('searchedBusinessName');
+    if (searchedName) {
+      setFormData(prev => ({ ...prev, businessName: searchedName }));
+      localStorage.removeItem('searchedBusinessName');
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -34,9 +61,31 @@ export default function ConfirmDetailsPage() {
   };
 
   const handleContinue = () => {
-    if (agreed && formData.businessName && formData.legalForm && formData.kvkNumber) {
-      // Store business details
-      localStorage.setItem('businessDetails', JSON.stringify(formData));
+    if (agreed && formData.businessName && formData.legalForm && formData.registrationNumber) {
+      // Get country from previous step
+      const selectedCountry = localStorage.getItem('selectedCountry') || 'CM';
+      const countryName = selectedCountry === 'CM' ? 'Cameroon' : 'Other';
+      
+      // Store business details with organization info
+      const organizationData = {
+        ...formData,
+        country: selectedCountry,
+        countryName: countryName,
+      };
+      
+      localStorage.setItem('businessDetails', JSON.stringify(organizationData));
+      const orgData = {
+        name: formData.businessName,
+        legalForm: formData.legalForm,
+        registrationNumber: formData.registrationNumber,
+        address: formData.address,
+        region: formData.region,
+        city: formData.city,
+        country: selectedCountry,
+        countryName: countryName,
+      };
+      localStorage.setItem('organization', JSON.stringify(orgData));
+      setOrganization(orgData);
       router.push('/');
     }
   };
@@ -73,7 +122,7 @@ export default function ConfirmDetailsPage() {
           {/* Business Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Business name
+              Business name *
             </label>
             <input
               type="text"
@@ -88,7 +137,7 @@ export default function ConfirmDetailsPage() {
           {/* Legal Form */}
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Legal form
+              Legal form *
             </label>
             <button
               type="button"
@@ -119,17 +168,17 @@ export default function ConfirmDetailsPage() {
             )}
           </div>
 
-          {/* KvK Number */}
+          {/* Registration Number (RC) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              KvK-number
+              Registration Number (RC) *
             </label>
             <input
               type="text"
-              name="kvkNumber"
-              value={formData.kvkNumber}
+              name="registrationNumber"
+              value={formData.registrationNumber}
               onChange={handleChange}
-              placeholder="E.g. 12345678"
+              placeholder="RC/DLA/2024/A/12345"
               className="w-full px-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500"
             />
           </div>
@@ -149,20 +198,42 @@ export default function ConfirmDetailsPage() {
             />
           </div>
 
-          {/* Postal Code and City */}
+          {/* Region and City */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Postal code
+                Region / Province
               </label>
-              <input
-                type="text"
-                name="postalCode"
-                value={formData.postalCode}
-                onChange={handleChange}
-                placeholder="1234 AB"
-                className="w-full px-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500"
-              />
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRegionDropdown(!showRegionDropdown);
+                  setShowLegalFormDropdown(false);
+                }}
+                className="w-full px-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500 flex items-center justify-between text-left"
+              >
+                <span className={formData.region ? 'text-gray-900' : 'text-gray-400'}>
+                  {formData.region || 'Select region'}
+                </span>
+                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showRegionDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              {showRegionDropdown && (
+                <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 max-h-60 overflow-y-auto">
+                  {cameroonRegions.map((region) => (
+                    <button
+                      key={region}
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, region });
+                        setShowRegionDropdown(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      {region}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -200,7 +271,7 @@ export default function ConfirmDetailsPage() {
           {/* Continue Button */}
           <button
             onClick={handleContinue}
-            disabled={!agreed || !formData.businessName || !formData.legalForm || !formData.kvkNumber}
+            disabled={!agreed || !formData.businessName || !formData.legalForm || !formData.registrationNumber}
             className="w-full py-3 bg-green-500 text-white font-semibold  hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continue

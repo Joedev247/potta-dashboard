@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingUp, CreditCard, Check } from 'lucide-react';
+import { TrendingUp, Smartphone, Check } from 'lucide-react';
 
 interface PaymentMethodsProps {
   onNext: () => void;
@@ -9,12 +9,8 @@ interface PaymentMethodsProps {
 }
 
 const paymentMethods = [
-  { id: 'credit-card', name: 'Credit card', icon: CreditCard, description: 'Visa, Mastercard, American Express' },
-  { id: 'ideal', name: 'iDEAL', icon: CreditCard, description: 'Popular in Netherlands' },
-  { id: 'paypal', name: 'PayPal', icon: CreditCard, description: 'PayPal account payments' },
-  { id: 'apple-pay', name: 'Apple Pay', icon: CreditCard, description: 'Apple Pay integration' },
-  { id: 'google-pay', name: 'Google Pay', icon: CreditCard, description: 'Google Pay integration' },
-  { id: 'bank-transfer', name: 'Bank transfer', icon: CreditCard, description: 'Direct bank transfers' },
+  { id: 'mtn-momo', name: 'MTN Mobile Money', icon: Smartphone, description: 'Mobile payments via MTN MoMo in Cameroon' },
+  { id: 'orange-money', name: 'Orange Money', icon: Smartphone, description: 'Mobile payments via Orange Money in Cameroon' },
 ];
 
 export default function PaymentMethods({ onNext, onPrevious }: PaymentMethodsProps) {
@@ -43,14 +39,14 @@ export default function PaymentMethods({ onNext, onPrevious }: PaymentMethodsPro
             <TrendingUp className="w-6 h-6 text-green-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Payment methods</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Payment Methods</h1>
             <p className="text-gray-600 mt-1">Select the payment methods you want to accept</p>
           </div>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {paymentMethods.map((method) => {
             const Icon = method.icon;
             const isSelected = selectedMethods.includes(method.id);

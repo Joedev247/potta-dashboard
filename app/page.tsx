@@ -2,9 +2,15 @@
 
 import { Users, FileText, TrendingUp, Building, Sparkles, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function GetStartedPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  
+  const userName = user?.firstName 
+    ? `${user.firstName.toUpperCase()}${user.lastName ? ' ' + user.lastName.toUpperCase() : ''}` 
+    : user?.username?.toUpperCase() || 'USER';
   return (
     <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Welcome Section */}
@@ -12,7 +18,7 @@ export default function GetStartedPage() {
         <div className="flex items-center gap-3 mb-4">
          
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-1">Welcome, JOSEPH!</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-1">Welcome, {userName}!</h1>
             <div className="flex items-center gap-2">
               <div className="h-1 w-12 bg-gradient-to-r from-green-500 to-green-400 rounded-full"></div>
               <h2 className="text-2xl font-semibold text-gray-700">Discover</h2>
@@ -33,8 +39,8 @@ export default function GetStartedPage() {
               className="w-full h-full object-cover  transition-transform duration-300 group-hover:scale-110"
             />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">instanvi Business Account</h3>
-          <p className="text-sm text-gray-600 leading-relaxed">Speed up your cash flow, grow your business.</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">Business Account instanvi</h3>
+          <p className="text-sm text-gray-600 leading-relaxed">Accelerate your cash flow, grow your business.</p>
         </div>
 
         {/* Payment Links Card */}
@@ -47,8 +53,8 @@ export default function GetStartedPage() {
               className="w-full h-full object-cover  transition-transform duration-300 group-hover:scale-110"
             />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">Payment links</h3>
-          <p className="text-sm text-gray-600 leading-relaxed">Get paid instantly. Sell anywhere.</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">Payment Links</h3>
+          <p className="text-sm text-gray-600 leading-relaxed">Receive payments instantly. Sell anywhere in Cameroon.</p>
         </div>
 
         {/* Online Payments Card */}
@@ -61,8 +67,8 @@ export default function GetStartedPage() {
               className="w-full h-full object-cover  transition-transform duration-300 group-hover:scale-110"
             />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">Online payments</h3>
-          <p className="text-sm text-gray-600 leading-relaxed">Link instanvi payments to your website or platform.</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">Online Payments</h3>
+          <p className="text-sm text-gray-600 leading-relaxed">Integrate instanvi payments into your website or platform.</p>
         </div>
 
         {/* In Person Payments Card */}
@@ -75,8 +81,8 @@ export default function GetStartedPage() {
               className="w-full h-full object-cover  transition-transform duration-300 group-hover:scale-110"
             />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">In person payments</h3>
-          <p className="text-sm text-gray-600 leading-relaxed">Physical payments at your store or on the go.</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">In Person Payments</h3>
+          <p className="text-sm text-gray-600 leading-relaxed">Physical payments in your store or on the go.</p>
         </div>
       </div>
 
@@ -88,9 +94,9 @@ export default function GetStartedPage() {
               <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900">Onboarding progress</h3>
+              <h3 className="text-2xl font-bold text-gray-900">Onboarding Progress</h3>
             </div>
-            <p className="text-sm text-gray-600 ml-12">Finish your setup in order to get access to more instanvi products.</p>
+            <p className="text-sm text-gray-600 ml-12">Complete your setup to access more instanvi products.</p>
           </div>
           <button 
             onClick={() => router.push('/onboarding')}
@@ -107,7 +113,7 @@ export default function GetStartedPage() {
               <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center group-hover:from-green-100 group-hover:to-green-50 transition-all">
                 <Users className="w-5 h-5 text-blue-600 group-hover:text-green-600 transition-colors" />
               </div>
-              <span className="text-gray-900 font-semibold">Stakeholder information</span>
+              <span className="text-gray-900 font-semibold">Stakeholder Information</span>
             </div>
             <button className="px-4 bg-gray-200 text-gray-700 text-sm font-semibold hover:bg-gradient-to-r hover:from-green-500 hover:to-green-600 hover:text-white transition-all rounded-full">
               To do
@@ -119,7 +125,7 @@ export default function GetStartedPage() {
             <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center group-hover:from-green-100 group-hover:to-green-50 transition-all">
             <FileText className="w-5 h-5 text-purple-600 group-hover:text-green-600 transition-colors" />
               </div>
-              <span className="text-gray-900 font-semibold">Business activity</span>
+              <span className="text-gray-900 font-semibold">Business Activity</span>
             </div>
             <button className="px-4 bg-gray-200 text-gray-700 text-sm font-semibold hover:bg-gradient-to-r hover:from-green-500 hover:to-green-600 hover:text-white transition-all rounded-full">
               To do
@@ -131,7 +137,7 @@ export default function GetStartedPage() {
             <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center group-hover:from-green-100 group-hover:to-green-50 transition-all">
                 <TrendingUp className="w-5 h-5 text-green-600 group-hover:text-green-700 transition-colors" />
               </div>
-              <span className="text-gray-900 font-semibold">Payment methods</span>
+              <span className="text-gray-900 font-semibold">Payment Methods</span>
             </div>
             <button className="px-4 bg-gray-200 text-gray-700 text-sm font-semibold hover:bg-gradient-to-r hover:from-green-500 hover:to-green-600 hover:text-white transition-all rounded-full">
               To do
@@ -143,19 +149,7 @@ export default function GetStartedPage() {
             <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center group-hover:from-green-100 group-hover:to-green-50 transition-all">
                 <FileText className="w-5 h-5 text-orange-600 group-hover:text-green-600 transition-colors" />
               </div>
-              <span className="text-gray-900 font-semibold">ID document</span>
-            </div>
-            <button className="px-4 bg-gray-200 text-gray-700 text-sm font-semibold hover:bg-gradient-to-r hover:from-green-500 hover:to-green-600 hover:text-white transition-all rounded-full">
-              To do
-            </button>
-          </div>
-
-          <div className="group flex items-center justify-between p-3 bg-white border-2 border-gray-200 hover:border-green-400 transition-all duration-300 ">
-            <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center group-hover:from-green-100 group-hover:to-green-50 transition-all">
-                <Building className="w-5 h-5 text-red-600 group-hover:text-green-600 transition-colors" />
-              </div>
-              <span className="text-gray-900 font-semibold">Link a bank account</span>
+              <span className="text-gray-900 font-semibold">ID Document</span>
             </div>
             <button className="px-4 bg-gray-200 text-gray-700 text-sm font-semibold hover:bg-gradient-to-r hover:from-green-500 hover:to-green-600 hover:text-white transition-all rounded-full">
               To do

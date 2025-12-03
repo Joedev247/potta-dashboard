@@ -17,6 +17,7 @@ import {
   Plus,
   ChevronDown,
 } from 'lucide-react';
+import { useOrganization } from '@/contexts/OrganizationContext';
 
 const navigationItems = [
   { name: 'Get started', href: '/', icon: Home },
@@ -30,8 +31,12 @@ const navigationItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { organization } = useOrganization();
   const [showOrgMenu, setShowOrgMenu] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
+
+  const orgInitials = organization?.name ? organization.name.substring(0, 2).toUpperCase() : 'CO';
+  const orgName = organization?.name || 'Codev';
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -59,10 +64,10 @@ export default function Sidebar() {
             className="flex items-center gap-3 cursor-pointer group w-full hover:bg-green-100/50  p-2 -m-2 transition-colors"
           >
             <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm font-bold">CO</span>
+              <span className="text-white text-sm font-bold">{orgInitials}</span>
             </div>
             <div className="flex-1 text-left">
-              <div className="font-bold text-gray-900 text-base">Codev</div>
+              <div className="font-bold text-gray-900 text-base">{orgName}</div>
               <div className="text-xs text-gray-500">Organization</div>
             </div>
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showOrgMenu ? 'rotate-180' : ''}`} />
@@ -74,10 +79,10 @@ export default function Sidebar() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">CO</span>
+                      <span className="text-white text-xs font-bold">{orgInitials}</span>
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900 text-sm">Codev</div>
+                      <div className="font-semibold text-gray-900 text-sm">{orgName}</div>
                       <div className="text-xs text-gray-500">Organization</div>
                     </div>
                   </div>

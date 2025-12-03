@@ -1,7 +1,7 @@
 'use client';
 
-import { Search, Plus, ExternalLink, ArrowLeft, ChevronDown, Calendar, X, RotateCcw, ChevronUp, ArrowRight, AlertCircle, Package, RefreshCw, Eye } from 'lucide-react';
-import { useState } from 'react';
+import { Search, Plus, ExternalLink, ArrowLeft, ChevronDown, Calendar, X, RotateCcw, ChevronUp, ArrowRight, AlertCircle, Package, RefreshCw, Eye, CheckCircle2, Copy } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function PaymentsPage() {
   const [activeTab, setActiveTab] = useState('payments');
@@ -9,7 +9,32 @@ export default function PaymentsPage() {
   const [showExtraOptions, setShowExtraOptions] = useState(true);
   const [reusable, setReusable] = useState(false);
   const [savXAFl, setSavXAFl] = useState(false);
-  const [paymentMethods, setPaymentMethods] = useState(['IDEAL']);
+  const [paymentMethods, setPaymentMethods] = useState(['MTN Mobile Money', 'Orange Money']);
+  const [showPaymentMethodsDropdown, setShowPaymentMethodsDropdown] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createdLink, setCreatedLink] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    type: 'Fixed',
+    currency: 'XAF',
+    amount: '',
+    description: '',
+    expiryDate: '',
+    redirectUrl: '',
+  });
+  
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAmountFilter, setShowAmountFilter] = useState(false);
+  const [showPeriodFilter, setShowPeriodFilter] = useState(false);
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
+  const [selectedAmount, setSelectedAmount] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   const tabs = [
     { id: 'payments', label: 'Payments' },
@@ -17,6 +42,178 @@ export default function PaymentsPage() {
     { id: 'chargebacks', label: 'Chargebacks' },
     { id: 'orders', label: 'Orders' },
   ];
+
+  // Mock payment data
+  const mockPayments = [
+    { id: 'tr_pay001', paymentId: 'tr_xyz789', amount: 'XAF 150.00', status: 'paid', date: '2024-01-15', customer: 'John Doe', paymentMethod: 'MTN MoMo' },
+    { id: 'tr_pay002', paymentId: 'tr_abc456', amount: 'XAF 250.00', status: 'pending', date: '2024-01-14', customer: 'Jane Smith', paymentMethod: 'Orange Money' },
+    { id: 'tr_pay003', paymentId: 'tr_def789', amount: 'XAF 75.00', status: 'paid', date: '2024-01-13', customer: 'Bob Johnson', paymentMethod: 'MTN MoMo' },
+    { id: 'tr_pay004', paymentId: 'tr_ghi012', amount: 'XAF 300.00', status: 'failed', date: '2024-01-12', customer: 'Alice Brown', paymentMethod: 'Orange Money' },
+  ];
+
+  const mockRefunds = [
+    { id: 're_abc123', paymentId: 'tr_xyz789', amount: 'XAF 25.00', status: 'completed', date: '2024-01-15', currency: 'XAF' },
+    { id: 're_def456', paymentId: 'tr_uvw012', amount: 'XAF 50.00', status: 'pending', date: '2024-01-14', currency: 'XAF' },
+    { id: 're_ghi789', paymentId: 'tr_rst345', amount: 'XAF 100.00', status: 'processing', date: '2024-01-13', currency: 'XAF' },
+  ];
+
+  const mockChargebacks = [
+    { id: 'ch_cb123', paymentId: 'tr_xyz789', amount: 'XAF 75.00', status: 'open', date: '2024-01-15', currency: 'XAF' },
+    { id: 'ch_cb456', paymentId: 'tr_uvw012', amount: 'XAF 120.00', status: 'won', date: '2024-01-10', currency: 'XAF' },
+    { id: 'ch_cb789', paymentId: 'tr_rst345', amount: 'XAF 200.00', status: 'lost', date: '2024-01-05', currency: 'XAF' },
+  ];
+
+  const mockOrders = [
+    { id: 'ord_001', customer: 'John Doe', amount: 'XAF 149.99', items: 3, status: 'paid', date: '2024-01-15', email: 'john@example.com' },
+    { id: 'ord_002', customer: 'Jane Smith', amount: 'XAF 89.50', items: 2, status: 'pending', date: '2024-01-14', email: 'jane@example.com' },
+    { id: 'ord_003', customer: 'Bob Johnson', amount: 'XAF 299.00', items: 1, status: 'shipped', date: '2024-01-13', email: 'bob@example.com' },
+    { id: 'ord_004', customer: 'Alice Brown', amount: 'XAF 45.00', items: 5, status: 'cancelled', date: '2024-01-12', email: 'alice@example.com' },
+  ];
+
+  // Helper function to extract numeric amount from string
+  const extractAmount = (amountStr: string): number => {
+    const match = amountStr.match(/[\d.]+/);
+    return match ? parseFloat(match[0]) : 0;
+  };
+
+  // Helper function to check if amount matches filter
+  const matchesAmountFilter = (amountStr: string): boolean => {
+    if (!selectedAmount || selectedAmount === 'All') return true;
+    const amount = extractAmount(amountStr);
+    
+    switch (selectedAmount) {
+      case '0-100':
+        return amount >= 0 && amount <= 100;
+      case '100-500':
+        return amount > 100 && amount <= 500;
+      case '500-1000':
+        return amount > 500 && amount <= 1000;
+      case '1000+':
+        return amount > 1000;
+      default:
+        return true;
+    }
+  };
+
+  // Helper function to check if date matches period filter
+  const matchesPeriodFilter = (dateStr: string): boolean => {
+    if (!selectedPeriod || selectedPeriod === 'All') return true;
+    
+    const date = new Date(dateStr);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (selectedPeriod) {
+      case 'Today':
+        return date.toDateString() === today.toDateString();
+      case 'This Week': {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return date >= weekAgo;
+      }
+      case 'This Month': {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        return date >= monthStart;
+      }
+      case 'Last 3 Months': {
+        const threeMonthsAgo = new Date(now);
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+        return date >= threeMonthsAgo;
+      }
+      default:
+        return true;
+    }
+  };
+
+  // Available payment methods for Cameroon
+  const availablePaymentMethods = ['MTN Mobile Money', 'Orange Money'];
+  
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowAmountFilter(false);
+      setShowPeriodFilter(false);
+      setShowStatusFilter(false);
+      setShowPaymentMethodsDropdown(false);
+      setShowCalendar(false);
+    };
+    
+    if (showAmountFilter || showPeriodFilter || showStatusFilter || showPaymentMethodsDropdown || showCalendar) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showAmountFilter, showPeriodFilter, showStatusFilter, showPaymentMethodsDropdown, showCalendar]);
+
+  // Format date for display
+  const formatDate = (date: Date): string => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  // Handle date selection from calendar
+  const handleDateSelect = (date: Date) => {
+    setFormData({ ...formData, expiryDate: formatDate(date) });
+    setShowCalendar(false);
+  };
+
+  // Handle create link submission
+  const handleCreateLink = async () => {
+    setError(null);
+    setCreatedLink(null);
+
+    // Validation
+    if (formData.type !== 'Variable' && !formData.amount) {
+      setError('Amount is required for fixed and subscription payments');
+      return;
+    }
+
+    if (paymentMethods.length === 0) {
+      setError('Please select at least one payment method');
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Generate a mock payment link
+      const linkId = `pl_${Date.now()}`;
+      const paymentLink = `https://pay.codev.cm/${linkId}`;
+      
+      setCreatedLink(paymentLink);
+      
+      // Reset form after successful creation
+      setTimeout(() => {
+        setFormData({
+          type: 'Fixed',
+          currency: 'XAF',
+          amount: '',
+          description: '',
+          expiryDate: '',
+          redirectUrl: '',
+        });
+        setPaymentMethods(['MTN Mobile Money', 'Orange Money']);
+        setReusable(false);
+        setSavXAFl(false);
+        setCreatedLink(null);
+        setShowCreateLink(false);
+      }, 3000);
+    } catch (err) {
+      setError('Failed to create payment link. Please try again.');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // Copy link to clipboard
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    // You could add a toast notification here
+  };
 
   return (
     <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -58,18 +255,76 @@ export default function PaymentsPage() {
               <input
                 type="text"
                 placeholder="Search here"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 pr-4 py-1 bg-white border-2 border-gray-200 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-green-500  w-64 transition-all"
               />
             </div>
-            <button className="px-4 py-1 bg-white border-2 border-gray-200 text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all font-medium">
-              Amount
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setShowStatusFilter(!showStatusFilter);
+                  setShowAmountFilter(false);
+                  setShowPeriodFilter(false);
+                }}
+                className={`px-4 py-1 bg-white border-2 ${selectedStatus ? 'border-green-500 bg-green-50' : 'border-gray-200'} text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all font-medium flex items-center gap-2`}
+              >
+                Status {selectedStatus && `(${selectedStatus})`}
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              {showStatusFilter && (
+                <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 shadow-lg z-10 min-w-[150px]">
+                  {activeTab === 'payments' && ['All', 'paid', 'pending', 'failed'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setSelectedStatus(status === 'All' ? '' : status);
+                        setShowStatusFilter(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </button>
+                  ))}
+                  {activeTab === 'refunds' && ['All', 'completed', 'pending', 'processing'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setSelectedStatus(status === 'All' ? '' : status);
+                        setShowStatusFilter(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
-            <button className="px-4 py-1 bg-white border-2 border-gray-200 text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all font-medium">
-              Period
+                  ))}
+                  {activeTab === 'chargebacks' && ['All', 'open', 'won', 'lost'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setSelectedStatus(status === 'All' ? '' : status);
+                        setShowStatusFilter(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
-            <button className="px-4 py-1 bg-white border-2 border-gray-200 text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all font-medium">
-              Status
+                  ))}
+                  {activeTab === 'orders' && ['All', 'paid', 'pending', 'shipped', 'cancelled'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setSelectedStatus(status === 'All' ? '' : status);
+                        setShowStatusFilter(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <button 
             onClick={() => setShowCreateLink(true)}
@@ -87,7 +342,23 @@ export default function PaymentsPage() {
           {/* Header */}
           <div className="mb-8">
             <button 
-              onClick={() => setShowCreateLink(false)}
+              onClick={() => {
+                setShowCreateLink(false);
+                setError(null);
+                setCreatedLink(null);
+                // Reset form when closing
+                setFormData({
+                  type: 'Fixed',
+                  currency: 'XAF',
+                  amount: '',
+                  description: '',
+                  expiryDate: '',
+                  redirectUrl: '',
+                });
+                setPaymentMethods(['MTN Mobile Money', 'Orange Money']);
+                setReusable(false);
+                setSavXAFl(false);
+              }}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -113,8 +384,14 @@ export default function PaymentsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
               <div className="relative">
-                <select className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10">
-                  <option>Fixed</option>
+                <select 
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10"
+                >
+                  <option value="Fixed">Fixed Amount</option>
+                  <option value="Variable">Variable Amount</option>
+                  <option value="Subscription">Subscription</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -122,8 +399,13 @@ export default function PaymentsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
               <div className="relative">
-                <select className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10">
-                  <option>XAF</option>
+                <select 
+                  value={formData.currency}
+                  onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                  className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10"
+                >
+                  <option value="XAF">XAF (Central African CFA Franc)</option>
+                  <option value="USD">USD (US Dollar)</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -132,7 +414,9 @@ export default function PaymentsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
               <input
                 type="text"
-                value="665656"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                placeholder={formData.type === 'Variable' ? 'Leave empty for variable' : 'Enter amount'}
                 className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
               />
             </div>
@@ -143,7 +427,9 @@ export default function PaymentsPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
             <input
               type="text"
-              placeholder=""
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter payment description"
               className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
             />
           </div>
@@ -154,10 +440,89 @@ export default function PaymentsPage() {
             <div className="relative">
               <input
                 type="text"
+                value={formData.expiryDate}
+                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
                 placeholder="DD-MM-YYYY"
-                className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500 pr-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCalendar(!showCalendar);
+                }}
+                className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500 pr-10 cursor-pointer"
+                readOnly
               />
-              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCalendar(!showCalendar);
+                }}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <Calendar className="w-4 h-4" />
+              </button>
+              {showCalendar && (
+                <div 
+                  className="absolute top-full left-0 mt-2 bg-white border border-gray-200 shadow-lg z-50 rounded-lg p-4"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Su</div>
+                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Mo</div>
+                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Tu</div>
+                    <div className="text-xs font-semibold text-gray-600 text-center py-1">We</div>
+                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Th</div>
+                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Fr</div>
+                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Sa</div>
+                  </div>
+                  {(() => {
+                    const today = new Date();
+                    const currentMonth = today.getMonth();
+                    const currentYear = today.getFullYear();
+                    const firstDay = new Date(currentYear, currentMonth, 1);
+                    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+                    const daysInMonth = lastDay.getDate();
+                    const startingDayOfWeek = firstDay.getDay();
+                    const days = [];
+                    
+                    // Add empty cells for days before the first day of the month
+                    for (let i = 0; i < startingDayOfWeek; i++) {
+                      days.push(null);
+                    }
+                    
+                    // Add all days of the month
+                    for (let day = 1; day <= daysInMonth; day++) {
+                      days.push(day);
+                    }
+                    
+                    return (
+                      <div className="grid grid-cols-7 gap-1">
+                        {days.map((day, index) => {
+                          if (day === null) {
+                            return <div key={index} className="w-8 h-8"></div>;
+                          }
+                          const date = new Date(currentYear, currentMonth, day);
+                          const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+                          return (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => handleDateSelect(date)}
+                              disabled={isPast}
+                              className={`w-8 h-8 text-sm rounded hover:bg-green-100 transition-colors ${
+                                isPast
+                                  ? 'text-gray-300 cursor-not-allowed'
+                                  : 'text-gray-900 hover:text-green-700'
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           </div>
 
@@ -166,7 +531,9 @@ export default function PaymentsPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">Redirect URL (optional)</label>
             <input
               type="text"
-              placeholder=""
+              value={formData.redirectUrl}
+              onChange={(e) => setFormData({ ...formData, redirectUrl: e.target.value })}
+              placeholder="https://yourwebsite.com/success"
               className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
             />
           </div>
@@ -222,36 +589,150 @@ export default function PaymentsPage() {
           {/* Payment Methods */}
           <div className="mb-8">
             <label className="block text-sm font-medium text-gray-700 mb-2">Payment methods</label>
-            <div className="border border-gray-200 rounded p-3 bg-white min-h-[48px] flex items-center gap-2 flex-wrap">
-              {paymentMethods.map((method, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded text-sm text-gray-900"
+            <div className="relative">
+              <div className="border border-gray-200 rounded p-3 bg-white min-h-[48px] flex items-center gap-2 flex-wrap">
+                {paymentMethods.length > 0 ? (
+                  paymentMethods.map((method, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded text-sm text-gray-900"
+                    >
+                      <span>{method}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPaymentMethods(paymentMethods.filter((_, i) => i !== index));
+                        }}
+                        className="hover:text-red-600 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-400">No payment methods selected</span>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPaymentMethodsDropdown(!showPaymentMethodsDropdown);
+                  }}
+                  className="ml-auto flex items-center gap-2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <span>{method}</span>
-                  <button
-                    onClick={() => setPaymentMethods(paymentMethods.filter((_, i) => i !== index))}
-                    className="hover:text-red-600 transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
+              {showPaymentMethodsDropdown && (
+                <div 
+                  className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 shadow-lg z-50 rounded-lg overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {availablePaymentMethods
+                    .filter(method => !paymentMethods.includes(method))
+                    .map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => {
+                          setPaymentMethods([...paymentMethods, method]);
+                          setShowPaymentMethodsDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  {availablePaymentMethods.filter(method => !paymentMethods.includes(method)).length === 0 && (
+                    <div className="px-4 py-2 text-sm text-gray-500">All payment methods are selected</div>
+                  )}
                 </div>
-              ))}
-              <button className="flex items-center gap-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <ChevronDown className="w-4 h-4" />
-              </button>
+              )}
             </div>
             <p className="mt-2 text-xs text-gray-500">By default, all methods are offered in your checkout.</p>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-400 hover:text-red-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {createdLink && (
+            <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start gap-3 mb-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-green-900 mb-1">Payment link created successfully!</h3>
+                  <p className="text-sm text-green-700">Your payment link has been generated.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white border border-green-200 rounded p-3">
+                <input
+                  type="text"
+                  value={createdLink}
+                  readOnly
+                  className="flex-1 text-sm text-gray-900 bg-transparent focus:outline-none"
+                />
+                <button
+                  onClick={() => copyToClipboard(createdLink)}
+                  className="px-3 py-1.5 bg-green-500 text-white text-sm font-medium rounded hover:bg-green-600 transition-colors flex items-center gap-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex items-center gap-4">
-            <button className="px-6 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors">
-              Create link
+            <button 
+              onClick={handleCreateLink}
+              disabled={isCreating}
+              className="px-6 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isCreating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create link'
+              )}
             </button>
             <button 
-              onClick={() => setShowCreateLink(false)}
-              className="px-6 py-1 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+              onClick={() => {
+                setShowCreateLink(false);
+                setError(null);
+                setCreatedLink(null);
+                // Reset form when canceling
+                setFormData({
+                  type: 'Fixed',
+                  currency: 'XAF',
+                  amount: '',
+                  description: '',
+                  expiryDate: '',
+                  redirectUrl: '',
+                });
+                setPaymentMethods(['MTN Mobile Money', 'Orange Money']);
+                setReusable(false);
+                setSavXAFl(false);
+              }}
+              disabled={isCreating}
+              className="px-6 py-1 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
@@ -260,26 +741,153 @@ export default function PaymentsPage() {
       ) : (
         <>
           {/* Payments Tab Content */}
-          {activeTab === 'payments' && (
+          {activeTab === 'payments' && (() => {
+            // Filter payments
+            let filteredPayments = mockPayments.filter(payment => {
+              const matchesSearch = !searchQuery || 
+                payment.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                payment.paymentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                payment.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                payment.amount.toLowerCase().includes(searchQuery.toLowerCase());
+              
+              const matchesStatus = !selectedStatus || payment.status === selectedStatus.toLowerCase();
+              
+              return matchesSearch && matchesStatus;
+            });
+
+            // Calculate stats
+            const totalPayments = filteredPayments.length;
+            const paidCount = filteredPayments.filter(p => p.status === 'paid').length;
+            const pendingCount = filteredPayments.filter(p => p.status === 'pending').length;
+            const totalRevenue = filteredPayments
+              .filter(p => p.status === 'paid')
+              .reduce((sum, p) => sum + extractAmount(p.amount), 0);
+
+            return (
+              <>
+                {/* Payments Stats */}
+                <div className="grid grid-cols-4 gap-6 mb-6">
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Total Payments</div>
+                    <div className="text-2xl font-bold text-gray-900">{totalPayments}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Paid</div>
+                    <div className="text-2xl font-bold text-green-600">{paidCount}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Pending</div>
+                    <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
+                    <div className="text-2xl font-bold text-gray-900">XAF {totalRevenue.toFixed(2)}</div>
+                  </div>
+                </div>
+
+                {filteredPayments.length > 0 ? (
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                  <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
+                    <div>Payment ID</div>
+                    <div>Customer</div>
+                    <div>Amount</div>
+                    <div>Status</div>
+                    <div>Date</div>
+                    <div>Actions</div>
+                  </div>
+                </div>
+                <div className="divide-y divide-gray-200">
+                  {filteredPayments.map((payment) => (
+                    <div key={payment.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                      <div className="grid grid-cols-6 gap-4 items-center">
+                        <div className="font-mono text-sm text-gray-900">{payment.id}</div>
+                        <div className="text-sm text-gray-900">{payment.customer}</div>
+                        <div className="font-semibold text-gray-900">{payment.amount}</div>
+                        <div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${
+                            payment.status === 'paid'
+                              ? 'bg-green-100 text-green-700'
+                              : payment.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {payment.status}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600">{payment.date}</div>
+                        <div>
+                          <button 
+                            onClick={() => setSelectedItem({ ...payment, type: 'payment' })}
+                            className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+                ) : (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="w-24 h-24 mb-6 flex items-center justify-center">
                 <Search className="w-24 h-24 text-gray-300" />
               </div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-3">No test payments found</h2>
-              <p className="text-gray-600 mb-6 text-center max-w-md">
-                Test payments will show up here, these help you test your connection with instanvi
-              </p>
-              <button className="flex items-center gap-2 text-green-600 hover:text-green-700 hover:underline">
-                Read more
-                <ExternalLink className="w-4 h-4" />
-              </button>
+                    <h2 className="text-2xl font-semibold text-gray-900 mb-3">No payments found</h2>
+                    <p className="text-gray-600 mb-6 text-center max-w-md">
+                      {searchQuery || selectedStatus ? 'Try adjusting your search or filters' : 'Test payments will show up here'}
+                    </p>
             </div>
           )}
+              </>
+            );
+          })()}
 
           {/* Refunds Tab Content */}
-          {activeTab === 'refunds' && (
+          {activeTab === 'refunds' && (() => {
+            // Filter refunds
+            const filteredRefunds = mockRefunds.filter(refund => {
+              const matchesSearch = !searchQuery || 
+                refund.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                refund.paymentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                refund.amount.toLowerCase().includes(searchQuery.toLowerCase());
+              const matchesStatus = !selectedStatus || refund.status === selectedStatus.toLowerCase();
+              return matchesSearch && matchesStatus;
+            });
+
+            // Calculate stats
+            const totalRefunds = filteredRefunds.length;
+            const completedCount = filteredRefunds.filter(r => r.status === 'completed').length;
+            const pendingCount = filteredRefunds.filter(r => r.status === 'pending').length;
+            const totalRefundAmount = filteredRefunds
+              .filter(r => r.status === 'completed')
+              .reduce((sum, r) => sum + extractAmount(r.amount), 0);
+
+            return (
             <div>
-              <div className="bg-white border border-gray-200  overflow-hidden">
+                {/* Refunds Stats */}
+                <div className="grid grid-cols-4 gap-6 mb-6">
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Total Refunds</div>
+                    <div className="text-2xl font-bold text-gray-900">{totalRefunds}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Completed</div>
+                    <div className="text-2xl font-bold text-green-600">{completedCount}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Pending</div>
+                    <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Total Refunded</div>
+                    <div className="text-2xl font-bold text-gray-900">XAF {totalRefundAmount.toFixed(2)}</div>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-gray-200 overflow-hidden">
                 {/* Table Header */}
                 <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
                   <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
@@ -294,11 +902,7 @@ export default function PaymentsPage() {
 
                 {/* Table Body */}
                 <div className="divide-y divide-gray-200">
-                  {[
-                    { id: 're_abc123', paymentId: 'tr_xyz789', amount: 'XAF 25.00', status: 'completed', date: '2024-01-15', currency: 'XAF' },
-                    { id: 're_def456', paymentId: 'tr_uvw012', amount: 'XAF 50.00', status: 'pending', date: '2024-01-14', currency: 'XAF' },
-                    { id: 're_ghi789', paymentId: 'tr_rst345', amount: 'XAF 100.00', status: 'processing', date: '2024-01-13', currency: 'XAF' },
-                  ].map((refund) => (
+                    {filteredRefunds.map((refund) => (
                     <div key={refund.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                       <div className="grid grid-cols-6 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{refund.id}</div>
@@ -317,7 +921,10 @@ export default function PaymentsPage() {
                         </div>
                         <div className="text-sm text-gray-600">{refund.date}</div>
                         <div>
-                          <button className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1">
+                          <button 
+                            onClick={() => setSelectedItem({ ...refund, type: 'refund' })}
+                            className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1"
+                          >
                             <Eye className="w-4 h-4" />
                             View
                           </button>
@@ -327,24 +934,53 @@ export default function PaymentsPage() {
                   ))}
                 </div>
               </div>
-
-              {/* Empty State (if no refunds) */}
-              <div className="flex flex-col items-center justify-center py-20 mt-8">
-                <div className="w-16 h-16 mb-4 flex items-center justify-center bg-gray-100 rounded-full">
-                  <RefreshCw className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No refunds yet</h3>
-                <p className="text-gray-600 text-center max-w-md">
-                  Refunds will appear here once you process them
-                </p>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Chargebacks Tab Content */}
-          {activeTab === 'chargebacks' && (
+          {activeTab === 'chargebacks' && (() => {
+            // Filter chargebacks
+            const filteredChargebacks = mockChargebacks.filter(chargeback => {
+              const matchesSearch = !searchQuery || 
+                chargeback.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                chargeback.paymentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                chargeback.amount.toLowerCase().includes(searchQuery.toLowerCase());
+              const matchesStatus = !selectedStatus || chargeback.status === selectedStatus.toLowerCase();
+              return matchesSearch && matchesStatus;
+            });
+
+            // Calculate stats
+            const totalChargebacks = filteredChargebacks.length;
+            const openCount = filteredChargebacks.filter(c => c.status === 'open').length;
+            const wonCount = filteredChargebacks.filter(c => c.status === 'won').length;
+            const totalChargebackAmount = filteredChargebacks
+              .filter(c => c.status === 'open')
+              .reduce((sum, c) => sum + extractAmount(c.amount), 0);
+
+            return (
             <div>
-              <div className="bg-white border border-gray-200  overflow-hidden">
+                {/* Chargebacks Stats */}
+                <div className="grid grid-cols-4 gap-6 mb-6">
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Total Chargebacks</div>
+                    <div className="text-2xl font-bold text-gray-900">{totalChargebacks}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Open</div>
+                    <div className="text-2xl font-bold text-red-600">{openCount}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Won</div>
+                    <div className="text-2xl font-bold text-green-600">{wonCount}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Open Amount</div>
+                    <div className="text-2xl font-bold text-gray-900">XAF {totalChargebackAmount.toFixed(2)}</div>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-gray-200 overflow-hidden">
                 {/* Table Header */}
                 <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
                   <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
@@ -359,11 +995,7 @@ export default function PaymentsPage() {
 
                 {/* Table Body */}
                 <div className="divide-y divide-gray-200">
-                  {[
-                    { id: 'ch_cb123', paymentId: 'tr_xyz789', amount: 'XAF 75.00', status: 'open', date: '2024-01-15', currency: 'XAF' },
-                    { id: 'ch_cb456', paymentId: 'tr_uvw012', amount: 'XAF 120.00', status: 'won', date: '2024-01-10', currency: 'XAF' },
-                    { id: 'ch_cb789', paymentId: 'tr_rst345', amount: 'XAF 200.00', status: 'lost', date: '2024-01-05', currency: 'XAF' },
-                  ].map((chargeback) => (
+                    {filteredChargebacks.map((chargeback) => (
                     <div key={chargeback.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                       <div className="grid grid-cols-6 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{chargeback.id}</div>
@@ -383,7 +1015,10 @@ export default function PaymentsPage() {
                         </div>
                         <div className="text-sm text-gray-600">{chargeback.date}</div>
                         <div>
-                          <button className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1">
+                          <button 
+                            onClick={() => setSelectedItem({ ...chargeback, type: 'chargeback' })}
+                            className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1"
+                          >
                             <Eye className="w-4 h-4" />
                             View
                           </button>
@@ -395,7 +1030,7 @@ export default function PaymentsPage() {
               </div>
 
               {/* Chargeback Info Banner */}
-              <div className="mt-6 bg-yellow-50 border border-yellow-200  p-4">
+                <div className="mt-6 bg-yellow-50 border border-yellow-200 p-4">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                   <div>
@@ -408,33 +1043,69 @@ export default function PaymentsPage() {
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Orders Tab Content */}
-          {activeTab === 'orders' && (
-            <div>
-              <div className="bg-white border border-gray-200  overflow-hidden">
-                {/* Table Header */}
-                <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                  <div className="grid grid-cols-7 gap-4 text-sm font-medium text-gray-700">
-                    <div>Order ID</div>
-                    <div>Customer</div>
-                    <div>Amount</div>
-                    <div>Items</div>
-                    <div>Status</div>
-                    <div>Date</div>
-                    <div>Actions</div>
+          {activeTab === 'orders' && (() => {
+            // Filter orders
+            const filteredOrders = mockOrders.filter(order => {
+              const matchesSearch = !searchQuery || 
+                order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.amount.toLowerCase().includes(searchQuery.toLowerCase());
+              const matchesStatus = !selectedStatus || order.status === selectedStatus.toLowerCase();
+              return matchesSearch && matchesStatus;
+            });
+
+            // Calculate stats
+            const totalOrders = filteredOrders.length;
+            const paidCount = filteredOrders.filter(o => o.status === 'paid').length;
+            const pendingCount = filteredOrders.filter(o => o.status === 'pending').length;
+            const totalRevenue = filteredOrders
+              .filter(o => o.status === 'paid')
+              .reduce((sum, o) => sum + extractAmount(o.amount), 0);
+
+            return (
+              <div>
+                {/* Orders Stats */}
+                <div className="grid grid-cols-4 gap-6 mb-6">
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Total Orders</div>
+                    <div className="text-2xl font-bold text-gray-900">{totalOrders}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Paid</div>
+                    <div className="text-2xl font-bold text-green-600">{paidCount}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Pending</div>
+                    <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
+                  </div>
+                  <div className="bg-white border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
+                    <div className="text-2xl font-bold text-gray-900">XAF {totalRevenue.toFixed(2)}</div>
                   </div>
                 </div>
 
-                {/* Table Body */}
-                <div className="divide-y divide-gray-200">
-                  {[
-                    { id: 'ord_001', customer: 'John Doe', amount: 'XAF 149.99', items: 3, status: 'paid', date: '2024-01-15', email: 'john@example.com' },
-                    { id: 'ord_002', customer: 'Jane Smith', amount: 'XAF 89.50', items: 2, status: 'pending', date: '2024-01-14', email: 'jane@example.com' },
-                    { id: 'ord_003', customer: 'Bob Johnson', amount: 'XAF 299.00', items: 1, status: 'shipped', date: '2024-01-13', email: 'bob@example.com' },
-                    { id: 'ord_004', customer: 'Alice Brown', amount: 'XAF 45.00', items: 5, status: 'cancelled', date: '2024-01-12', email: 'alice@example.com' },
-                  ].map((order) => (
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                  {/* Table Header */}
+                  <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                    <div className="grid grid-cols-7 gap-4 text-sm font-medium text-gray-700">
+                      <div>Order ID</div>
+                      <div>Customer</div>
+                      <div>Amount</div>
+                      <div>Items</div>
+                      <div>Status</div>
+                      <div>Date</div>
+                      <div>Actions</div>
+                    </div>
+                  </div>
+
+                  {/* Table Body */}
+                  <div className="divide-y divide-gray-200">
+                    {filteredOrders.map((order) => (
                     <div key={order.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                       <div className="grid grid-cols-7 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{order.id}</div>
@@ -459,39 +1130,177 @@ export default function PaymentsPage() {
                         </div>
                         <div className="text-sm text-gray-600">{order.date}</div>
                         <div>
-                          <button className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1">
+                          <button 
+                            onClick={() => setSelectedItem({ ...order, type: 'order' })}
+                            className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1"
+                          >
                             <Eye className="w-4 h-4" />
                             View
                           </button>
                         </div>
                       </div>
                     </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-
-              {/* Orders Summary */}
-              <div className="grid grid-cols-4 gap-6 mt-6">
-                <div className="bg-white border border-gray-200  p-4">
-                  <div className="text-sm text-gray-600 mb-1">Total Orders</div>
-                  <div className="text-2xl font-bold text-gray-900">24</div>
-                </div>
-                <div className="bg-white border border-gray-200  p-4">
-                  <div className="text-sm text-gray-600 mb-1">Paid</div>
-                  <div className="text-2xl font-bold text-green-600">18</div>
-                </div>
-                <div className="bg-white border border-gray-200  p-4">
-                  <div className="text-sm text-gray-600 mb-1">Pending</div>
-                  <div className="text-2xl font-bold text-yellow-600">4</div>
-                </div>
-                <div className="bg-white border border-gray-200  p-4">
-                  <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
-                  <div className="text-2xl font-bold text-gray-900">XAF 2,450.00</div>
-                </div>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </>
+      )}
+
+      {/* Payment Detail Modal */}
+      {selectedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
+          <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {selectedItem.type === 'payment' && 'Payment Details'}
+                {selectedItem.type === 'refund' && 'Refund Details'}
+                {selectedItem.type === 'chargeback' && 'Chargeback Details'}
+                {selectedItem.type === 'order' && 'Order Details'}
+              </h2>
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {selectedItem.type === 'payment' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-600">Payment ID</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedItem.id}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Transaction ID</label>
+                      <p className="text-lg font-mono text-gray-900">{selectedItem.paymentId}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Customer</label>
+                      <p className="text-lg text-gray-900">{selectedItem.customer}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Payment Method</label>
+                      <p className="text-lg text-gray-900">{selectedItem.paymentMethod}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Amount</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedItem.amount}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Status</label>
+                      <span className={`inline-block px-3 py-1 text-sm font-medium rounded ${
+                        selectedItem.status === 'paid'
+                          ? 'bg-green-100 text-green-700'
+                          : selectedItem.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}>
+                        {selectedItem.status}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Date</label>
+                      <p className="text-lg text-gray-900">{selectedItem.date}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+              {(selectedItem.type === 'refund' || selectedItem.type === 'chargeback') && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-600">{selectedItem.type === 'refund' ? 'Refund ID' : 'Chargeback ID'}</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedItem.id}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Payment ID</label>
+                      <p className="text-lg font-mono text-gray-900">{selectedItem.paymentId}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Amount</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedItem.amount}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Status</label>
+                      <span className={`inline-block px-3 py-1 text-sm font-medium rounded ${
+                        selectedItem.status === 'completed' || selectedItem.status === 'won'
+                          ? 'bg-green-100 text-green-700'
+                          : selectedItem.status === 'pending' || selectedItem.status === 'processing'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : selectedItem.status === 'open'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {selectedItem.status}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Date</label>
+                      <p className="text-lg text-gray-900">{selectedItem.date}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+              {selectedItem.type === 'order' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-600">Order ID</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedItem.id}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Date</label>
+                      <p className="text-lg text-gray-900">{selectedItem.date}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Customer</label>
+                      <p className="text-lg text-gray-900">{selectedItem.customer}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Email</label>
+                      <p className="text-lg text-gray-900">{selectedItem.email}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Amount</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedItem.amount}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Items</label>
+                      <p className="text-lg text-gray-900">{selectedItem.items} items</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Status</label>
+                      <span className={`inline-block px-3 py-1 text-sm font-medium rounded ${
+                        selectedItem.status === 'paid'
+                          ? 'bg-green-100 text-green-700'
+                          : selectedItem.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : selectedItem.status === 'shipped'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {selectedItem.status}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="px-6 py-2 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors rounded"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

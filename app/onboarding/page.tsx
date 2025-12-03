@@ -7,14 +7,12 @@ import StakeholderInformation from './components/StakeholderInformation';
 import BusinessActivity from './components/BusinessActivity';
 import PaymentMethods from './components/PaymentMethods';
 import IDDocument from './components/IDDocument';
-import LinkBankAccount from './components/LinkBankAccount';
 
 const steps = [
   { id: 'stakeholder', title: 'Stakeholder info', component: StakeholderInformation },
   { id: 'business', title: 'Business activity', component: BusinessActivity },
   { id: 'payment', title: 'Payment methods', component: PaymentMethods },
   { id: 'document', title: 'ID document', component: IDDocument },
-  { id: 'bank', title: 'Link bank account', component: LinkBankAccount },
 ];
 
 export default function OnboardingPage() {

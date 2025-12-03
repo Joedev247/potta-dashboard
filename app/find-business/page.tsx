@@ -19,6 +19,10 @@ export default function FindBusinessPage() {
   };
 
   const handleAddManually = () => {
+    // Store the searched business name to pre-fill in confirm-details
+    if (searchQuery && searchQuery.trim()) {
+      localStorage.setItem('searchedBusinessName', searchQuery.trim());
+    }
     router.push('/confirm-details');
   };
 
