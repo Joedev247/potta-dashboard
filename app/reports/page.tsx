@@ -720,9 +720,14 @@ export default function ReportsPage() {
         const startDate = selectedRange.start ? convertToAPIDate(selectedRange.start) : new Date().toISOString().split('T')[0];
         const endDate = selectedRange.end ? convertToAPIDate(selectedRange.end) : new Date().toISOString().split('T')[0];
         
+        const reportType: 'settlements' | 'balance' | 'invoices' | 'payments' = 
+          activeTab === 'settlements' ? 'settlements' : 
+          activeTab === 'invoices' ? 'invoices' : 
+          'balance';
+        
         const exportData = {
-          reportType: activeTab === 'settlements' ? 'settlements' : activeTab === 'invoices' ? 'invoices' : 'balance',
-          format: 'pdf',
+          reportType,
+          format: 'pdf' as const,
           startDate,
           endDate,
           filters: {
