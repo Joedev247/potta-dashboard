@@ -51,9 +51,9 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const token = await this.getAuthToken();
     
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(options.headers as HeadersInit),
+      ...(options.headers as Record<string, string>),
     };
 
     if (token) {
@@ -142,7 +142,7 @@ class ApiClient {
 
   async upload<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
     const token = await this.getAuthToken();
-    const headers: HeadersInit = {};
+    const headers: Record<string, string> = {};
     
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
