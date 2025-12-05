@@ -1,17 +1,48 @@
 'use client';
 
-import { useState, useRef, useMemo } from 'react';
-import { Info, ChevronLeft, ChevronRight, Grid3x3, TrendingUp } from 'lucide-react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import { Info, ChevronLeft, ChevronRight, Grid3x3, TrendingUp, Loader2 } from 'lucide-react';
+import { statisticsService } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils/format';
 
 export default function StatisticsPage() {
-  const [activePeriod, setActivePeriod] = useState('months');
+  const [activePeriod, setActivePeriod] = useState<'days' | 'weeks' | 'months' | 'quarters' | 'years'>('months');
   const [selectedValue, setSelectedValue] = useState('November 2025');
   const [showPreviousPeriod, setShowPreviousPeriod] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [statistics, setStatistics] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const selectorScrollRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<SVGSVGElement>(null);
 
   const periods = ['Days', 'Weeks', 'Months', 'Quarters', 'Years', 'Custom...'];
+
+  // Fetch statistics from API
+  const fetchStatistics = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await statisticsService.getStatistics({
+        period: activePeriod,
+        value: selectedValue,
+        comparePrevious: showPreviousPeriod,
+      });
+      
+      if (response.success && response.data) {
+        setStatistics(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [activePeriod, selectedValue, showPreviousPeriod]);
+
+  // Fetch statistics when period or value changes
+  useEffect(() => {
+    if (activePeriod !== 'custom...') {
+      fetchStatistics();
+    }
+  }, [fetchStatistics]);
   
   // Generate months from January to current month (November 2025)
   const generateMonths = () => {
@@ -257,27 +288,45 @@ export default function StatisticsPage() {
   };
 
   const currentPeriodData = useMemo(() => {
+    // Use API data if available, otherwise fallback to generated data
+    if (statistics?.dataPoints && statistics.dataPoints.length > 0) {
+      return statistics.dataPoints.map((point: any, index: number) => ({
+        label: point.label,
+        revenue: point.revenue || 0,
+        date: new Date(point.date),
+        index,
+      }));
+    }
     return generateDataForPeriod(activePeriod, selectedValue, false);
-  }, [activePeriod, selectedValue]);
+  }, [statistics, activePeriod, selectedValue]);
 
   const previousPeriodData = useMemo(() => {
     if (!showPreviousPeriod) return [];
+    // Use API previous period data if available
+    if (statistics?.previousPeriod) {
+      // Return empty array as previous period data structure may vary
+      return [];
+    }
     const previousValue = getPreviousPeriodValue(activePeriod, selectedValue);
     return generateDataForPeriod(activePeriod, previousValue, true);
-  }, [activePeriod, selectedValue, showPreviousPeriod]);
+  }, [statistics, activePeriod, selectedValue, showPreviousPeriod]);
 
-  // Calculate totals
-  const totalRevenue = currentPeriodData.length > 0 
-    ? currentPeriodData.reduce((sum, d) => {
-        const rev = d.revenue || 0;
-        return sum + (isNaN(rev) ? 0 : rev);
-      }, 0)
-    : 0;
-  const totalTransactions = currentPeriodData.length > 0 
-    ? currentPeriodData.length * Math.floor(Math.random() * 50 + 20)
-    : 0;
-  const totalRefunds = Math.round(totalRevenue * 0.02); // 2% refund rate
-  const totalChargebacks = Math.round(totalRevenue * 0.005); // 0.5% chargeback rate
+  // Calculate totals - use API data if available
+  const totalRevenue = statistics?.totals?.revenue ?? 
+    (currentPeriodData.length > 0 
+      ? currentPeriodData.reduce((sum, d) => {
+          const rev = d.revenue || 0;
+          return sum + (isNaN(rev) ? 0 : rev);
+        }, 0)
+      : 0);
+  
+  const totalTransactions = statistics?.totals?.transactions ?? 
+    (currentPeriodData.length > 0 
+      ? currentPeriodData.length * Math.floor(Math.random() * 50 + 20)
+      : 0);
+  
+  const totalRefunds = statistics?.totals?.refunds ?? Math.round(totalRevenue * 0.02);
+  const totalChargebacks = statistics?.totals?.chargebacks ?? Math.round(totalRevenue * 0.005);
 
   // Chart dimensions and calculations
   const chartWidth = 800;
@@ -329,11 +378,6 @@ export default function StatisticsPage() {
     return { x, y };
   };
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return `XAF ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
   return (
     <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="flex items-center gap-3 mb-6">
@@ -342,6 +386,12 @@ export default function StatisticsPage() {
         </div>
         <h1 className="text-4xl font-bold text-gray-900">Statistics</h1>
       </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+        </div>
+      )}
 
       {/* Period Selector */}
       <div className="flex gap-1 mb-4 border-b-2 border-gray-200">

@@ -1,237 +1,584 @@
 'use client';
 
-import { Settings, Info, ArrowUpRight, X, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Wallet, ArrowDown, ArrowUp, ArrowUpRight, X, CheckCircle2, AlertCircle, RefreshCw, Loader2, TrendingUp, TrendingDown, History, Filter, Search, Calendar, Download, Eye, EyeOff, CreditCard, Smartphone, Building2 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { balanceService } from '@/lib/api';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils/format';
 
-export default function BalancePage() {
-  const [showRequestPayout, setShowRequestPayout] = useState(false);
-  const [isRequesting, setIsRequesting] = useState(false);
-  const [payoutSuccess, setPayoutSuccess] = useState(false);
-  const [payoutError, setPayoutError] = useState<string | null>(null);
-  const [payoutData, setPayoutData] = useState({
+export default function WalletPage() {
+  // Modal states
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showTransactionDetails, setShowTransactionDetails] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  
+  // Action states
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  
+  // Form states
+  const [depositData, setDepositData] = useState({
+    amount: '',
+    currency: 'XAF',
+    method: 'MTN Mobile Money',
+    description: '',
+  });
+  
+  const [withdrawData, setWithdrawData] = useState({
     amount: '',
     currency: 'XAF',
     description: '',
   });
 
-  const availableBalance = 0.00;
-  const pendingBalance = 0.00;
+  // Balance state
+  const [balance, setBalance] = useState({ available: 0, pending: 0, reserved: 0, currency: 'XAF', lastUpdated: '' });
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [payouts, setPayouts] = useState<any[]>([]);
+  const [loading, setLoading] = useState({ balance: false, transactions: false, payouts: false });
+  const [showBalance, setShowBalance] = useState(true);
+  
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
 
-  const handleRequestPayout = async () => {
-    setPayoutError(null);
-    setPayoutSuccess(false);
+  // Fetch balance
+  const fetchBalance = useCallback(async () => {
+    setLoading(prev => ({ ...prev, balance: true }));
+    try {
+      const response = await balanceService.getBalance('XAF');
+      if (response.success && response.data) {
+        setBalance(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, balance: false }));
+    }
+  }, []);
 
-    // Validation
-    if (!payoutData.amount || parseFloat(payoutData.amount) <= 0) {
-      setPayoutError('Please enter a valid amount');
+  // Fetch transactions
+  const fetchTransactions = useCallback(async () => {
+    setLoading(prev => ({ ...prev, transactions: true }));
+    try {
+      const response = await balanceService.getTransactions({
+        page: 1,
+        limit: 50,
+      });
+      if (response.success && response.data) {
+        setTransactions(response.data.transactions || []);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, transactions: false }));
+    }
+  }, []);
+
+  // Fetch payouts
+  const fetchPayouts = useCallback(async () => {
+    setLoading(prev => ({ ...prev, payouts: true }));
+    try {
+      const response = await balanceService.getPayouts({
+        page: 1,
+        limit: 10,
+      });
+      if (response.success && response.data) {
+        setPayouts(response.data.payouts || []);
+      }
+    } catch (error) {
+      console.error('Error fetching payouts:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, payouts: false }));
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBalance();
+    fetchTransactions();
+    fetchPayouts();
+  }, [fetchBalance, fetchTransactions, fetchPayouts]);
+
+  // Handle deposit
+  const handleDeposit = async () => {
+    setActionError(null);
+    setActionSuccess(false);
+
+    if (!depositData.amount || parseFloat(depositData.amount) <= 0) {
+      setActionError('Please enter a valid amount');
       return;
     }
 
-    const requestedAmount = parseFloat(payoutData.amount);
-    
-    if (requestedAmount > availableBalance) {
-      setPayoutError(`Insufficient balance. Available: ${payoutData.currency} ${availableBalance.toFixed(2)}`);
-      return;
-    }
-
-    setIsRequesting(true);
+    setIsProcessing(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Simulate deposit (in real app, this would call an API)
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      setPayoutSuccess(true);
+      // Create a deposit transaction
+      const depositTransaction = {
+        id: `dep_${Date.now()}`,
+        type: 'payment' as const,
+        amount: parseFloat(depositData.amount),
+        currency: depositData.currency,
+        description: depositData.description || `Deposit via ${depositData.method}`,
+        status: 'completed',
+        createdAt: new Date().toISOString(),
+      };
+
+      // Update balance
+      setBalance(prev => ({
+        ...prev,
+        available: prev.available + parseFloat(depositData.amount),
+        lastUpdated: new Date().toISOString(),
+      }));
+
+      // Add to transactions
+      setTransactions(prev => [depositTransaction, ...prev]);
+
+      setActionSuccess(true);
       
-      // Reset form after success
       setTimeout(() => {
-        setPayoutSuccess(false);
-        setPayoutData({
+        setActionSuccess(false);
+        setDepositData({
           amount: '',
           currency: 'XAF',
+          method: 'MTN Mobile Money',
           description: '',
         });
-        setShowRequestPayout(false);
-      }, 3000);
+        setShowDepositModal(false);
+      }, 2000);
     } catch (err) {
-      setPayoutError('Failed to request payout. Please try again.');
+      console.error('Deposit error:', err);
+      setActionError('Failed to process deposit. Please try again.');
     } finally {
-      setIsRequesting(false);
+      setIsProcessing(false);
     }
+  };
+
+  // Handle withdraw
+  const handleWithdraw = async () => {
+    setActionError(null);
+    setActionSuccess(false);
+
+    if (!withdrawData.amount || parseFloat(withdrawData.amount) <= 0) {
+      setActionError('Please enter a valid amount');
+      return;
+    }
+
+    const requestedAmount = parseFloat(withdrawData.amount);
+    
+    if (requestedAmount > balance.available) {
+      setActionError(`Insufficient balance. Available: ${formatCurrency(balance.available, withdrawData.currency)}`);
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const response = await balanceService.requestPayout({
+        amount: requestedAmount,
+        currency: withdrawData.currency,
+        description: withdrawData.description || undefined,
+      });
+
+      if (response.success) {
+        setActionSuccess(true);
+        await fetchBalance();
+        await fetchTransactions();
+        await fetchPayouts();
+        
+        setTimeout(() => {
+          setActionSuccess(false);
+          setWithdrawData({
+            amount: '',
+            currency: 'XAF',
+            description: '',
+          });
+          setShowWithdrawModal(false);
+        }, 2000);
+      } else {
+        setActionError(response.error?.message || 'Failed to process withdrawal. Please try again.');
+      }
+    } catch (err) {
+      console.error('Withdraw error:', err);
+      setActionError('Failed to process withdrawal. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Filter transactions
+  const filteredTransactions = transactions.filter(transaction => {
+    const matchesSearch = !searchQuery || 
+      transaction.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.id.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesType = filterType === 'all' || transaction.type === filterType;
+    const matchesStatus = filterStatus === 'all' || transaction.status === filterStatus;
+    
+    return matchesSearch && matchesType && matchesStatus;
+  });
+
+  // Calculate stats
+  const stats = {
+    totalIncome: transactions
+      .filter(t => t.type === 'payment' && t.status === 'completed')
+      .reduce((sum, t) => sum + t.amount, 0),
+    totalExpenses: transactions
+      .filter(t => (t.type === 'payout' || t.type === 'refund' || t.type === 'fee') && t.status === 'completed')
+      .reduce((sum, t) => sum + t.amount, 0),
+    pendingPayouts: payouts.filter(p => p.status === 'pending' || p.status === 'processing').length,
   };
 
   return (
     <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      {/* Top Section - Balance Summary and Actions */}
-      <div className="flex items-start justify-between mb-8">
-        {/* Balance Display */}
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">XAF</span>
-            </div>
-            <span className="text-sm text-gray-600 font-medium">XAF</span>
-          </div>
-          <div className="text-6xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">XAF 0.00</div>
-          <div className="text-sm text-gray-600 font-medium">Pending: XAF 0.00</div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          <Link 
-            href="/settings"
-            className="px-5 py-1 text-gray-700 text-sm font-semibold hover:text-gray-900 transition-colors"
-          >
-            Settings
-          </Link>
-          <button 
-            onClick={() => setShowRequestPayout(true)}
-            className="px-5 py-1 bg-gradient-to-br from-green-400 to-green-600 text-white text-sm font-semibold hover:from-green-500 hover:to-green-700 transition-all flex items-center gap-2 transform hover:scale-105"
-          >
-            Request payout
-            <ArrowUpRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Payouts Section */}
+      {/* Header Section */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-            <Settings className="w-5 h-5 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900">Payouts</h2>
-        </div>
-        
-        <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 p-6">
-          {/* Next Payout Amount */}
-          <div className="text-4xl font-bold text-gray-900 mb-2">XAF 0.00</div>
-          <div className="text-sm text-gray-600 mb-6">Next payout - Blocked</div>
-
-          {/* Information Banner */}
-          <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 border-2 border-green-200 p-4 mb-6 flex items-start gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center rounded-full flex-shrink-0">
-              <Info className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+              <Wallet className="w-6 h-6 text-white" />
             </div>
-            <p className="text-sm text-gray-700 font-medium">
-              Your payouts are not enabled. Please view our{' '}
-              <Link href="/" className="text-green-600 hover:text-green-700 underline font-semibold">
-                Get Started
-              </Link>{' '}
-              page for more details.
-            </p>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">My Wallet</h1>
+              <p className="text-sm text-gray-600">Manage your balance and transactions</p>
+            </div>
           </div>
-
-          {/* Balance Reserve and Setup */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-600">XAF 0 balance reserve</div>
-            <Link href="/" className="text-green-600 hover:text-green-700 text-sm font-medium">
-              Set up
-            </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowBalance(!showBalance)}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              {showBalance ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={() => {
+                fetchBalance();
+                fetchTransactions();
+                fetchPayouts();
+              }}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <RefreshCw className={`w-5 h-5 ${loading.balance ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Transactions Section - Placeholder */}
-      <div className="bg-white border border-gray-200 p-12">
-        <div className="flex flex-col items-center justify-center text-center">
-          {/* Placeholder Graphic - Three Stacked Rectangles */}
-          <div className="mb-6 space-y-2">
-            <div className="w-32 h-12 bg-gray-100 border border-gray-200">
-              <div className="h-full flex items-center px-3">
-                <div className="w-full h-0.5 bg-gray-300"></div>
+      {/* Balance Cards Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Main Balance Card */}
+        <div className="md:col-span-2 bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 p-8 text-white shadow-xl transform hover:scale-[1.02] transition-transform duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                <Wallet className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-green-100 text-sm font-medium">Available Balance</p>
+                <p className="text-white/80 text-xs">{balance.currency}</p>
               </div>
             </div>
-            <div className="w-32 h-12 bg-gray-100 rounded border border-gray-200">
-              <div className="h-full flex items-center px-3">
-                <div className="w-full h-0.5 bg-gray-300"></div>
-              </div>
-            </div>
-            <div className="w-32 h-12 bg-gray-100 rounded border border-gray-200">
-              <div className="h-full flex items-center px-3">
-                <div className="w-full h-0.5 bg-gray-300"></div>
-              </div>
+            <div className="text-right">
+              <p className="text-green-100 text-sm">Last updated</p>
+              <p className="text-white/80 text-xs">{balance.lastUpdated ? formatDate(balance.lastUpdated) : 'Just now'}</p>
             </div>
           </div>
           
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No transactions yet</h3>
-          <p className="text-sm text-gray-600">Transactions on this balance will appear here</p>
+          <div className="mb-6">
+            {loading.balance ? (
+              <Loader2 className="w-12 h-12 animate-spin" />
+            ) : (
+              <div className="text-5xl font-bold mb-2">
+                {showBalance ? formatCurrency(balance.available, balance.currency) : '••••••'}
+              </div>
+            )}
+            <div className="flex items-center gap-4 text-green-100">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                <span className="text-sm">Pending: {showBalance ? formatCurrency(balance.pending, balance.currency) : '••••'}</span>
+              </div>
+              {balance.reserved > 0 && (
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm">Reserved: {showBalance ? formatCurrency(balance.reserved, balance.currency) : '••••'}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowDepositModal(true)}
+              className="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold py-4 px-4 transition-all flex items-center justify-center gap-2 transform hover:scale-105"
+            >
+              <ArrowDown className="w-5 h-5" />
+              Deposit
+            </button>
+            <button
+              onClick={() => setShowWithdrawModal(true)}
+              className="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold py-4 px-4 transition-all flex items-center justify-center gap-2 transform hover:scale-105"
+            >
+              <ArrowUp className="w-5 h-5" />
+              Withdraw
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="space-y-4">
+          {/* Income Card */}
+          <div className="bg-white p-6 border-2 border-gray-200 hover:border-green-400 transition-all shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              </div>
+            </div>
+            <p className="text-gray-600 text-sm font-medium mb-1">Total Income</p>
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalIncome, balance.currency)}</p>
+            <p className="text-xs text-gray-500 mt-1">From payments</p>
+          </div>
+
+          {/* Expenses Card */}
+          <div className="bg-white p-6 border-2 border-gray-200 hover:border-red-400 transition-all shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-red-600" />
+              </div>
+            </div>
+            <p className="text-gray-600 text-sm font-medium mb-1">Total Expenses</p>
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalExpenses, balance.currency)}</p>
+            <p className="text-xs text-gray-500 mt-1">Payouts & fees</p>
+          </div>
         </div>
       </div>
 
-      {/* Request Payout Modal */}
-      {showRequestPayout && (
+      {/* Pending Payouts Section */}
+      {stats.pendingPayouts > 0 && (
+        <div className="mb-8 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                <ArrowUpRight className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Pending Payouts</h3>
+                <p className="text-sm text-gray-600">{stats.pendingPayouts} payout{stats.pendingPayouts > 1 ? 's' : ''} being processed</p>
+              </div>
+            </div>
+            <Link
+              href="/payments?tab=refunds"
+              className="px-4 py-2 bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors"
+            >
+              View All
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Transactions Section */}
+      <div className="bg-white  border-2 border-gray-200 shadow-sm overflow-hidden">
+        {/* Transactions Header */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
+                <History className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Transaction History</h2>
+                <p className="text-sm text-gray-600">{filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <Filter className="w-5 h-5" />
+              </button>
+              <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
+                <Download className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 focus:outline-none focus:border-green-500"
+              />
+            </div>
+            {showFilters && (
+              <div className="flex gap-2">
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="px-4 py-2 border-2 border-gray-200 focus:outline-none focus:border-green-500"
+                >
+                  <option value="all">All Types</option>
+                  <option value="payment">Payments</option>
+                  <option value="payout">Payouts</option>
+                  <option value="refund">Refunds</option>
+                  <option value="fee">Fees</option>
+                  <option value="chargeback">Chargebacks</option>
+                </select>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="px-4 py-2 border-2 border-gray-200 focus:outline-none focus:border-green-500"
+                >
+                  <option value="all">All Status</option>
+                  <option value="completed">Completed</option>
+                  <option value="pending">Pending</option>
+                  <option value="processing">Processing</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Transactions List */}
+        {loading.transactions ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+          </div>
+        ) : filteredTransactions.length > 0 ? (
+          <div className="divide-y divide-gray-200">
+            {filteredTransactions.map((transaction) => {
+              const isIncome = transaction.type === 'payment';
+              const isExpense = transaction.type === 'payout' || transaction.type === 'refund' || transaction.type === 'fee' || transaction.type === 'chargeback';
+              
+              return (
+                <div
+                  key={transaction.id}
+                  onClick={() => {
+                    setSelectedTransaction(transaction);
+                    setShowTransactionDetails(true);
+                  }}
+                  className="p-6 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        isIncome ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {isIncome ? (
+                          <ArrowDown className="w-6 h-6 text-green-600" />
+                        ) : (
+                          <ArrowUp className="w-6 h-6 text-red-600" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-gray-900 capitalize">{transaction.type}</span>
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                            transaction.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                            transaction.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {transaction.status}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">{transaction.description || 'No description'}</p>
+                        <p className="text-xs text-gray-500 mt-1">{formatDateTime(transaction.createdAt)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-xl font-bold ${
+                        isIncome ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {isIncome ? '+' : '-'}{formatCurrency(transaction.amount, transaction.currency)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-12 flex flex-col items-center justify-center text-center">
+            <History className="w-16 h-16 text-gray-300 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No transactions found</h3>
+            <p className="text-sm text-gray-600">
+              {searchQuery || filterType !== 'all' || filterStatus !== 'all' 
+                ? 'Try adjusting your filters' 
+                : 'Your transaction history will appear here'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Deposit Modal */}
+      {showDepositModal && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
           onClick={() => {
-            if (!isRequesting) {
-              setShowRequestPayout(false);
-              setPayoutError(null);
-              setPayoutSuccess(false);
+            if (!isProcessing) {
+              setShowDepositModal(false);
+              setActionError(null);
+              setActionSuccess(false);
             }
           }}
         >
           <div 
-            className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Request Payout</h2>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <ArrowDown className="w-5 h-5 text-green-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Deposit Funds</h2>
+              </div>
               <button
                 onClick={() => {
-                  if (!isRequesting) {
-                    setShowRequestPayout(false);
-                    setPayoutError(null);
-                    setPayoutSuccess(false);
-                    setPayoutData({
-                      amount: '',
-                      currency: 'XAF',
-                      description: '',
-                    });
+                  if (!isProcessing) {
+                    setShowDepositModal(false);
+                    setActionError(null);
+                    setActionSuccess(false);
                   }
                 }}
-                disabled={isRequesting}
+                disabled={isProcessing}
                 className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            {/* Modal Content */}
             <div className="p-6 space-y-4">
-              {/* Balance Info */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Available Balance</span>
-                  <span className="text-lg font-bold text-gray-900">{payoutData.currency} {availableBalance.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Pending</span>
-                  <span className="text-sm text-gray-900">{payoutData.currency} {pendingBalance.toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* Success Message */}
-              {payoutSuccess && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+              {actionSuccess && (
+                <div className="bg-green-50 border border-green-200 p-4 flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm text-green-800 font-medium">Payout request submitted successfully!</p>
-                    <p className="text-xs text-green-700 mt-1">Your payout will be processed within 1-3 business days.</p>
+                    <p className="text-sm text-green-800 font-medium">Deposit successful!</p>
+                    <p className="text-xs text-green-700 mt-1">Your funds have been added to your wallet.</p>
                   </div>
                 </div>
               )}
 
-              {/* Error Message */}
-              {payoutError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+              {actionError && (
+                <div className="bg-red-50 border border-red-200 p-4 flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm text-red-800">{payoutError}</p>
+                    <p className="text-sm text-red-800">{actionError}</p>
                   </div>
                   <button
-                    onClick={() => setPayoutError(null)}
+                    onClick={() => setActionError(null)}
                     className="text-red-400 hover:text-red-600 transition-colors"
                   >
                     <X className="w-4 h-4" />
@@ -239,104 +586,319 @@ export default function BalancePage() {
                 </div>
               )}
 
-              {/* Currency Selection */}
+              <div className="bg-gray-50 border border-gray-200 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-600">Available Balance</span>
+                  <span className="text-lg font-bold text-gray-900">{depositData.currency} {balance.available.toFixed(2)}</span>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
                 <select
-                  value={payoutData.currency}
-                  onChange={(e) => setPayoutData({ ...payoutData, currency: e.target.value })}
-                  disabled={isRequesting || payoutSuccess}
-                  className="w-full px-4 py-2 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={depositData.method}
+                  onChange={(e) => setDepositData({ ...depositData, method: e.target.value })}
+                  disabled={isProcessing || actionSuccess}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 text-gray-900 focus:outline-none focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value="XAF">XAF (Central African CFA Franc)</option>
-                  <option value="USD">USD (US Dollar)</option>
+                  <option value="MTN Mobile Money">MTN Mobile Money</option>
+                  <option value="Orange Money">Orange Money</option>
                 </select>
               </div>
 
-              {/* Amount Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Amount <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-medium">
-                    {payoutData.currency}
+                    {depositData.currency}
                   </span>
                   <input
                     type="number"
-                    value={payoutData.amount}
-                    onChange={(e) => setPayoutData({ ...payoutData, amount: e.target.value })}
+                    value={depositData.amount}
+                    onChange={(e) => setDepositData({ ...depositData, amount: e.target.value })}
                     placeholder="0.00"
                     min="0"
                     step="0.01"
-                    disabled={isRequesting || payoutSuccess}
-                    className="w-full pl-16 pr-4 py-2 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isProcessing || actionSuccess}
+                    className="w-full pl-16 pr-4 py-3 bg-white border-2 border-gray-200 text-gray-900 focus:outline-none focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
-                <p className="mt-1 text-xs text-gray-500">Maximum: {payoutData.currency} {availableBalance.toFixed(2)}</p>
+                <p className="mt-1 text-xs text-gray-500">Minimum deposit: {depositData.currency} 1,000</p>
               </div>
 
-              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
                 <textarea
-                  value={payoutData.description}
-                  onChange={(e) => setPayoutData({ ...payoutData, description: e.target.value })}
-                  placeholder="Add a note for this payout"
+                  value={depositData.description}
+                  onChange={(e) => setDepositData({ ...depositData, description: e.target.value })}
+                  placeholder="Add a note for this deposit"
                   rows={3}
-                  disabled={isRequesting || payoutSuccess}
-                  className="w-full px-4 py-2 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                  disabled={isProcessing || actionSuccess}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 text-gray-900 focus:outline-none focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-4">
+              <button
+                onClick={() => {
+                  if (!isProcessing) {
+                    setShowDepositModal(false);
+                    setActionError(null);
+                    setActionSuccess(false);
+                  }
+                }}
+                disabled={isProcessing}
+                className="px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeposit}
+                disabled={isProcessing || actionSuccess || !depositData.amount}
+                className="px-6 py-3 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <ArrowDown className="w-4 h-4" />
+                    Deposit
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw Modal */}
+      {showWithdrawModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            if (!isProcessing) {
+              setShowWithdrawModal(false);
+              setActionError(null);
+              setActionSuccess(false);
+            }
+          }}
+        >
+          <div 
+            className="bg-white max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <ArrowUp className="w-5 h-5 text-red-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Withdraw Funds</h2>
+              </div>
+              <button
+                onClick={() => {
+                  if (!isProcessing) {
+                    setShowWithdrawModal(false);
+                    setActionError(null);
+                    setActionSuccess(false);
+                  }
+                }}
+                disabled={isProcessing}
+                className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {actionSuccess && (
+                <div className="bg-green-50 border border-green-200 p-4 flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-green-800 font-medium">Withdrawal request submitted!</p>
+                    <p className="text-xs text-green-700 mt-1">Your withdrawal will be processed within 1-3 business days.</p>
+                  </div>
+                </div>
+              )}
+
+              {actionError && (
+                <div className="bg-red-50 border border-red-200 p-4 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-800">{actionError}</p>
+                  </div>
+                  <button
+                    onClick={() => setActionError(null)}
+                    className="text-red-400 hover:text-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-600">Available Balance</span>
+                  <span className="text-lg font-bold text-gray-900">{withdrawData.currency} {balance.available.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Pending</span>
+                  <span className="text-sm text-gray-900">{withdrawData.currency} {balance.pending.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Amount <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-medium">
+                    {withdrawData.currency}
+                  </span>
+                  <input
+                    type="number"
+                    value={withdrawData.amount}
+                    onChange={(e) => setWithdrawData({ ...withdrawData, amount: e.target.value })}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    disabled={isProcessing || actionSuccess}
+                    className="w-full pl-16 pr-4 py-3 bg-white border-2 border-gray-200 text-gray-900 focus:outline-none focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Maximum: {withdrawData.currency} {balance.available.toFixed(2)}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
+                <textarea
+                  value={withdrawData.description}
+                  onChange={(e) => setWithdrawData({ ...withdrawData, description: e.target.value })}
+                  placeholder="Add a note for this withdrawal"
+                  rows={3}
+                  disabled={isProcessing || actionSuccess}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 text-gray-900  focus:outline-none focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
                 />
               </div>
 
-              {/* Info Banner */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-blue-50 border border-blue-200 p-4">
                 <div className="flex items-start gap-3">
-                  <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-blue-800 font-medium mb-1">Payout Processing</p>
+                    <p className="text-xs text-blue-800 font-medium mb-1">Processing Time</p>
                     <p className="text-xs text-blue-700">
-                      Payouts are typically processed within 1-3 business days. You'll receive a notification once the payout is completed.
+                      Withdrawals are typically processed within 1-3 business days. You'll receive a notification once completed.
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Modal Footer */}
             <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-4">
               <button
                 onClick={() => {
-                  if (!isRequesting) {
-                    setShowRequestPayout(false);
-                    setPayoutError(null);
-                    setPayoutSuccess(false);
-                    setPayoutData({
-                      amount: '',
-                      currency: 'XAF',
-                      description: '',
-                    });
+                  if (!isProcessing) {
+                    setShowWithdrawModal(false);
+                    setActionError(null);
+                    setActionSuccess(false);
                   }
                 }}
-                disabled={isRequesting}
-                className="px-6 py-2 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isProcessing}
+                className="px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
-                onClick={handleRequestPayout}
-                disabled={isRequesting || payoutSuccess || !payoutData.amount}
-                className="px-6 py-2 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                onClick={handleWithdraw}
+                disabled={isProcessing || actionSuccess || !withdrawData.amount}
+                className="px-6 py-3 bg-red-500 text-white font-medium hover:bg-red-600 transition-colors  disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {isRequesting ? (
+                {isProcessing ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
                     Processing...
                   </>
                 ) : (
-                  'Request Payout'
+                  <>
+                    <ArrowUp className="w-4 h-4" />
+                    Withdraw
+                  </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transaction Details Modal */}
+      {showTransactionDetails && selectedTransaction && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowTransactionDetails(false);
+            setSelectedTransaction(null);
+          }}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-md w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Transaction Details</h2>
+              <button
+                onClick={() => {
+                  setShowTransactionDetails(false);
+                  setSelectedTransaction(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Transaction ID</span>
+                <span className="font-mono text-sm text-gray-900">{selectedTransaction.id}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Type</span>
+                <span className="font-semibold text-gray-900 capitalize">{selectedTransaction.type}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Amount</span>
+                <span className={`text-lg font-bold ${
+                  selectedTransaction.type === 'payment' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {selectedTransaction.type === 'payment' ? '+' : '-'}
+                  {formatCurrency(selectedTransaction.amount, selectedTransaction.currency)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Status</span>
+                <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                  selectedTransaction.status === 'completed' ? 'bg-green-100 text-green-700' :
+                  selectedTransaction.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                  selectedTransaction.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                  'bg-red-100 text-red-700'
+                }`}>
+                  {selectedTransaction.status}
+                </span>
+              </div>
+              {selectedTransaction.description && (
+                <div>
+                  <span className="text-gray-600 block mb-1">Description</span>
+                  <p className="text-gray-900">{selectedTransaction.description}</p>
+                </div>
+              )}
+              <div>
+                <span className="text-gray-600 block mb-1">Date</span>
+                <p className="text-gray-900">{formatDateTime(selectedTransaction.createdAt)}</p>
+              </div>
             </div>
           </div>
         </div>

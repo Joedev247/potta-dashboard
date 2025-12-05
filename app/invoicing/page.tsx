@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Plus, Settings, ArrowLeft, ChevronDown, Info, FileText, Eye, Download, Search, Calendar, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Plus, Settings, ArrowLeft, ChevronDown, Info, FileText, Eye, Download, Search, Calendar, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { invoicingService } from '@/lib/api';
+import { formatDate, formatCurrency } from '@/lib/utils/format';
 
 export default function InvoicingPage() {
   const [activeTab, setActiveTab] = useState('invoices');
@@ -47,14 +49,19 @@ export default function InvoicingPage() {
     { id: 'products', label: 'Products' },
   ];
 
-  // Mock invoice data
-  const mockInvoices = [
-    { id: 'INV-2024-001', customer: 'John Doe', date: '2024-01-15', amount: 1250.00, status: 'paid', email: 'john@example.com', paymentMethod: 'MTN Mobile Money' },
-    { id: 'INV-2024-002', customer: 'Jane Smith', date: '2024-01-14', amount: 850.00, status: 'paid', email: 'jane@example.com', paymentMethod: 'Orange Money' },
-    { id: 'INV-2024-003', customer: 'Bob Johnson', date: '2024-01-13', amount: 2100.00, status: 'pending', email: 'bob@example.com', paymentMethod: 'MTN Mobile Money' },
-    { id: 'INV-2024-004', customer: 'Alice Brown', date: '2024-01-12', amount: 950.00, status: 'paid', email: 'alice@example.com', paymentMethod: 'Orange Money' },
-    { id: 'INV-2024-005', customer: 'Charlie Wilson', date: '2024-01-11', amount: 1500.00, status: 'overdue', email: 'charlie@example.com', paymentMethod: 'MTN Mobile Money' },
-  ];
+  // API data state
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [recurringInvoices, setRecurringInvoices] = useState<any[]>([]);
+  const [creditNotes, setCreditNotes] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState({
+    invoices: false,
+    recurring: false,
+    creditNotes: false,
+    customers: false,
+    products: false,
+  });
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -83,9 +90,135 @@ export default function InvoicingPage() {
     return match ? parseFloat(match[0]) : 0;
   };
 
-  // Filter invoices
+  // Fetch invoices
+  const fetchInvoices = useCallback(async () => {
+    setLoading(prev => ({ ...prev, invoices: true }));
+    try {
+      const params: any = {};
+      
+      if (selectedPeriod && selectedPeriod !== 'All') {
+        const today = new Date();
+        let startDate: Date = today;
+        
+        switch (selectedPeriod) {
+          case 'Last 7 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 7);
+            break;
+          case 'Last 30 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 30);
+            break;
+          case 'Last 90 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 90);
+            break;
+          case 'This year':
+            startDate = new Date(today.getFullYear(), 0, 1);
+            break;
+        }
+        
+        params.startDate = startDate.toISOString().split('T')[0];
+        params.endDate = today.toISOString().split('T')[0];
+      }
+      
+      if (selectedStatus && selectedStatus !== 'All') {
+        params.status = selectedStatus.toLowerCase();
+      }
+      
+      if (searchQuery) {
+        params.search = searchQuery;
+      }
+      
+      const response = await invoicingService.getInvoices(params);
+      if (response.success && response.data) {
+        setInvoices(response.data.invoices || []);
+      }
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, invoices: false }));
+    }
+  }, [selectedPeriod, selectedStatus, searchQuery]);
+
+  // Fetch recurring invoices
+  const fetchRecurringInvoices = useCallback(async () => {
+    setLoading(prev => ({ ...prev, recurring: true }));
+    try {
+      const response = await invoicingService.getRecurringInvoices();
+      if (response.success && response.data) {
+        setRecurringInvoices(response.data.recurringInvoices || []);
+      }
+    } catch (error) {
+      console.error('Error fetching recurring invoices:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, recurring: false }));
+    }
+  }, []);
+
+  // Fetch credit notes
+  const fetchCreditNotes = useCallback(async () => {
+    setLoading(prev => ({ ...prev, creditNotes: true }));
+    try {
+      const response = await invoicingService.getCreditNotes();
+      if (response.success && response.data) {
+        setCreditNotes(response.data.creditNotes || []);
+      }
+    } catch (error) {
+      console.error('Error fetching credit notes:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, creditNotes: false }));
+    }
+  }, []);
+
+  // Fetch customers
+  const fetchCustomers = useCallback(async () => {
+    setLoading(prev => ({ ...prev, customers: true }));
+    try {
+      const response = await invoicingService.getCustomers();
+      if (response.success && response.data) {
+        setCustomers(response.data.customers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, customers: false }));
+    }
+  }, []);
+
+  // Fetch products
+  const fetchProducts = useCallback(async () => {
+    setLoading(prev => ({ ...prev, products: true }));
+    try {
+      const response = await invoicingService.getProducts();
+      if (response.success && response.data) {
+        setProducts(response.data.products || []);
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, products: false }));
+    }
+  }, []);
+
+  // Fetch data on mount and tab change
+  useEffect(() => {
+    if (activeTab === 'invoices') {
+      fetchInvoices();
+    } else if (activeTab === 'recurring') {
+      fetchRecurringInvoices();
+    } else if (activeTab === 'credit-notes') {
+      fetchCreditNotes();
+    } else if (activeTab === 'customers') {
+      fetchCustomers();
+    } else if (activeTab === 'products') {
+      fetchProducts();
+    }
+  }, [activeTab, fetchInvoices, fetchRecurringInvoices, fetchCreditNotes, fetchCustomers, fetchProducts]);
+
+  // Filter invoices (client-side filtering for search)
   const getFilteredInvoices = () => {
-    let filtered = [...mockInvoices];
+    let filtered = [...invoices];
 
     // Search filter
     if (searchQuery) {
@@ -225,27 +358,52 @@ export default function InvoicingPage() {
     setIsCreating(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Prepare invoice data
+      const invoiceData = {
+        customerId: formData.customer,
+        customerName: formData.customer,
+        items: formData.items.map(item => ({
+          product: item.product,
+          quantity: parseFloat(item.quantity.toString()) || 1,
+          price: parseFloat(item.price) || 0,
+          vatRate: item.vat || 0,
+        })),
+        subtotal: formData.subtotal,
+        discount: formData.discount || 0,
+        total: formData.total,
+        paymentTerm: formData.paymentTerm || undefined,
+        memo: formData.memo || undefined,
+        currency: 'XAF',
+      };
       
-      setCreateSuccess(true);
+      const response = await invoicingService.createInvoice(invoiceData);
       
-      // Reset form after success
-      setTimeout(() => {
-        setFormData({
-          profile: 'Codev',
-          customer: '',
-          paymentTerm: '',
-          memo: '',
-          items: [{ product: '', quantity: 1, price: '', vat: 0, total: 0 }],
-          discount: 0,
-          subtotal: 0,
-          total: 0,
-        });
-        setCreateSuccess(false);
-        setShowCreateInvoice(false);
-      }, 3000);
+      if (response.success) {
+        setCreateSuccess(true);
+        
+        // Refresh invoices list
+        await fetchInvoices();
+        
+        // Reset form after success
+        setTimeout(() => {
+          setFormData({
+            profile: 'Codev',
+            customer: '',
+            paymentTerm: '',
+            memo: '',
+            items: [{ product: '', quantity: 1, price: '', vat: 0, total: 0 }],
+            discount: 0,
+            subtotal: 0,
+            total: 0,
+          });
+          setCreateSuccess(false);
+          setShowCreateInvoice(false);
+        }, 3000);
+      } else {
+        setCreateError(response.error?.message || 'Failed to create invoice. Please try again.');
+      }
     } catch (err) {
+      console.error('Create invoice error:', err);
       setCreateError('Failed to create invoice. Please try again.');
     } finally {
       setIsCreating(false);
@@ -325,14 +483,14 @@ export default function InvoicingPage() {
         <div className="flex gap-3">
           <Link 
             href="/settings"
-            className="px-4 py-1 bg-white border-2 border-gray-200 text-gray-700 text-sm font-semibold hover:border-green-400 hover:bg-green-50 transition-all flex items-center gap-2"
+            className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 text-sm font-semibold hover:border-green-400 hover:bg-green-50 transition-all flex items-center gap-2"
           >
             <Settings className="w-4 h-4" />
             Settings
           </Link>
           <button 
             onClick={() => setShowCreateInvoice(true)}
-            className="px-5 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 transform hover:scale-105"
+            className="px-5 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 transform hover:scale-105"
           >
             <Plus className="w-4 h-4" />
             Create
@@ -843,69 +1001,75 @@ export default function InvoicingPage() {
       ) : (
         <>
           {/* Invoices List */}
-          {activeTab === 'invoices' && (() => {
-            const filteredInvoices = getFilteredInvoices();
-            
-            return (
-              <div className="bg-white border border-gray-200 overflow-hidden">
-                <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                  <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
-                    <div>Invoice #</div>
-                    <div>Customer</div>
-                    <div>Date</div>
-                    <div>Amount</div>
-                    <div>Status</div>
-                    <div>Actions</div>
+          {activeTab === 'invoices' && (
+            loading.invoices ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+              </div>
+            ) : (() => {
+              const filteredInvoices = getFilteredInvoices();
+              
+              return (
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                  <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                    <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
+                      <div>Invoice #</div>
+                      <div>Customer</div>
+                      <div>Date</div>
+                      <div>Amount</div>
+                      <div>Status</div>
+                      <div>Actions</div>
+                    </div>
                   </div>
-                </div>
-                <div className="divide-y divide-gray-200">
-                  {filteredInvoices.length > 0 ? (
-                    filteredInvoices.map((invoice) => (
-                      <div key={invoice.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                        <div className="grid grid-cols-6 gap-4 items-center">
-                          <div className="font-mono text-sm text-gray-900 font-semibold">{invoice.id}</div>
-                          <div className="text-sm text-gray-900">{invoice.customer}</div>
-                          <div className="text-sm text-gray-600">{invoice.date}</div>
-                          <div className="font-semibold text-gray-900">XAF {invoice.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                          <div>
-                            <span className={`px-2 py-1 text-xs font-medium rounded ${
-                              invoice.status === 'paid'
-                                ? 'bg-green-100 text-green-700'
-                                : invoice.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-red-100 text-red-700'
-                            }`}>
-                              {invoice.status}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button 
-                              onClick={() => setSelectedItem({ ...invoice, type: 'invoice' })}
-                              className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1"
-                            >
-                              <Eye className="w-4 h-4" />
-                              View
-                            </button>
-                            <button 
-                              onClick={() => handleDownloadInvoice(invoice)}
-                              className="text-gray-600 hover:text-gray-700"
-                              title="Download invoice"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
+                  <div className="divide-y divide-gray-200">
+                    {filteredInvoices.length > 0 ? (
+                      filteredInvoices.map((invoice) => (
+                        <div key={invoice.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                          <div className="grid grid-cols-6 gap-4 items-center">
+                            <div className="font-mono text-sm text-gray-900 font-semibold">{invoice.invoiceNumber || invoice.id}</div>
+                            <div className="text-sm text-gray-900">{invoice.customerName || invoice.customer?.name || invoice.customer}</div>
+                            <div className="text-sm text-gray-600">{formatDate(invoice.date || invoice.createdAt)}</div>
+                            <div className="font-semibold text-gray-900">{formatCurrency(invoice.amount, invoice.currency || 'XAF')}</div>
+                            <div>
+                              <span className={`px-2 py-1 text-xs font-medium rounded ${
+                                invoice.status === 'paid'
+                                  ? 'bg-green-100 text-green-700'
+                                  : invoice.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}>
+                                {invoice.status}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => setSelectedItem({ ...invoice, type: 'invoice' })}
+                                className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1"
+                              >
+                                <Eye className="w-4 h-4" />
+                                View
+                              </button>
+                              <button 
+                                onClick={() => handleDownloadInvoice(invoice)}
+                                className="text-gray-600 hover:text-gray-700"
+                                title="Download invoice"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="px-6 py-8 text-center text-gray-500">
+                        No invoices found matching the selected filters
                       </div>
-                    ))
-                  ) : (
-                    <div className="px-6 py-8 text-center text-gray-500">
-                      No invoices found matching the selected filters
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })()}
+              );
+            })()
+          )}
 
           {/* Recurring Tab */}
           {activeTab === 'recurring' && (

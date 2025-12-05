@@ -31,12 +31,12 @@ export default function GetStartedPage() {
       <div className="grid grid-cols-4 gap-6 mb-12">
         {/* Business Account Card */}
         <div className="group bg-white p-6 border-2 border-gray-200 hover:border-green-500 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
-          <div className="mb-4 bg-gradient-to-br from-green-50 to-emerald-50 p-4 h-48 flex items-center justify-center border border-green-100  overflow-hidden relative">
+          <div className="mb-4 bg-gradient-to-br from-green-50 to-emerald-50 p-4 h-48 flex items-center justify-center border border-green-100 overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-t from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <img 
-              src="/images/business-account.jpg" 
+              src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=400&h=300&fit=crop&q=80" 
               alt="Business Account" 
-              className="w-full h-full object-cover  transition-transform duration-300 group-hover:scale-110"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             />
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">Business Account instanvi</h3>
@@ -45,12 +45,12 @@ export default function GetStartedPage() {
 
         {/* Payment Links Card */}
         <div className="group bg-white p-6 border-2 border-gray-200 hover:border-green-500 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
-          <div className="mb-4 bg-gradient-to-br from-blue-50 to-cyan-50 p-4 h-48 flex items-center justify-center border border-blue-100  overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="mb-4 bg-gradient-to-br from-blue-50 to-cyan-50 p-4 h-48 flex items-center justify-center border border-blue-100 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <img 
-              src="/images/payment-links.jpg" 
+              src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=300&fit=crop&q=80" 
               alt="Payment Links" 
-              className="w-full h-full object-cover  transition-transform duration-300 group-hover:scale-110"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             />
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">Payment Links</h3>
@@ -59,12 +59,12 @@ export default function GetStartedPage() {
 
         {/* Online Payments Card */}
         <div className="group bg-white p-6 border-2 border-gray-200 hover:border-green-500 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
-          <div className="mb-4 bg-gradient-to-br from-purple-50 to-pink-50 p-4 h-48 flex items-center justify-center border border-purple-100  overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="mb-4 bg-gradient-to-br from-purple-50 to-pink-50 p-4 h-48 flex items-center justify-center border border-purple-100 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <img 
-              src="/images/online-payments.jpg" 
+              src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop&q=80" 
               alt="Online Payments" 
-              className="w-full h-full object-cover  transition-transform duration-300 group-hover:scale-110"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             />
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">Online Payments</h3>
@@ -73,12 +73,12 @@ export default function GetStartedPage() {
 
         {/* In Person Payments Card */}
         <div className="group bg-white p-6 border-2 border-gray-200 hover:border-green-500 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
-          <div className="mb-4 bg-gradient-to-br from-orange-50 to-amber-50 p-4 h-48 flex items-center justify-center border border-orange-100  overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="mb-4 bg-gradient-to-br from-orange-50 to-amber-50 p-4 h-48 flex items-center justify-center border border-orange-100 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-orange-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <img 
-              src="/images/in-person-payments.jpg" 
+              src="https://images.unsplash.com/photo-1556740758-90de374c12ad?w=400&h=300&fit=crop&q=80" 
               alt="In Person Payments" 
-              className="w-full h-full object-cover  transition-transform duration-300 group-hover:scale-110"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             />
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">In Person Payments</h3>
@@ -100,7 +100,7 @@ export default function GetStartedPage() {
           </div>
           <button 
             onClick={() => router.push('/onboarding')}
-            className="px-4 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 transform hover:scale-105"
+            className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 transform hover:scale-105"
           >
             Continue
             <ArrowRight className="w-4 h-4" />

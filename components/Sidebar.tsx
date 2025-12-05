@@ -90,18 +90,30 @@ export default function Sidebar() {
                 </div>
               </div>
               <div className="py-2">
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
+                <Link
+                  href="/team-member"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  onClick={() => setShowOrgMenu(false)}
+                >
                   <UserPlus className="w-4 h-4" />
                   <span className="text-sm font-medium">Add team member</span>
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
+                </Link>
+                <Link
+                  href="/settings?tab=organization"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  onClick={() => setShowOrgMenu(false)}
+                >
                   <Settings className="w-4 h-4" />
                   <span className="text-sm font-medium">Organization settings</span>
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
+                </Link>
+                <Link
+                  href="/organization/new"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  onClick={() => setShowOrgMenu(false)}
+                >
                   <Plus className="w-4 h-4" />
                   <span className="text-sm font-medium">Create new organization</span>
-                </button>
+                </Link>
               </div>
             </div>
           )}

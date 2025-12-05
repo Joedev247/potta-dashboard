@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authService, usersService } from '@/lib/api';
 
 interface User {
   id: string;
@@ -23,79 +24,67 @@ interface SignupData {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   signup: (data: SignupData) => Promise<boolean>;
   sendOTP: (email: string) => Promise<void>;
   verifyOTP: (otp: string) => Promise<boolean>;
-  updateUser: (userData: Partial<User>) => void;
+  updateUser: (userData: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Dummy user data for development
-const dummyUser: User = {
-  id: '1',
-  email: 'john.doe@example.com',
-  username: 'johndoe',
-  firstName: 'John',
-  lastName: 'Doe',
-  isVerified: true,
-  role: 'customer',
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(dummyUser);
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Load user from localStorage on mount
+  // Load user from localStorage on mount (mock mode)
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const storedAuth = localStorage.getItem('isAuthenticated');
-    
-    if (storedUser && storedAuth === 'true') {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('user');
-        localStorage.removeItem('isAuthenticated');
-        // Fall back to dummy user
-        setUser(dummyUser);
-        setIsAuthenticated(true);
+    const loadUser = async () => {
+      const token = localStorage.getItem('accessToken');
+      const userStr = localStorage.getItem('user');
+      
+      if (token && userStr) {
+        try {
+          // Try to get user from localStorage first (faster)
+          const storedUser = JSON.parse(userStr);
+          setUser(storedUser);
+          setIsAuthenticated(true);
+          
+          // Also try to refresh from mock service (validates token)
+          const response = await usersService.getProfile();
+          if (response.success && response.data) {
+            setUser(response.data);
+            localStorage.setItem('user', JSON.stringify(response.data));
+          }
+        } catch (error) {
+          console.error('Error loading user:', error);
+          // Clear invalid data
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          setIsAuthenticated(false);
+        }
+      } else {
+        // No token or user, clear everything
+        setIsAuthenticated(false);
       }
-    } else {
-      // Set dummy user if no stored user
-      setUser(dummyUser);
-      setIsAuthenticated(true);
-    }
+      setLoading(false);
+    };
+
+    loadUser();
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // For now, use mock authentication
-      // In production, this would call your API
-      if (email && password) {
-        // Extract name from email for dummy data
-        const emailParts = email.split('@')[0].split('.');
-        const firstName = emailParts[0]?.charAt(0).toUpperCase() + emailParts[0]?.slice(1) || 'User';
-        const lastName = emailParts[1]?.charAt(0).toUpperCase() + emailParts[1]?.slice(1) || '';
-        
-        const newUser: User = {
-          id: '1',
-          email,
-          username: email.split('@')[0],
-          firstName,
-          lastName: lastName || 'Doe',
-          isVerified: false,
-          role: 'customer',
-        };
-        
-        setUser(newUser);
+      const response = await authService.login({ email, password });
+      
+      if (response.success && response.data) {
+        setUser(response.data.user);
         setIsAuthenticated(true);
-        localStorage.setItem('user', JSON.stringify(newUser));
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         localStorage.setItem('isAuthenticated', 'true');
         return true;
       }
@@ -106,26 +95,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('user');
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('otp');
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      setIsAuthenticated(false);
+      localStorage.removeItem('user');
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('otp');
+    }
   };
 
   const signup = async (data: SignupData): Promise<boolean> => {
     try {
-      // For now, use mock signup
-      // In production, this would call your API
-      if (data.email && data.password) {
+      const response = await authService.signup(data);
+      
+      if (response.success && response.data) {
+        // Create user object from response
         const newUser: User = {
-          id: '1',
-          email: data.email,
+          id: response.data.userId,
+          email: response.data.email,
           username: data.username,
           firstName: data.firstName,
           lastName: data.lastName,
-          isVerified: false,
+          isVerified: response.data.isVerified,
         };
         
         setUser(newUser);
@@ -143,33 +141,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sendOTP = async (email: string): Promise<void> => {
     try {
-      // For now, use mock OTP
-      // In production, this would call your API
-      const mockOTP = '123456';
-      localStorage.setItem('otp', mockOTP);
-      console.log(`OTP sent to ${email}: ${mockOTP}`);
+      await authService.sendVerificationOTP(email);
     } catch (error) {
       console.error('Send OTP error:', error);
+      throw error;
     }
   };
 
   const verifyOTP = async (otp: string): Promise<boolean> => {
     try {
-      // For now, use mock verification
-      // In production, this would call your API
-      const storedOTP = localStorage.getItem('otp');
+      if (!user?.email) return false;
       
-      if (otp === storedOTP || otp === '123456') {
-        if (user) {
-          const verifiedUser: User = {
-            ...user,
-            isVerified: true,
-          };
-          setUser(verifiedUser);
-          localStorage.setItem('user', JSON.stringify(verifiedUser));
-          localStorage.removeItem('otp');
-          return true;
-        }
+      const response = await authService.verifyOTP(user.email, otp);
+      
+      if (response.success && user) {
+        const verifiedUser: User = {
+          ...user,
+          isVerified: true,
+        };
+        setUser(verifiedUser);
+        localStorage.setItem('user', JSON.stringify(verifiedUser));
+        return true;
       }
       return false;
     } catch (error) {
@@ -178,8 +170,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateUser = (userData: Partial<User>) => {
-    if (user) {
+  const updateUser = async (userData: Partial<User>) => {
+    if (!user) return;
+    
+    try {
+      const response = await usersService.updateProfile(userData);
+      if (response.success && response.data) {
+        setUser(response.data);
+        localStorage.setItem('user', JSON.stringify(response.data));
+      }
+    } catch (error) {
+      console.error('Update user error:', error);
+      // Fallback to local update if API fails
       const updatedUser: User = {
         ...user,
         ...userData,
@@ -194,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isAuthenticated,
+        loading,
         login,
         logout,
         signup,

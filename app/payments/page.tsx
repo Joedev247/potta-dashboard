@@ -1,7 +1,9 @@
 'use client';
 
-import { Search, Plus, ExternalLink, ArrowLeft, ChevronDown, Calendar, X, RotateCcw, ChevronUp, ArrowRight, AlertCircle, Package, RefreshCw, Eye, CheckCircle2, Copy } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Search, Plus, ExternalLink, ArrowLeft, ChevronDown, Calendar, X, RotateCcw, ChevronUp, ArrowRight, AlertCircle, Package, RefreshCw, Eye, CheckCircle2, Copy, Loader2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { paymentsService, type Payment, type Refund, type Chargeback, type Order } from '@/lib/api';
+import { formatDate, formatCurrency } from '@/lib/utils/format';
 
 export default function PaymentsPage() {
   const [activeTab, setActiveTab] = useState('payments');
@@ -35,6 +37,14 @@ export default function PaymentsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  
+  // API data states
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [refunds, setRefunds] = useState<Refund[]>([]);
+  const [chargebacks, setChargebacks] = useState<Chargeback[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState({ payments: false, refunds: false, chargebacks: false, orders: false });
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 });
 
   const tabs = [
     { id: 'payments', label: 'Payments' },
@@ -43,32 +53,125 @@ export default function PaymentsPage() {
     { id: 'orders', label: 'Orders' },
   ];
 
-  // Mock payment data
-  const mockPayments = [
-    { id: 'tr_pay001', paymentId: 'tr_xyz789', amount: 'XAF 150.00', status: 'paid', date: '2024-01-15', customer: 'John Doe', paymentMethod: 'MTN MoMo' },
-    { id: 'tr_pay002', paymentId: 'tr_abc456', amount: 'XAF 250.00', status: 'pending', date: '2024-01-14', customer: 'Jane Smith', paymentMethod: 'Orange Money' },
-    { id: 'tr_pay003', paymentId: 'tr_def789', amount: 'XAF 75.00', status: 'paid', date: '2024-01-13', customer: 'Bob Johnson', paymentMethod: 'MTN MoMo' },
-    { id: 'tr_pay004', paymentId: 'tr_ghi012', amount: 'XAF 300.00', status: 'failed', date: '2024-01-12', customer: 'Alice Brown', paymentMethod: 'Orange Money' },
-  ];
+  // Fetch data functions
+  const fetchPayments = useCallback(async () => {
+    setLoading(prev => ({ ...prev, payments: true }));
+    try {
+      const params: any = {
+        page: pagination.page,
+        limit: pagination.limit,
+        search: searchQuery || undefined,
+        status: selectedStatus || undefined,
+      };
+      
+      // Add date filters if period is selected
+      if (selectedPeriod && selectedPeriod !== 'All') {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let startDate: Date = today;
+        
+        switch (selectedPeriod) {
+          case 'Today':
+            startDate = today;
+            break;
+          case 'This Week':
+            startDate = new Date(today);
+            startDate.setDate(startDate.getDate() - 7);
+            break;
+          case 'This Month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+          case 'Last 3 Months':
+            startDate = new Date(now);
+            startDate.setMonth(startDate.getMonth() - 3);
+            break;
+        }
+        
+        params.startDate = startDate.toISOString().split('T')[0];
+        params.endDate = new Date().toISOString().split('T')[0];
+      }
+      
+      const response = await paymentsService.getPayments(params);
+      if (response.success && response.data) {
+        setPayments(response.data.payments || []);
+        if (response.data.pagination) {
+          setPagination(response.data.pagination);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, payments: false }));
+    }
+  }, [searchQuery, selectedStatus, selectedPeriod, pagination.page, pagination.limit]);
 
-  const mockRefunds = [
-    { id: 're_abc123', paymentId: 'tr_xyz789', amount: 'XAF 25.00', status: 'completed', date: '2024-01-15', currency: 'XAF' },
-    { id: 're_def456', paymentId: 'tr_uvw012', amount: 'XAF 50.00', status: 'pending', date: '2024-01-14', currency: 'XAF' },
-    { id: 're_ghi789', paymentId: 'tr_rst345', amount: 'XAF 100.00', status: 'processing', date: '2024-01-13', currency: 'XAF' },
-  ];
+  const fetchRefunds = useCallback(async () => {
+    setLoading(prev => ({ ...prev, refunds: true }));
+    try {
+      const response = await paymentsService.getRefunds({
+        page: pagination.page,
+        limit: pagination.limit,
+        search: searchQuery || undefined,
+        status: selectedStatus || undefined,
+      });
+      if (response.success && response.data) {
+        setRefunds(response.data.refunds || []);
+      }
+    } catch (error) {
+      console.error('Error fetching refunds:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, refunds: false }));
+    }
+  }, [searchQuery, selectedStatus, pagination.page, pagination.limit]);
 
-  const mockChargebacks = [
-    { id: 'ch_cb123', paymentId: 'tr_xyz789', amount: 'XAF 75.00', status: 'open', date: '2024-01-15', currency: 'XAF' },
-    { id: 'ch_cb456', paymentId: 'tr_uvw012', amount: 'XAF 120.00', status: 'won', date: '2024-01-10', currency: 'XAF' },
-    { id: 'ch_cb789', paymentId: 'tr_rst345', amount: 'XAF 200.00', status: 'lost', date: '2024-01-05', currency: 'XAF' },
-  ];
+  const fetchChargebacks = useCallback(async () => {
+    setLoading(prev => ({ ...prev, chargebacks: true }));
+    try {
+      const response = await paymentsService.getChargebacks({
+        page: pagination.page,
+        limit: pagination.limit,
+        status: selectedStatus || undefined,
+      });
+      if (response.success && response.data) {
+        setChargebacks(response.data.chargebacks || []);
+      }
+    } catch (error) {
+      console.error('Error fetching chargebacks:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, chargebacks: false }));
+    }
+  }, [selectedStatus, pagination.page, pagination.limit]);
 
-  const mockOrders = [
-    { id: 'ord_001', customer: 'John Doe', amount: 'XAF 149.99', items: 3, status: 'paid', date: '2024-01-15', email: 'john@example.com' },
-    { id: 'ord_002', customer: 'Jane Smith', amount: 'XAF 89.50', items: 2, status: 'pending', date: '2024-01-14', email: 'jane@example.com' },
-    { id: 'ord_003', customer: 'Bob Johnson', amount: 'XAF 299.00', items: 1, status: 'shipped', date: '2024-01-13', email: 'bob@example.com' },
-    { id: 'ord_004', customer: 'Alice Brown', amount: 'XAF 45.00', items: 5, status: 'cancelled', date: '2024-01-12', email: 'alice@example.com' },
-  ];
+  const fetchOrders = useCallback(async () => {
+    setLoading(prev => ({ ...prev, orders: true }));
+    try {
+      const response = await paymentsService.getOrders({
+        page: pagination.page,
+        limit: pagination.limit,
+        status: selectedStatus || undefined,
+      });
+      if (response.success && response.data) {
+        setOrders(response.data.orders || []);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, orders: false }));
+    }
+  }, [selectedStatus, pagination.page, pagination.limit]);
+
+  // Fetch data on mount and when filters change
+  useEffect(() => {
+    if (activeTab === 'payments') {
+      fetchPayments();
+    } else if (activeTab === 'refunds') {
+      fetchRefunds();
+    } else if (activeTab === 'chargebacks') {
+      fetchChargebacks();
+    } else if (activeTab === 'orders') {
+      fetchOrders();
+    }
+  }, [activeTab, fetchPayments, fetchRefunds, fetchChargebacks, fetchOrders]);
 
   // Helper function to extract numeric amount from string
   const extractAmount = (amountStr: string): number => {
@@ -144,8 +247,8 @@ export default function PaymentsPage() {
     }
   }, [showAmountFilter, showPeriodFilter, showStatusFilter, showPaymentMethodsDropdown, showCalendar]);
 
-  // Format date for display
-  const formatDate = (date: Date): string => {
+  // Format date for input field (calendar selection)
+  const formatDateForInput = (date: Date): string => {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
@@ -154,7 +257,7 @@ export default function PaymentsPage() {
 
   // Handle date selection from calendar
   const handleDateSelect = (date: Date) => {
-    setFormData({ ...formData, expiryDate: formatDate(date) });
+    setFormData({ ...formData, expiryDate: formatDateForInput(date) });
     setShowCalendar(false);
   };
 
@@ -177,32 +280,45 @@ export default function PaymentsPage() {
     setIsCreating(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await paymentsService.createPaymentLink({
+        type: formData.type as 'Fixed' | 'Subscription' | 'Donation',
+        amount: formData.amount ? parseFloat(formData.amount) : 0,
+        currency: formData.currency as 'XAF' | 'USD',
+        description: formData.description || undefined,
+        expiryDate: formData.expiryDate || null,
+        redirectUrl: formData.redirectUrl || null,
+        reusable,
+        paymentMethods,
+        saveUrl: savXAFl,
+      });
 
-      // Generate a mock payment link
-      const linkId = `pl_${Date.now()}`;
-      const paymentLink = `https://pay.codev.cm/${linkId}`;
-      
-      setCreatedLink(paymentLink);
-      
-      // Reset form after successful creation
-      setTimeout(() => {
-        setFormData({
-          type: 'Fixed',
-          currency: 'XAF',
-          amount: '',
-          description: '',
-          expiryDate: '',
-          redirectUrl: '',
-        });
-        setPaymentMethods(['MTN Mobile Money', 'Orange Money']);
-        setReusable(false);
-        setSavXAFl(false);
-        setCreatedLink(null);
-        setShowCreateLink(false);
-      }, 3000);
+      if (response.success && response.data) {
+        setCreatedLink(response.data.url);
+        
+        // Refresh payments list
+        fetchPayments();
+        
+        // Reset form after successful creation
+        setTimeout(() => {
+          setFormData({
+            type: 'Fixed',
+            currency: 'XAF',
+            amount: '',
+            description: '',
+            expiryDate: '',
+            redirectUrl: '',
+          });
+          setPaymentMethods(['MTN Mobile Money', 'Orange Money']);
+          setReusable(false);
+          setSavXAFl(false);
+          setCreatedLink(null);
+          setShowCreateLink(false);
+        }, 3000);
+      } else {
+        setError(response.error?.message || 'Failed to create payment link. Please try again.');
+      }
     } catch (err) {
+      console.error('Error creating payment link:', err);
       setError('Failed to create payment link. Please try again.');
     } finally {
       setIsCreating(false);
@@ -328,7 +444,7 @@ export default function PaymentsPage() {
           </div>
           <button 
             onClick={() => setShowCreateLink(true)}
-            className="flex items-center gap-2 px-5 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all transform hover:scale-105"
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all transform hover:scale-105"
           >
             <Plus className="w-4 h-4" />
             Create payment
@@ -742,13 +858,14 @@ export default function PaymentsPage() {
         <>
           {/* Payments Tab Content */}
           {activeTab === 'payments' && (() => {
-            // Filter payments
-            let filteredPayments = mockPayments.filter(payment => {
+            // Filter payments from API data
+            let filteredPayments = payments.filter(payment => {
               const matchesSearch = !searchQuery || 
                 payment.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                payment.paymentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                payment.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                payment.amount.toLowerCase().includes(searchQuery.toLowerCase());
+                (payment.paymentLinkId && payment.paymentLinkId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (payment.customer?.name && payment.customer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (payment.customer?.email && payment.customer.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                payment.amount.toString().includes(searchQuery);
               
               const matchesStatus = !selectedStatus || payment.status === selectedStatus.toLowerCase();
               
@@ -756,12 +873,20 @@ export default function PaymentsPage() {
             });
 
             // Calculate stats
-            const totalPayments = filteredPayments.length;
-            const paidCount = filteredPayments.filter(p => p.status === 'paid').length;
-            const pendingCount = filteredPayments.filter(p => p.status === 'pending').length;
-            const totalRevenue = filteredPayments
+            const totalPayments = payments.length;
+            const paidCount = payments.filter(p => p.status === 'paid').length;
+            const pendingCount = payments.filter(p => p.status === 'pending').length;
+            const totalRevenue = payments
               .filter(p => p.status === 'paid')
-              .reduce((sum, p) => sum + extractAmount(p.amount), 0);
+              .reduce((sum, p) => sum + p.amount, 0);
+
+            if (loading.payments) {
+              return (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+                </div>
+              );
+            }
 
             return (
               <>
@@ -781,7 +906,7 @@ export default function PaymentsPage() {
                   </div>
                   <div className="bg-white border border-gray-200 p-4">
                     <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
-                    <div className="text-2xl font-bold text-gray-900">XAF {totalRevenue.toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</div>
                   </div>
                 </div>
 
@@ -802,8 +927,8 @@ export default function PaymentsPage() {
                     <div key={payment.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                       <div className="grid grid-cols-6 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{payment.id}</div>
-                        <div className="text-sm text-gray-900">{payment.customer}</div>
-                        <div className="font-semibold text-gray-900">{payment.amount}</div>
+                        <div className="text-sm text-gray-900">{payment.customer?.name || payment.customer?.email || 'N/A'}</div>
+                        <div className="font-semibold text-gray-900">{formatCurrency(payment.amount, payment.currency)}</div>
                         <div>
                           <span className={`px-2 py-1 text-xs font-medium rounded ${
                             payment.status === 'paid'
@@ -815,7 +940,7 @@ export default function PaymentsPage() {
                             {payment.status}
                           </span>
                         </div>
-                        <div className="text-sm text-gray-600">{payment.date}</div>
+                        <div className="text-sm text-gray-600">{formatDate(payment.createdAt)}</div>
                         <div>
                           <button 
                             onClick={() => setSelectedItem({ ...payment, type: 'payment' })}
@@ -837,7 +962,7 @@ export default function PaymentsPage() {
               </div>
                     <h2 className="text-2xl font-semibold text-gray-900 mb-3">No payments found</h2>
                     <p className="text-gray-600 mb-6 text-center max-w-md">
-                      {searchQuery || selectedStatus ? 'Try adjusting your search or filters' : 'Test payments will show up here'}
+                      {searchQuery || selectedStatus ? 'Try adjusting your search or filters' : loading.payments ? 'Loading payments...' : 'No payments yet. Create your first payment link to get started.'}
                     </p>
             </div>
           )}
@@ -847,23 +972,31 @@ export default function PaymentsPage() {
 
           {/* Refunds Tab Content */}
           {activeTab === 'refunds' && (() => {
-            // Filter refunds
-            const filteredRefunds = mockRefunds.filter(refund => {
+            if (loading.refunds) {
+              return (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+                </div>
+              );
+            }
+
+            // Filter refunds from API data
+            const filteredRefunds = refunds.filter(refund => {
               const matchesSearch = !searchQuery || 
                 refund.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 refund.paymentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                refund.amount.toLowerCase().includes(searchQuery.toLowerCase());
+                refund.amount.toString().includes(searchQuery);
               const matchesStatus = !selectedStatus || refund.status === selectedStatus.toLowerCase();
               return matchesSearch && matchesStatus;
             });
 
             // Calculate stats
-            const totalRefunds = filteredRefunds.length;
-            const completedCount = filteredRefunds.filter(r => r.status === 'completed').length;
-            const pendingCount = filteredRefunds.filter(r => r.status === 'pending').length;
-            const totalRefundAmount = filteredRefunds
+            const totalRefunds = refunds.length;
+            const completedCount = refunds.filter(r => r.status === 'completed').length;
+            const pendingCount = refunds.filter(r => r.status === 'pending').length;
+            const totalRefundAmount = refunds
               .filter(r => r.status === 'completed')
-              .reduce((sum, r) => sum + extractAmount(r.amount), 0);
+              .reduce((sum, r) => sum + r.amount, 0);
 
             return (
             <div>
@@ -883,7 +1016,7 @@ export default function PaymentsPage() {
                   </div>
                   <div className="bg-white border border-gray-200 p-4">
                     <div className="text-sm text-gray-600 mb-1">Total Refunded</div>
-                    <div className="text-2xl font-bold text-gray-900">XAF {totalRefundAmount.toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalRefundAmount)}</div>
                   </div>
                 </div>
 
@@ -907,7 +1040,7 @@ export default function PaymentsPage() {
                       <div className="grid grid-cols-6 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{refund.id}</div>
                         <div className="font-mono text-sm text-gray-600">{refund.paymentId}</div>
-                        <div className="font-semibold text-gray-900">{refund.amount}</div>
+                        <div className="font-semibold text-gray-900">{formatCurrency(refund.amount, refund.currency)}</div>
                         <div>
                           <span className={`px-2 py-1 text-xs font-medium rounded ${
                             refund.status === 'completed'
@@ -919,7 +1052,7 @@ export default function PaymentsPage() {
                             {refund.status}
                           </span>
                         </div>
-                        <div className="text-sm text-gray-600">{refund.date}</div>
+                        <div className="text-sm text-gray-600">{formatDate(refund.createdAt)}</div>
                         <div>
                           <button 
                             onClick={() => setSelectedItem({ ...refund, type: 'refund' })}
@@ -940,23 +1073,31 @@ export default function PaymentsPage() {
 
           {/* Chargebacks Tab Content */}
           {activeTab === 'chargebacks' && (() => {
-            // Filter chargebacks
-            const filteredChargebacks = mockChargebacks.filter(chargeback => {
+            if (loading.chargebacks) {
+              return (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+                </div>
+              );
+            }
+
+            // Filter chargebacks from API data
+            const filteredChargebacks = chargebacks.filter(chargeback => {
               const matchesSearch = !searchQuery || 
                 chargeback.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 chargeback.paymentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                chargeback.amount.toLowerCase().includes(searchQuery.toLowerCase());
+                chargeback.amount.toString().includes(searchQuery);
               const matchesStatus = !selectedStatus || chargeback.status === selectedStatus.toLowerCase();
               return matchesSearch && matchesStatus;
             });
 
             // Calculate stats
-            const totalChargebacks = filteredChargebacks.length;
-            const openCount = filteredChargebacks.filter(c => c.status === 'open').length;
-            const wonCount = filteredChargebacks.filter(c => c.status === 'won').length;
-            const totalChargebackAmount = filteredChargebacks
+            const totalChargebacks = chargebacks.length;
+            const openCount = chargebacks.filter(c => c.status === 'open').length;
+            const wonCount = chargebacks.filter(c => c.status === 'won').length;
+            const totalChargebackAmount = chargebacks
               .filter(c => c.status === 'open')
-              .reduce((sum, c) => sum + extractAmount(c.amount), 0);
+              .reduce((sum, c) => sum + c.amount, 0);
 
             return (
             <div>
@@ -976,7 +1117,7 @@ export default function PaymentsPage() {
                   </div>
                   <div className="bg-white border border-gray-200 p-4">
                     <div className="text-sm text-gray-600 mb-1">Open Amount</div>
-                    <div className="text-2xl font-bold text-gray-900">XAF {totalChargebackAmount.toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalChargebackAmount)}</div>
                   </div>
                 </div>
 
@@ -1000,7 +1141,7 @@ export default function PaymentsPage() {
                       <div className="grid grid-cols-6 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{chargeback.id}</div>
                         <div className="font-mono text-sm text-gray-600">{chargeback.paymentId}</div>
-                        <div className="font-semibold text-gray-900">{chargeback.amount}</div>
+                        <div className="font-semibold text-gray-900">{formatCurrency(chargeback.amount, chargeback.currency)}</div>
                         <div>
                           <span className={`px-2 py-1 text-xs font-medium rounded flex items-center gap-1 w-fit ${
                             chargeback.status === 'open'
@@ -1013,7 +1154,7 @@ export default function PaymentsPage() {
                             {chargeback.status}
                           </span>
                         </div>
-                        <div className="text-sm text-gray-600">{chargeback.date}</div>
+                        <div className="text-sm text-gray-600">{formatDate(chargeback.createdAt)}</div>
                         <div>
                           <button 
                             onClick={() => setSelectedItem({ ...chargeback, type: 'chargeback' })}
@@ -1048,24 +1189,32 @@ export default function PaymentsPage() {
 
           {/* Orders Tab Content */}
           {activeTab === 'orders' && (() => {
-            // Filter orders
-            const filteredOrders = mockOrders.filter(order => {
+            if (loading.orders) {
+              return (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+                </div>
+              );
+            }
+
+            // Filter orders from API data
+            const filteredOrders = orders.filter(order => {
               const matchesSearch = !searchQuery || 
                 order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                order.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                order.amount.toLowerCase().includes(searchQuery.toLowerCase());
+                order.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.amount.toString().includes(searchQuery);
               const matchesStatus = !selectedStatus || order.status === selectedStatus.toLowerCase();
               return matchesSearch && matchesStatus;
             });
 
             // Calculate stats
-            const totalOrders = filteredOrders.length;
-            const paidCount = filteredOrders.filter(o => o.status === 'paid').length;
-            const pendingCount = filteredOrders.filter(o => o.status === 'pending').length;
-            const totalRevenue = filteredOrders
+            const totalOrders = orders.length;
+            const paidCount = orders.filter(o => o.status === 'paid').length;
+            const pendingCount = orders.filter(o => o.status === 'pending').length;
+            const totalRevenue = orders
               .filter(o => o.status === 'paid')
-              .reduce((sum, o) => sum + extractAmount(o.amount), 0);
+              .reduce((sum, o) => sum + o.amount, 0);
 
             return (
               <div>
@@ -1085,7 +1234,7 @@ export default function PaymentsPage() {
                   </div>
                   <div className="bg-white border border-gray-200 p-4">
                     <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
-                    <div className="text-2xl font-bold text-gray-900">XAF {totalRevenue.toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</div>
                   </div>
                 </div>
 
@@ -1110,11 +1259,11 @@ export default function PaymentsPage() {
                       <div className="grid grid-cols-7 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{order.id}</div>
                         <div>
-                          <div className="font-medium text-gray-900">{order.customer}</div>
-                          <div className="text-xs text-gray-500">{order.email}</div>
+                          <div className="font-medium text-gray-900">{order.customer.name}</div>
+                          <div className="text-xs text-gray-500">{order.customer.email}</div>
                         </div>
-                        <div className="font-semibold text-gray-900">{order.amount}</div>
-                        <div className="text-sm text-gray-600">{order.items} items</div>
+                        <div className="font-semibold text-gray-900">{formatCurrency(order.amount, order.currency)}</div>
+                        <div className="text-sm text-gray-600">{order.items.length} items</div>
                         <div>
                           <span className={`px-2 py-1 text-xs font-medium rounded ${
                             order.status === 'paid'
@@ -1128,7 +1277,7 @@ export default function PaymentsPage() {
                             {order.status}
                           </span>
                         </div>
-                        <div className="text-sm text-gray-600">{order.date}</div>
+                        <div className="text-sm text-gray-600">{formatDate(order.createdAt)}</div>
                         <div>
                           <button 
                             onClick={() => setSelectedItem({ ...order, type: 'order' })}
@@ -1140,8 +1289,8 @@ export default function PaymentsPage() {
                         </div>
                       </div>
                     </div>
-                    ))}
-                  </div>
+                  ))}
+                </div>
                 </div>
               </div>
             );

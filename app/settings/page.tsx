@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Settings as SettingsIcon, 
   User, 
@@ -18,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
   const { user, updateUser } = useAuth();
   const { organization, updateOrganization } = useOrganization();
   const [activeTab, setActiveTab] = useState('profile');
@@ -76,6 +78,14 @@ export default function SettingsPage() {
       });
     }
   }, [organization]);
+
+  // Load tab from URL query parameter
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tabs.find(t => t.id === tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Load notification settings on mount
   useEffect(() => {

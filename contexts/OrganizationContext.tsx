@@ -26,14 +26,19 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
   // Load organization from localStorage on mount
   useEffect(() => {
-    const storedOrg = localStorage.getItem('organization');
+    // Check both storage keys for compatibility
+    const storedOrg = localStorage.getItem('organization') || localStorage.getItem('organization_data');
     if (storedOrg) {
       try {
         const parsedOrg = JSON.parse(storedOrg);
         setOrganizationState(parsedOrg);
+        // Sync to both keys
+        localStorage.setItem('organization', storedOrg);
+        localStorage.setItem('organization_data', storedOrg);
       } catch (error) {
         console.error('Error parsing stored organization:', error);
         localStorage.removeItem('organization');
+        localStorage.removeItem('organization_data');
       }
     }
   }, []);
@@ -41,9 +46,12 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const setOrganization = (org: Organization | null) => {
     setOrganizationState(org);
     if (org) {
-      localStorage.setItem('organization', JSON.stringify(org));
+      const orgJson = JSON.stringify(org);
+      localStorage.setItem('organization', orgJson);
+      localStorage.setItem('organization_data', orgJson);
     } else {
       localStorage.removeItem('organization');
+      localStorage.removeItem('organization_data');
     }
   };
 
@@ -51,7 +59,9 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     if (organization) {
       const updated = { ...organization, ...updates };
       setOrganizationState(updated);
-      localStorage.setItem('organization', JSON.stringify(updated));
+      const orgJson = JSON.stringify(updated);
+      localStorage.setItem('organization', orgJson);
+      localStorage.setItem('organization_data', orgJson);
     }
   };
 

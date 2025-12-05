@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Bell, 
   CheckCircle, 
@@ -8,9 +8,12 @@ import {
   Info, 
   X,
   Filter,
-  Search
+  Search,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
+import { notificationsService } from '@/lib/api';
+import { formatDateTime } from '@/lib/utils/format';
 
 interface Notification {
   id: string;
@@ -27,57 +30,64 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<'primary' | 'notification'>('primary');
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const notifications: Notification[] = [
-    {
-      id: '1',
-      type: 'primary',
-      category: 'success',
-      title: 'Payment Received',
-      message: 'You received a payment of $1,250.00 from John Doe',
-      time: '2 hours ago',
-      read: false,
-      actionUrl: '/payments'
-    },
-    {
-      id: '2',
-      type: 'primary',
-      category: 'info',
-      title: 'Account Verification',
-      message: 'Your account verification is pending review',
-      time: '5 hours ago',
-      read: false,
-      actionUrl: '/settings'
-    },
-    {
-      id: '3',
-      type: 'notification',
-      category: 'warning',
-      title: 'Low Balance Alert',
-      message: 'Your account balance is below the minimum threshold',
-      time: '1 day ago',
-      read: true
-    },
-    {
-      id: '4',
-      type: 'primary',
-      category: 'success',
-      title: 'Invoice Paid',
-      message: 'Invoice #INV-2024-001 has been paid',
-      time: '2 days ago',
-      read: true,
-      actionUrl: '/invoicing'
-    },
-    {
-      id: '5',
-      type: 'notification',
-      category: 'info',
-      title: 'System Update',
-      message: 'New features have been added to your dashboard',
-      time: '3 days ago',
-      read: true
+  // Fetch notifications from API
+  const fetchNotifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: any = {};
+      if (filter === 'unread') {
+        params.read = false;
+      }
+      
+      const response = await notificationsService.getNotifications({
+        type: activeTab,
+        filter: filter === 'unread' ? 'unread' : undefined,
+        search: searchQuery || undefined,
+      });
+      
+      if (response.success && response.data) {
+        // Map API response to Notification interface
+        const mappedNotifications = (response.data.notifications || []).map((notif: any) => ({
+          id: notif.id,
+          type: notif.type || 'notification',
+          category: notif.category || 'info',
+          title: notif.title,
+          message: notif.message,
+          time: notif.createdAt ? formatDateTime(notif.createdAt) : notif.time || '',
+          read: notif.read || false,
+          actionUrl: notif.actionUrl,
+        }));
+        setNotifications(mappedNotifications);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, [activeTab, filter, searchQuery]);
+
+  // Fetch notifications on mount and when filter/tab/search changes
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Handle mark as read
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      const response = await notificationsService.markAsRead(notificationId);
+      if (response.success) {
+        // Update local state
+        setNotifications(notifications.map(n => 
+          n.id === notificationId ? { ...n, read: true } : n
+        ));
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
 
   const filteredNotifications = notifications.filter(notif => {
     const matchesTab = notif.type === activeTab;
@@ -218,7 +228,11 @@ export default function NotificationsPage() {
 
         {/* Notifications List */}
         <div className="bg-white border-2 border-gray-200">
-          {filteredNotifications.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+            </div>
+          ) : filteredNotifications.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
                 <Bell className="w-8 h-8 text-green-600" />
@@ -253,14 +267,24 @@ export default function NotificationsPage() {
                       <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-500">{notification.time}</span>
-                        {notification.actionUrl && (
-                          <Link
-                            href={notification.actionUrl}
-                            className="text-xs text-green-600 hover:text-green-700 font-medium"
-                          >
-                            View details →
-                          </Link>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {!notification.read && (
+                            <button
+                              onClick={() => handleMarkAsRead(notification.id)}
+                              className="text-xs text-gray-500 hover:text-gray-700 font-medium"
+                            >
+                              Mark as read
+                            </button>
+                          )}
+                          {notification.actionUrl && (
+                            <Link
+                              href={notification.actionUrl}
+                              className="text-xs text-green-600 hover:text-green-700 font-medium"
+                            >
+                              View details →
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { FileText, Download, Calendar, Filter, ChevronDown, Eye, CheckCircle2, Printer, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { FileText, Download, Calendar, Filter, ChevronDown, Eye, CheckCircle2, Printer, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import { reportsService, invoicingService } from '@/lib/api';
+import { formatDate as formatDateUtil, formatCurrency } from '@/lib/utils/format';
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('settlements');
@@ -216,24 +218,154 @@ export default function ReportsPage() {
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-  // Mock data for filtering
-  const mockSettlements = [
-    { id: 'stl_abc123', date: '2024-01-15', amount: 5250.00, status: 'paid' },
-    { id: 'stl_def456', date: '2024-01-14', amount: 3800.00, status: 'paid' },
-    { id: 'stl_ghi789', date: '2024-01-13', amount: 4200.00, status: 'pending' },
-    { id: 'stl_jkl012', date: '2024-01-12', amount: 2950.00, status: 'paid' },
-  ];
+  // API data state
+  const [settlements, setSettlements] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [balanceReport, setBalanceReport] = useState<any>(null);
+  const [loading, setLoading] = useState({ settlements: false, invoices: false, balanceReport: false });
 
-  const mockInvoices = [
-    { id: 'inv_001', date: '2024-01-15', amount: 1250.00, status: 'paid' },
-    { id: 'inv_002', date: '2024-01-14', amount: 850.00, status: 'paid' },
-    { id: 'inv_003', date: '2024-01-13', amount: 2100.00, status: 'pending' },
-    { id: 'inv_004', date: '2024-01-12', amount: 950.00, status: 'paid' },
-  ];
+  // Helper to convert date format for API
+  const convertToAPIDate = (dateStr: string): string => {
+    // Convert DD/MM/YYYY to YYYY-MM-DD
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
+  };
+
+  // Fetch settlements
+  const fetchSettlements = useCallback(async () => {
+    setLoading(prev => ({ ...prev, settlements: true }));
+    try {
+      const params: any = {};
+      
+      if (selectedPeriod && selectedPeriod !== 'All') {
+        const today = new Date();
+        let startDate: Date = today;
+        
+        switch (selectedPeriod) {
+          case 'Last 7 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 7);
+            break;
+          case 'Last 30 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 30);
+            break;
+          case 'Last 90 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 90);
+            break;
+          case 'This year':
+            startDate = new Date(today.getFullYear(), 0, 1);
+            break;
+        }
+        
+        params.startDate = startDate.toISOString().split('T')[0];
+        params.endDate = today.toISOString().split('T')[0];
+      }
+      
+      if (selectedFilter && selectedFilter !== 'All') {
+        params.status = selectedFilter.toLowerCase();
+      }
+      
+      const response = await reportsService.getSettlements(params);
+      if (response.success && response.data) {
+        setSettlements(response.data.settlements || []);
+      }
+    } catch (error) {
+      console.error('Error fetching settlements:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, settlements: false }));
+    }
+  }, [selectedPeriod, selectedFilter]);
+
+  // Fetch invoices
+  const fetchInvoices = useCallback(async () => {
+    setLoading(prev => ({ ...prev, invoices: true }));
+    try {
+      const params: any = {};
+      
+      if (selectedPeriod && selectedPeriod !== 'All') {
+        const today = new Date();
+        let startDate: Date = today;
+        
+        switch (selectedPeriod) {
+          case 'Last 7 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 7);
+            break;
+          case 'Last 30 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 30);
+            break;
+          case 'Last 90 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 90);
+            break;
+          case 'This year':
+            startDate = new Date(today.getFullYear(), 0, 1);
+            break;
+        }
+        
+        params.startDate = startDate.toISOString().split('T')[0];
+        params.endDate = today.toISOString().split('T')[0];
+      }
+      
+      if (selectedFilter && selectedFilter !== 'All') {
+        params.status = selectedFilter.toLowerCase();
+      }
+      
+      const response = await invoicingService.getInvoices(params);
+      if (response.success && response.data) {
+        setInvoices(response.data.invoices || []);
+      }
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, invoices: false }));
+    }
+  }, [selectedPeriod, selectedFilter]);
+
+  // Fetch balance report
+  const fetchBalanceReport = useCallback(async () => {
+    if (!selectedRange.start || !selectedRange.end) return;
+    
+    setLoading(prev => ({ ...prev, balanceReport: true }));
+    try {
+      const startDate = convertToAPIDate(selectedRange.start);
+      const endDate = convertToAPIDate(selectedRange.end);
+      
+      const response = await reportsService.getBalanceReport({
+        startDate,
+        endDate,
+      });
+      
+      if (response.success && response.data) {
+        setBalanceReport(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching balance report:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, balanceReport: false }));
+    }
+  }, [selectedRange]);
+
+  // Fetch data when tab or filters change
+  useEffect(() => {
+    if (activeTab === 'settlements') {
+      fetchSettlements();
+    } else if (activeTab === 'invoices') {
+      fetchInvoices();
+    } else if (activeTab === 'balance-report') {
+      fetchBalanceReport();
+    }
+  }, [activeTab, fetchSettlements, fetchInvoices, fetchBalanceReport]);
 
   // Filter data based on selected filters
   const getFilteredData = () => {
-    let data = activeTab === 'settlements' ? mockSettlements : mockInvoices;
+    let data = activeTab === 'settlements' ? settlements : invoices;
     
     // Filter by status
     if (selectedFilter && selectedFilter !== 'All') {
@@ -583,6 +715,43 @@ export default function ReportsPage() {
   // Export report in different formats
   const handleExportReport = async (format: 'csv' | 'pdf' | 'excel' = 'csv') => {
     try {
+      // For server-side exports, use API
+      if (format === 'pdf' && (activeTab === 'settlements' || activeTab === 'invoices' || activeTab === 'balance-report')) {
+        const startDate = selectedRange.start ? convertToAPIDate(selectedRange.start) : new Date().toISOString().split('T')[0];
+        const endDate = selectedRange.end ? convertToAPIDate(selectedRange.end) : new Date().toISOString().split('T')[0];
+        
+        const exportData = {
+          reportType: activeTab === 'settlements' ? 'settlements' : activeTab === 'invoices' ? 'invoices' : 'balance',
+          format: 'pdf',
+          startDate,
+          endDate,
+          filters: {
+            status: selectedFilter || undefined,
+            period: selectedPeriod || undefined,
+          },
+        };
+        
+        const response = await reportsService.exportReport(exportData);
+        if (response.success && response.data) {
+          // Handle blob download
+          const blob = new Blob([response.data as any], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${activeTab}-report-${new Date().toISOString().split('T')[0]}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          return;
+        }
+      }
+    } catch (apiError) {
+      console.error('API export failed:', apiError);
+    }
+    
+    try {
+      // Client-side export fallback
       setShowExportDropdown(false);
       const tabName = activeTab === 'settlements' ? 'settlements' : activeTab === 'invoices' ? 'invoices' : 'balance-report';
       const dateStr = new Date().toISOString().split('T')[0];
@@ -679,7 +848,7 @@ export default function ReportsPage() {
         URL.revokeObjectURL(url);
       }
     } catch (error) {
-      console.error('Export failed:', error);
+      console.error('Client-side export failed:', error);
     }
   };
 
@@ -709,7 +878,7 @@ export default function ReportsPage() {
           {activeTab === 'balance-report' && (
             <button 
               onClick={handleDownloadAnnualReports}
-              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-2"
+              className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
               Download annual reports
@@ -719,7 +888,7 @@ export default function ReportsPage() {
           <div className="relative" ref={exportRef}>
             <button 
               onClick={() => setShowExportDropdown(!showExportDropdown)}
-              className="px-5 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 transform hover:scale-105"
+              className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 transform hover:scale-105"
             >
               <Download className="w-4 h-4" />
               Export Report
@@ -921,6 +1090,14 @@ export default function ReportsPage() {
       {activeTab === 'settlements' && (() => {
         const filteredSettlements = getFilteredData();
         
+        if (loading.settlements) {
+          return (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+            </div>
+          );
+        }
+        
         return (
           <div ref={reportContentRef} className="bg-white border border-gray-200 overflow-hidden">
           <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
@@ -938,8 +1115,8 @@ export default function ReportsPage() {
               <div key={settlement.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                 <div className="grid grid-cols-5 gap-4 items-center">
                   <div className="font-mono text-sm text-gray-900">{settlement.id}</div>
-                  <div className="text-sm text-gray-600">{settlement.date}</div>
-                    <div className="font-semibold text-gray-900">XAF {settlement.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="text-sm text-gray-600">{formatDateUtil(settlement.date)}</div>
+                    <div className="font-semibold text-gray-900">{formatCurrency(settlement.amount, settlement.currency || 'XAF')}</div>
                   <div>
                       <span className={`px-2 py-1 text-xs font-medium rounded ${
                       settlement.status === 'paid'
@@ -963,7 +1140,7 @@ export default function ReportsPage() {
                 ))
               ) : (
                 <div className="px-6 py-8 text-center text-gray-500">
-                  No settlements found matching the selected filters
+                  {settlements.length === 0 ? 'No settlements found. Settlements will appear here when available.' : 'No settlements found matching the selected filters'}
                 </div>
               )}
             </div>
@@ -973,6 +1150,14 @@ export default function ReportsPage() {
 
       {activeTab === 'invoices' && (() => {
         const filteredInvoices = getFilteredData();
+        
+        if (loading.invoices) {
+          return (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+            </div>
+          );
+        }
         
         return (
           <div ref={reportContentRef} className="bg-white border border-gray-200 overflow-hidden">
@@ -990,14 +1175,16 @@ export default function ReportsPage() {
                 filteredInvoices.map((invoice: any) => (
               <div key={invoice.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                 <div className="grid grid-cols-5 gap-4 items-center">
-                  <div className="font-mono text-sm text-gray-900">{invoice.id}</div>
-                  <div className="text-sm text-gray-600">{invoice.date}</div>
-                      <div className="font-semibold text-gray-900">XAF {invoice.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="font-mono text-sm text-gray-900">{invoice.invoiceNumber || invoice.id}</div>
+                  <div className="text-sm text-gray-600">{formatDateUtil(invoice.date)}</div>
+                      <div className="font-semibold text-gray-900">{formatCurrency(invoice.amount, invoice.currency || 'XAF')}</div>
                   <div>
                     <span className={`px-2 py-1 text-xs font-medium rounded ${
                       invoice.status === 'paid'
                         ? 'bg-green-100 text-green-700'
-                        : 'bg-yellow-100 text-yellow-700'
+                        : invoice.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-gray-100 text-gray-700'
                     }`}>
                       {invoice.status}
                     </span>
@@ -1016,7 +1203,7 @@ export default function ReportsPage() {
                 ))
               ) : (
                 <div className="px-6 py-8 text-center text-gray-500">
-                  No invoices found matching the selected filters
+                  {invoices.length === 0 ? 'No invoices found. Invoices will appear here when available.' : 'No invoices found matching the selected filters'}
                 </div>
               )}
             </div>
@@ -1183,45 +1370,67 @@ export default function ReportsPage() {
 
           {/* Balance Report Table */}
           <div className="bg-white border border-gray-200  overflow-hidden">
-            <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-              <div className="grid grid-cols-3 gap-4 text-sm font-medium text-gray-700">
-                <div>Category</div>
-                <div className="text-right">Pending</div>
-                <div className="text-right">Available</div>
+            {loading.balanceReport ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-green-600" />
               </div>
-            </div>
-            <div className="divide-y divide-gray-200">
-              {[
-                { category: `Opening balance (${selectedRange.start})`, pending: 'XAF 0.00', available: 'XAF 0.00' },
-                { category: 'Payments', pending: 'XAF 0.00', available: 'XAF 0.00' },
-                { category: 'Refunds', pending: 'XAF 0.00', available: 'XAF 0.00' },
-                { category: 'Chargebacks', pending: 'XAF 0.00', available: 'XAF 0.00' },
-                { category: 'Transfers', pending: 'XAF 0.00', available: 'XAF 0.00' },
-                { category: 'Top-ups', pending: 'XAF 0.00', available: 'XAF 0.00' },
-                { category: 'Corrections', pending: 'XAF 0.00', available: 'XAF 0.00' },
-                { category: 'Fees charged', pending: 'XAF 0.00', available: 'XAF 0.00' },
-                { category: `Closing balance (${selectedRange.end})`, pending: 'XAF 0.00', available: 'XAF 0.00', isTotal: true },
-              ].map((row, index) => (
-                <div
-                  key={index}
-                  className={`px-6 py-4 hover:bg-gray-50 transition-colors ${
-                    row.isTotal ? 'bg-gray-50 font-semibold' : ''
-                  }`}
-                >
-                  <div className="grid grid-cols-3 gap-4 items-center">
-                    <div className={`text-sm ${row.isTotal ? 'text-gray-900' : 'text-gray-700'}`}>
-                      {row.category}
+            ) : balanceReport ? (
+              <>
+                <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                  <div className="grid grid-cols-3 gap-4 text-sm font-medium text-gray-700">
+                    <div>Category</div>
+                    <div className="text-right">Pending</div>
+                    <div className="text-right">Available</div>
+                  </div>
+                </div>
+                <div className="divide-y divide-gray-200">
+                  {/* Opening Balance */}
+                  <div className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div className="grid grid-cols-3 gap-4 items-center">
+                      <div className="text-sm text-gray-700">
+                        Opening balance ({formatDateUtil(balanceReport.startDate)})
+                      </div>
+                      <div className="text-sm text-right text-gray-600">-</div>
+                      <div className="text-sm text-right text-gray-600">
+                        {formatCurrency(balanceReport.openingBalance)}
+                      </div>
                     </div>
-                    <div className={`text-sm text-right ${row.isTotal ? 'text-gray-900' : 'text-gray-600'}`}>
-                      {row.pending}
+                  </div>
+                  
+                  {/* Categories */}
+                  {balanceReport.categories?.map((category: any, index: number) => (
+                    <div key={index} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                      <div className="grid grid-cols-3 gap-4 items-center">
+                        <div className="text-sm text-gray-700">{category.category}</div>
+                        <div className="text-sm text-right text-gray-600">
+                          {formatCurrency(category.pending)}
+                        </div>
+                        <div className="text-sm text-right text-gray-600">
+                          {formatCurrency(category.available)}
+                        </div>
+                      </div>
                     </div>
-                    <div className={`text-sm text-right ${row.isTotal ? 'text-gray-900' : 'text-gray-600'}`}>
-                      {row.available}
+                  ))}
+                  
+                  {/* Closing Balance */}
+                  <div className="px-6 py-4 bg-gray-50 font-semibold">
+                    <div className="grid grid-cols-3 gap-4 items-center">
+                      <div className="text-sm text-gray-900">
+                        Closing balance ({formatDateUtil(balanceReport.endDate)})
+                      </div>
+                      <div className="text-sm text-right text-gray-900">-</div>
+                      <div className="text-sm text-right text-gray-900">
+                        {formatCurrency(balanceReport.closingBalance)}
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <div className="px-6 py-12 text-center text-gray-500">
+                No balance report data available. Select a date range to view the report.
+              </div>
+            )}
           </div>
           </div>
         </div>

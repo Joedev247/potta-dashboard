@@ -1,8 +1,13 @@
 /**
  * API Client Configuration
  * Centralized API service for Instanvi Payment Platform
+ * 
+ * DEVELOPMENT MODE: Using localhost for local testing
+ * The production API backend is not yet available, so we're using localhost
  */
 
+// Force development endpoint for local testing
+// Change this to production URL when backend is ready: https://api.instanvi.com
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 const API_VERSION = '/api';
 
@@ -179,4 +184,5 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+
 

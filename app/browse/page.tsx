@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Eye, EyeOff, Copy, Info, RefreshCw, Plus, Trash2, ExternalLink, Search, Filter, Calendar, CheckCircle2, XCircle, Clock, Globe, X, Edit, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Eye, EyeOff, Copy, Info, RefreshCw, Plus, Trash2, ExternalLink, Search, Filter, Calendar, CheckCircle2, XCircle, Clock, Globe, X, Edit, AlertCircle, Loader2 } from 'lucide-react';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { browseService } from '@/lib/api';
+import { formatDate, formatDateTime } from '@/lib/utils/format';
 
 export default function BrowsePage() {
   const { organization } = useOrganization();
@@ -11,16 +13,14 @@ export default function BrowsePage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   
   // API Keys states
-  const [liveApiKey, setLiveApiKey] = useState('live_25wDKPwhNySv8pwgt35Wh6AJeMfJUc');
-  const [testApiKey, setTestApiKey] = useState('test_25wDKPwhNySv8pwgt35Wh6AJeMfJUc');
+  const [apiKeys, setApiKeys] = useState<any>({ liveApiKey: '', testApiKey: '', createdAt: '', lastUsed: null });
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState<string | null>(null);
   
   // Access Tokens states
   const [showCreateToken, setShowCreateToken] = useState(false);
-  const [tokens, setTokens] = useState([
-    { id: '1', name: 'My App Token', created: '2024-01-15', expires: '2025-01-15', status: 'active', token: 'token_abc123xyz789' },
-    { id: '2', name: 'Development Token', created: '2024-01-10', expires: '2024-12-31', status: 'active', token: 'token_def456uvw012' },
-  ]);
+  const [tokens, setTokens] = useState<any[]>([]);
+  const [tokensLoading, setTokensLoading] = useState(false);
   const [selectedToken, setSelectedToken] = useState<any>(null);
   const [tokenFormData, setTokenFormData] = useState({ name: '', expiresIn: '365' });
   const [tokenLoading, setTokenLoading] = useState(false);
@@ -31,10 +31,8 @@ export default function BrowsePage() {
   // Webhooks states
   const [showWebhookModal, setShowWebhookModal] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<any>(null);
-  const [webhooks, setWebhooks] = useState([
-    { id: '1', url: 'https://api.example.com/webhook', events: ['payment.*'], status: 'active' },
-    { id: '2', url: 'https://webhook.example.com/instanvi', events: ['payment.paid'], status: 'inactive' },
-  ]);
+  const [webhooks, setWebhooks] = useState<any[]>([]);
+  const [webhooksLoading, setWebhooksLoading] = useState(false);
   const [webhookFormData, setWebhookFormData] = useState({ url: '', events: [] as string[] });
   const [webhookLoading, setWebhookLoading] = useState(false);
   const [webhookSuccess, setWebhookSuccess] = useState('');
@@ -51,21 +49,16 @@ export default function BrowsePage() {
   const filterRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLDivElement>(null);
   
-  const mockApiLogs = [
-    { id: '1', time: '2024-01-15 14:32:15', method: 'GET', endpoint: '/payments', status: 200, responseTime: '45ms', requestBody: null, responseBody: { data: [] } },
-    { id: '2', time: '2024-01-15 14:31:42', method: 'POST', endpoint: '/payments', status: 201, responseTime: '120ms', requestBody: { amount: 1000, currency: 'XAF' }, responseBody: { id: 'tr_abc123' } },
-    { id: '3', time: '2024-01-15 14:30:18', method: 'GET', endpoint: '/payments/tr_abc123', status: 200, responseTime: '32ms', requestBody: null, responseBody: { id: 'tr_abc123', status: 'paid' } },
-    { id: '4', time: '2024-01-15 14:29:05', method: 'GET', endpoint: '/methods', status: 200, responseTime: '28ms', requestBody: null, responseBody: { methods: ['mtn-momo', 'orange-money'] } },
-    { id: '5', time: '2024-01-15 14:28:30', method: 'POST', endpoint: '/refunds', status: 400, responseTime: '50ms', requestBody: { paymentId: 'tr_abc123' }, responseBody: { error: 'Invalid request' } },
-  ];
+  // API Logs states
+  const [apiLogs, setApiLogs] = useState<any[]>([]);
+  const [apiLogsLoading, setApiLogsLoading] = useState(false);
+  const [apiLogsPagination, setApiLogsPagination] = useState({ page: 1, limit: 20, total: 0 });
   
   // Your Apps states
   const [showCreateApp, setShowCreateApp] = useState(false);
   const [editingApp, setEditingApp] = useState<any>(null);
-  const [apps, setApps] = useState([
-    { id: '1', name: 'My E-commerce App', description: 'Main application for processing payments', status: 'active', created: '2024-01-10', redirectUri: 'https://app.example.com/callback', clientId: 'client_abc123', clientSecret: 'secret_xyz789' },
-    { id: '2', name: 'Development App', description: 'Testing and development environment', status: 'active', created: '2024-01-05', redirectUri: 'https://dev.example.com/callback', clientId: 'client_def456', clientSecret: 'secret_uvw012' },
-  ]);
+  const [apps, setApps] = useState<any[]>([]);
+  const [appsLoading, setAppsLoading] = useState(false);
   const [appFormData, setAppFormData] = useState({ name: '', description: '', redirectUri: '' });
   const [appLoading, setAppLoading] = useState(false);
   const [appSuccess, setAppSuccess] = useState('');
@@ -86,18 +79,135 @@ export default function BrowsePage() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  // Fetch API Keys
+  const fetchApiKeys = useCallback(async () => {
+    setApiKeysLoading(true);
+    try {
+      const response = await browseService.getApiKeys();
+      if (response.success && response.data) {
+        setApiKeys(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching API keys:', error);
+    } finally {
+      setApiKeysLoading(false);
+    }
+  }, []);
+
+  // Fetch Access Tokens
+  const fetchTokens = useCallback(async () => {
+    setTokensLoading(true);
+    try {
+      const response = await browseService.getAccessTokens();
+      if (response.success && response.data) {
+        setTokens(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching tokens:', error);
+    } finally {
+      setTokensLoading(false);
+    }
+  }, []);
+
+  // Fetch Webhooks
+  const fetchWebhooks = useCallback(async () => {
+    setWebhooksLoading(true);
+    try {
+      const response = await browseService.getWebhooks();
+      if (response.success && response.data) {
+        setWebhooks(response.data.webhooks || []);
+      }
+    } catch (error) {
+      console.error('Error fetching webhooks:', error);
+    } finally {
+      setWebhooksLoading(false);
+    }
+  }, []);
+
+  // Fetch API Logs
+  const fetchApiLogs = useCallback(async () => {
+    setApiLogsLoading(true);
+    try {
+      const params: any = {
+        page: apiLogsPagination.page,
+        limit: apiLogsPagination.limit,
+      };
+      
+      if (selectedDateFilter && selectedDateFilter !== 'All') {
+        const today = new Date();
+        let startDate: Date = today;
+        
+        switch (selectedDateFilter) {
+          case 'Last 7 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 7);
+            break;
+          case 'Last 30 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 30);
+            break;
+          case 'Last 90 days':
+            startDate = new Date(today);
+            startDate.setDate(today.getDate() - 90);
+            break;
+        }
+        
+        params.startDate = startDate.toISOString().split('T')[0];
+        params.endDate = today.toISOString().split('T')[0];
+      }
+      
+      const response = await browseService.getApiLogs(params);
+      if (response.success && response.data) {
+        setApiLogs(response.data.logs || []);
+        if (response.data.pagination) {
+          setApiLogsPagination(response.data.pagination);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching API logs:', error);
+    } finally {
+      setApiLogsLoading(false);
+    }
+  }, [selectedDateFilter, apiLogsPagination.page, apiLogsPagination.limit]);
+
+  // Fetch Apps
+  const fetchApps = useCallback(async () => {
+    setAppsLoading(true);
+    try {
+      const response = await browseService.getApps();
+      if (response.success && response.data) {
+        setApps(response.data.apps || []);
+      }
+    } catch (error) {
+      console.error('Error fetching apps:', error);
+    } finally {
+      setAppsLoading(false);
+    }
+  }, []);
+
+  // Fetch data on mount and tab change
+  useEffect(() => {
+    if (activeTab === 'api-keys') {
+      fetchApiKeys();
+    } else if (activeTab === 'access-tokens') {
+      fetchTokens();
+    } else if (activeTab === 'webhooks') {
+      fetchWebhooks();
+    } else if (activeTab === 'api-logs') {
+      fetchApiLogs();
+    } else if (activeTab === 'your-apps') {
+      fetchApps();
+    }
+  }, [activeTab, fetchApiKeys, fetchTokens, fetchWebhooks, fetchApiLogs, fetchApps]);
+
   // API Keys handlers
   const handleResetApiKey = async (type: 'live' | 'test') => {
     setShowResetConfirm(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const newKey = type === 'live' 
-        ? `live_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
-        : `test_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-      if (type === 'live') {
-        setLiveApiKey(newKey);
-      } else {
-        setTestApiKey(newKey);
+      const response = await browseService.generateApiKey(type);
+      if (response.success) {
+        // Refresh API keys after reset
+        await fetchApiKeys();
       }
     } catch (error) {
       console.error('Failed to reset API key:', error);
@@ -117,23 +227,25 @@ export default function BrowsePage() {
     }
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const newToken = {
-        id: Date.now().toString(),
+      const scopes = ['payments:read', 'payments:write', 'refunds:read', 'refunds:write'];
+      const response = await browseService.createAccessToken({
         name: tokenFormData.name,
-        created: new Date().toISOString().split('T')[0],
-        expires: new Date(Date.now() + parseInt(tokenFormData.expiresIn) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        status: 'active' as const,
-        token: `token_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 10)}`,
-      };
-      setTokens([newToken, ...tokens]);
-      setTokenSuccess(`Token created successfully! Token: ${newToken.token}`);
-      setTokenFormData({ name: '', expiresIn: '365' });
-      setTimeout(() => {
-        setShowCreateToken(false);
-        setTokenSuccess('');
-      }, 3000);
+        scopes,
+      });
+      
+      if (response.success && response.data) {
+        setTokenSuccess(`Token created successfully! Token: ${response.data.token}`);
+        await fetchTokens();
+        setTokenFormData({ name: '', expiresIn: '365' });
+        setTimeout(() => {
+          setShowCreateToken(false);
+          setTokenSuccess('');
+        }, 3000);
+      } else {
+        setTokenError(response.error?.message || 'Failed to create token. Please try again.');
+      }
     } catch (error) {
+      console.error('Create token error:', error);
       setTokenError('Failed to create token. Please try again.');
     } finally {
       setTokenLoading(false);
@@ -149,8 +261,10 @@ export default function BrowsePage() {
     const tokenId = showRevokeTokenConfirm;
     setShowRevokeTokenConfirm(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setTokens(tokens.filter(t => t.id !== tokenId));
+      const response = await browseService.revokeAccessToken(tokenId);
+      if (response.success) {
+        await fetchTokens();
+      }
     } catch (error) {
       console.error('Failed to revoke token:', error);
     }
@@ -174,65 +288,38 @@ export default function BrowsePage() {
     }
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const newWebhook = {
-        id: Date.now().toString(),
-        url: webhookFormData.url,
-        events: webhookFormData.events,
-        status: 'active' as const,
-      };
-      setWebhooks([newWebhook, ...webhooks]);
-      setWebhookSuccess('Webhook created successfully!');
-      setWebhookFormData({ url: '', events: [] });
-      setTimeout(() => {
-        setShowWebhookModal(false);
-        setWebhookSuccess('');
-        setEditingWebhook(null);
-      }, 2000);
+      const response = editingWebhook
+        ? await browseService.updateWebhook(editingWebhook.id, {
+            url: webhookFormData.url,
+            events: webhookFormData.events,
+            status: 'active',
+          })
+        : await browseService.createWebhook({
+            url: webhookFormData.url,
+            events: webhookFormData.events,
+          });
+      
+      if (response.success) {
+        setWebhookSuccess(editingWebhook ? 'Webhook updated successfully!' : 'Webhook created successfully!');
+        await fetchWebhooks();
+        setWebhookFormData({ url: '', events: [] });
+        setTimeout(() => {
+          setShowWebhookModal(false);
+          setWebhookSuccess('');
+          setEditingWebhook(null);
+        }, 2000);
+      } else {
+        setWebhookError(response.error?.message || 'Failed to save webhook. Please try again.');
+      }
     } catch (error) {
-      setWebhookError('Failed to create webhook. Please try again.');
+      console.error('Webhook error:', error);
+      setWebhookError('Failed to save webhook. Please try again.');
     } finally {
       setWebhookLoading(false);
     }
   };
 
-  const handleUpdateWebhook = async () => {
-    if (!editingWebhook) return;
-    setWebhookLoading(true);
-    setWebhookError('');
-    setWebhookSuccess('');
-    
-    if (!webhookFormData.url.trim()) {
-      setWebhookError('Webhook URL is required.');
-      setWebhookLoading(false);
-      return;
-    }
-    if (webhookFormData.events.length === 0) {
-      setWebhookError('At least one event must be selected.');
-      setWebhookLoading(false);
-      return;
-    }
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setWebhooks(webhooks.map(w => 
-        w.id === editingWebhook.id 
-          ? { ...w, url: webhookFormData.url, events: webhookFormData.events }
-          : w
-      ));
-      setWebhookSuccess('Webhook updated successfully!');
-      setWebhookFormData({ url: '', events: [] });
-      setTimeout(() => {
-        setShowWebhookModal(false);
-        setWebhookSuccess('');
-        setEditingWebhook(null);
-      }, 2000);
-    } catch (error) {
-      setWebhookError('Failed to update webhook. Please try again.');
-    } finally {
-      setWebhookLoading(false);
-    }
-  };
+  // handleUpdateWebhook is now handled in handleCreateWebhook (combined logic)
 
   const handleDeleteWebhook = async (webhookId: string) => {
     setShowDeleteWebhookConfirm(webhookId);
@@ -243,8 +330,10 @@ export default function BrowsePage() {
     const webhookId = showDeleteWebhookConfirm;
     setShowDeleteWebhookConfirm(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setWebhooks(webhooks.filter(w => w.id !== webhookId));
+      const response = await browseService.deleteWebhook(webhookId);
+      if (response.success) {
+        await fetchWebhooks();
+      }
     } catch (error) {
       console.error('Failed to delete webhook:', error);
     }
@@ -258,7 +347,7 @@ export default function BrowsePage() {
 
   // API Logs handlers
   const getFilteredLogs = () => {
-    let filtered = [...mockApiLogs];
+    let filtered = [...apiLogs];
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -305,63 +394,39 @@ export default function BrowsePage() {
     }
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const newApp = {
-        id: Date.now().toString(),
-        name: appFormData.name,
-        description: appFormData.description || '',
-        status: 'active' as const,
-        created: new Date().toISOString().split('T')[0],
-        redirectUri: appFormData.redirectUri,
-        clientId: `client_${Math.random().toString(36).substring(2, 15)}`,
-        clientSecret: `secret_${Math.random().toString(36).substring(2, 15)}`,
-      };
-      setApps([newApp, ...apps]);
-      setAppSuccess('App created successfully!');
-      setAppFormData({ name: '', description: '', redirectUri: '' });
-      setTimeout(() => {
-        setShowCreateApp(false);
-        setAppSuccess('');
-      }, 2000);
+      const response = editingApp
+        ? await browseService.updateApp(editingApp.id, {
+            name: appFormData.name,
+            description: appFormData.description || undefined,
+            redirectUri: appFormData.redirectUri,
+          })
+        : await browseService.createApp({
+            name: appFormData.name,
+            description: appFormData.description || undefined,
+            redirectUri: appFormData.redirectUri,
+          });
+      
+      if (response.success) {
+        setAppSuccess(editingApp ? 'App updated successfully!' : 'App created successfully!');
+        await fetchApps();
+        setAppFormData({ name: '', description: '', redirectUri: '' });
+        setTimeout(() => {
+          setShowCreateApp(false);
+          setAppSuccess('');
+          setEditingApp(null);
+        }, 2000);
+      } else {
+        setAppError(response.error?.message || 'Failed to save app. Please try again.');
+      }
     } catch (error) {
-      setAppError('Failed to create app. Please try again.');
+      console.error('App error:', error);
+      setAppError('Failed to save app. Please try again.');
     } finally {
       setAppLoading(false);
     }
   };
 
-  const handleUpdateApp = async () => {
-    if (!editingApp) return;
-    setAppLoading(true);
-    setAppError('');
-    setAppSuccess('');
-    
-    if (!appFormData.name.trim() || !appFormData.redirectUri.trim()) {
-      setAppError('Name and redirect URI are required.');
-      setAppLoading(false);
-      return;
-    }
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setApps(apps.map(a => 
-        a.id === editingApp.id 
-          ? { ...a, name: appFormData.name, description: appFormData.description, redirectUri: appFormData.redirectUri }
-          : a
-      ));
-      setAppSuccess('App updated successfully!');
-      setAppFormData({ name: '', description: '', redirectUri: '' });
-      setTimeout(() => {
-        setShowCreateApp(false);
-        setAppSuccess('');
-        setEditingApp(null);
-      }, 2000);
-    } catch (error) {
-      setAppError('Failed to update app. Please try again.');
-    } finally {
-      setAppLoading(false);
-    }
-  };
+  // handleUpdateApp is now handled in handleCreateApp (combined logic)
 
   const handleDeleteApp = async (appId: string) => {
     setShowDeleteAppConfirm(appId);
@@ -372,8 +437,10 @@ export default function BrowsePage() {
     const appId = showDeleteAppConfirm;
     setShowDeleteAppConfirm(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setApps(apps.filter(a => a.id !== appId));
+      const response = await browseService.deleteApp(appId);
+      if (response.success) {
+        await fetchApps();
+      }
     } catch (error) {
       console.error('Failed to delete app:', error);
     }
@@ -442,6 +509,11 @@ export default function BrowsePage() {
 
       {/* Tab Content */}
       {activeTab === 'api-keys' && (
+        apiKeysLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+          </div>
+        ) : (
         <>
           {/* Your API keys Section */}
           <div>
@@ -473,7 +545,7 @@ export default function BrowsePage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 bg-white border border-gray-200  px-4 py-1 font-mono text-sm text-gray-900">
-                    {showLiveKey ? liveApiKey : 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
+                    {showLiveKey ? apiKeys.liveApiKey : 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
                   </div>
                   <button
                     onClick={() => setShowLiveKey(!showLiveKey)}
@@ -482,7 +554,7 @@ export default function BrowsePage() {
                     {showLiveKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                   <button
-                    onClick={() => handleCopy(liveApiKey, 'live')}
+                    onClick={() => handleCopy(apiKeys.liveApiKey, 'live')}
                     className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
                   >
                     <Copy className="w-4 h-4" />
@@ -506,10 +578,10 @@ export default function BrowsePage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 bg-white border border-gray-200 rounded px-4 py-1 font-mono text-sm text-gray-900">
-                    {testApiKey}
+                    {apiKeys.testApiKey}
                   </div>
                   <button
-                    onClick={() => handleCopy(testApiKey, 'test')}
+                    onClick={() => handleCopy(apiKeys.testApiKey, 'test')}
                     className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
                   >
                     <Copy className="w-4 h-4" />
@@ -546,6 +618,7 @@ export default function BrowsePage() {
             </div>
           </div>
         </>
+        )
       )}
 
       {/* Reset API Key Confirmation Modal */}
