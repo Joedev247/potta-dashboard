@@ -147,7 +147,7 @@ export default function InvoicingPage() {
     try {
       const response = await invoicingService.getRecurringInvoices();
       if (response.success && response.data) {
-        setRecurringInvoices(response.data.recurringInvoices || []);
+        setRecurringInvoices(response.data || []);
       }
     } catch (error) {
       console.error('Error fetching recurring invoices:', error);
@@ -162,7 +162,7 @@ export default function InvoicingPage() {
     try {
       const response = await invoicingService.getCreditNotes();
       if (response.success && response.data) {
-        setCreditNotes(response.data.creditNotes || []);
+        setCreditNotes(response.data || []);
       }
     } catch (error) {
       console.error('Error fetching credit notes:', error);
@@ -360,20 +360,20 @@ export default function InvoicingPage() {
     try {
       // Prepare invoice data
       const invoiceData = {
+        type: 'one-off' as const,
         customerId: formData.customer,
-        customerName: formData.customer,
         items: formData.items.map(item => ({
-          product: item.product,
+          name: item.product,
           quantity: parseFloat(item.quantity.toString()) || 1,
           price: parseFloat(item.price) || 0,
           vatRate: item.vat || 0,
         })),
-        subtotal: formData.subtotal,
-        discount: formData.discount || 0,
-        total: formData.total,
+        discount: formData.discount && formData.discount > 0 
+          ? { type: 'percentage' as const, value: formData.discount }
+          : null,
         paymentTerm: formData.paymentTerm || undefined,
         memo: formData.memo || undefined,
-        currency: 'XAF',
+        vatDisplay: vatDisplay as 'including' | 'excluding',
       };
       
       const response = await invoicingService.createInvoice(invoiceData);
