@@ -6,7 +6,7 @@ import { statisticsService } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils/format';
 
 export default function StatisticsPage() {
-  const [activePeriod, setActivePeriod] = useState<'days' | 'weeks' | 'months' | 'quarters' | 'years'>('months');
+  const [activePeriod, setActivePeriod] = useState<'days' | 'weeks' | 'months' | 'quarters' | 'years' | 'custom...'>('months');
   const [selectedValue, setSelectedValue] = useState('November 2025');
   const [showPreviousPeriod, setShowPreviousPeriod] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
