@@ -1429,7 +1429,7 @@ export default function BrowsePage() {
                 Cancel
               </button>
               <button
-                onClick={editingApp ? handleUpdateApp : handleCreateApp}
+                onClick={handleCreateApp}
                 disabled={appLoading}
                 className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
