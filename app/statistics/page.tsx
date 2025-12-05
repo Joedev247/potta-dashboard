@@ -19,10 +19,15 @@ export default function StatisticsPage() {
 
   // Fetch statistics from API
   const fetchStatistics = useCallback(async () => {
+    // Don't fetch if custom period is selected
+    if (activePeriod === 'custom...') {
+      return;
+    }
+    
     setLoading(true);
     try {
       const response = await statisticsService.getStatistics({
-        period: activePeriod,
+        period: activePeriod as 'days' | 'weeks' | 'months' | 'quarters' | 'years',
         value: selectedValue,
         comparePrevious: showPreviousPeriod,
       });
@@ -122,7 +127,7 @@ export default function StatisticsPage() {
   
   // Set default selected value when period changes
   const handlePeriodChange = (period: string) => {
-    setActivePeriod(period);
+    setActivePeriod(period as 'days' | 'weeks' | 'months' | 'quarters' | 'years' | 'custom...');
     const options = period === 'quarters' ? generateQuarters() : 
                    period === 'years' ? generateYears() : months;
     if (options.length > 0) {
@@ -290,7 +295,7 @@ export default function StatisticsPage() {
   const currentPeriodData = useMemo(() => {
     // Use API data if available, otherwise fallback to generated data
     if (statistics?.dataPoints && statistics.dataPoints.length > 0) {
-      return statistics.dataPoints.map((point: any, index: number) => ({
+      return statistics.dataPoints.map((point: { label: string; revenue?: number; date: string | Date }, index: number) => ({
         label: point.label,
         revenue: point.revenue || 0,
         date: new Date(point.date),
@@ -314,7 +319,7 @@ export default function StatisticsPage() {
   // Calculate totals - use API data if available
   const totalRevenue = statistics?.totals?.revenue ?? 
     (currentPeriodData.length > 0 
-      ? currentPeriodData.reduce((sum, d) => {
+      ? currentPeriodData.reduce((sum: number, d: { label: string; revenue: number; date: Date; index: number }) => {
           const rev = d.revenue || 0;
           return sum + (isNaN(rev) ? 0 : rev);
         }, 0)
@@ -337,8 +342,8 @@ export default function StatisticsPage() {
 
   // Find max value for scaling
   const allRevenues = [
-    ...currentPeriodData.map(d => d.revenue || 0),
-    ...(showPreviousPeriod ? previousPeriodData.map(d => d.revenue || 0) : [])
+    ...currentPeriodData.map((d: { label: string; revenue: number; date: Date; index: number }) => d.revenue || 0),
+    ...(showPreviousPeriod ? previousPeriodData.map((d: { label: string; revenue: number; date: Date; index: number }) => d.revenue || 0) : [])
   ].filter(rev => !isNaN(rev) && rev > 0);
   
   const maxRevenue = allRevenues.length > 0 ? Math.max(...allRevenues) : 100000;
@@ -352,7 +357,7 @@ export default function StatisticsPage() {
   // Generate path for line chart
   const generatePath = (data: typeof currentPeriodData) => {
     if (data.length === 0) return '';
-    const points = data.map((d, index) => {
+    const points = data.map((d: { label: string; revenue: number; date: Date; index: number }, index: number) => {
       const x = (index / (data.length - 1)) * graphWidth;
       const y = scaleY(d.revenue) + padding.top;
       return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
@@ -398,7 +403,7 @@ export default function StatisticsPage() {
         {periods.map((period) => (
           <button
             key={period}
-            onClick={() => setActivePeriod(period.toLowerCase())}
+            onClick={() => setActivePeriod(period.toLowerCase() as 'days' | 'weeks' | 'months' | 'quarters' | 'years' | 'custom...')}
             className={`
               px-4 py-2 text-sm font-semibold transition-colors relative
               ${activePeriod === period.toLowerCase()
@@ -587,7 +592,7 @@ export default function StatisticsPage() {
                 />
 
                 {/* Data points and hover areas */}
-                {currentPeriodData.map((data, index) => {
+                {currentPeriodData.map((data: { label: string; revenue: number; date: Date; index: number }, index: number) => {
                   const { x, y } = getPointPosition(index);
                   const isHovered = hoveredIndex === index;
                   
