@@ -111,7 +111,6 @@ export default function PaymentsPage() {
       const response = await paymentsService.getRefunds({
         page: pagination.page,
         limit: pagination.limit,
-        search: searchQuery || undefined,
         status: selectedStatus || undefined,
       });
       if (response.success && response.data) {
