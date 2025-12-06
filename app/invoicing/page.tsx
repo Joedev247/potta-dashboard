@@ -1079,8 +1079,8 @@ export default function InvoicingPage() {
               
               return (
                 <div className="bg-white border border-gray-200 overflow-hidden">
-                  <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                    <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
+                  <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                    <div className="hidden lg:grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
                       <div>Invoice #</div>
                       <div>Customer</div>
                       <div>Date</div>
@@ -1092,8 +1092,53 @@ export default function InvoicingPage() {
                   <div className="divide-y divide-gray-200">
                     {filteredInvoices.length > 0 ? (
                       filteredInvoices.map((invoice) => (
-                        <div key={invoice.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                          <div className="grid grid-cols-6 gap-4 items-center">
+                        <div key={invoice.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                          {/* Mobile Card Layout */}
+                          <div className="lg:hidden space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-mono text-xs sm:text-sm text-gray-900 font-semibold truncate">{invoice.invoiceNumber || invoice.id}</div>
+                                <div className="text-xs sm:text-sm text-gray-600 mt-1">{formatDate(invoice.date || invoice.createdAt)}</div>
+                              </div>
+                              <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${
+                                invoice.status === 'paid'
+                                  ? 'bg-green-100 text-green-700'
+                                  : invoice.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}>
+                                {invoice.status}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-600">Customer</div>
+                              <div className="text-sm font-medium text-gray-900">{invoice.customerName || invoice.customer?.name || invoice.customer}</div>
+                            </div>
+                            <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                              <div>
+                                <div className="text-xs text-gray-600">Amount</div>
+                                <div className="text-sm font-semibold text-gray-900">{formatCurrency(invoice.amount, invoice.currency || 'XAF')}</div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => setSelectedItem({ ...invoice, type: 'invoice' })}
+                                  className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1 px-3 py-1 border border-green-200 hover:bg-green-50 transition-colors"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  View
+                                </button>
+                                <button 
+                                  onClick={() => handleDownloadInvoice(invoice)}
+                                  className="p-2 text-gray-600 hover:text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors rounded"
+                                  title="Download invoice"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          {/* Desktop Table Layout */}
+                          <div className="hidden lg:grid grid-cols-6 gap-4 items-center">
                             <div className="font-mono text-sm text-gray-900 font-semibold">{invoice.invoiceNumber || invoice.id}</div>
                             <div className="text-sm text-gray-900">{invoice.customerName || invoice.customer?.name || invoice.customer}</div>
                             <div className="text-sm text-gray-600">{formatDate(invoice.date || invoice.createdAt)}</div>
@@ -1129,8 +1174,8 @@ export default function InvoicingPage() {
                         </div>
                       ))
                     ) : (
-                      <div className="px-6 py-8 text-center text-gray-500">
-                        No invoices found matching the selected filters
+                      <div className="px-4 sm:px-6 py-6 sm:py-8 text-center text-sm text-gray-500">
+                        {invoices.length === 0 ? 'No invoices found. Create your first invoice to get started.' : 'No invoices found matching your search criteria.'}
                       </div>
                     )}
                   </div>
