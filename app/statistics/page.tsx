@@ -384,28 +384,28 @@ export default function StatisticsPage() {
   };
 
   return (
-    <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-          <TrendingUp className="w-6 h-6 text-white" />
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
-        <h1 className="text-4xl font-bold text-gray-900">Statistics</h1>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Statistics</h1>
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+        <div className="flex items-center justify-center py-12 sm:py-20">
+          <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-green-600" />
         </div>
       )}
 
       {/* Period Selector */}
-      <div className="flex gap-1 mb-4 border-b-2 border-gray-200">
+      <div className="flex gap-1 mb-3 sm:mb-4 border-b-2 border-gray-200 overflow-x-auto">
         {periods.map((period) => (
           <button
             key={period}
             onClick={() => setActivePeriod(period.toLowerCase() as 'days' | 'weeks' | 'months' | 'quarters' | 'years' | 'custom...')}
             className={`
-              px-4 py-2 text-sm font-semibold transition-colors relative
+              px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition-colors relative whitespace-nowrap
               ${activePeriod === period.toLowerCase()
                 ? 'text-gray-900 bg-gray-50'
                 : 'text-gray-600 hover:text-gray-900'
@@ -422,7 +422,7 @@ export default function StatisticsPage() {
 
       {/* Dynamic Selector (Months/Weeks/Quarters/Years) */}
       {activePeriod !== 'custom...' && availableOptions.length > 0 && (
-        <div className="flex items-center gap-2 mb-8">
+        <div className="flex items-center gap-2 mb-6 sm:mb-8">
           <button 
             onClick={() => scrollSelector('left')}
             className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
@@ -462,22 +462,23 @@ export default function StatisticsPage() {
       )}
 
       {/* Revenue and Chart Section */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         {/* Revenue Display */}
-        <div className="mb-6">
-          <div className="text-5xl font-bold text-gray-900 mb-2">{formatCurrency(totalRevenue)}</div>
-          <div className="text-sm text-gray-600 mb-3">Revenue</div>
+        <div className="mb-4 sm:mb-6">
+          <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-2">{formatCurrency(totalRevenue)}</div>
+          <div className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">Revenue</div>
           <div className="flex items-center gap-2">
-            <div className="h-1 w-12 bg-green-500"></div>
+            <div className="h-1 w-8 sm:w-12 bg-green-500"></div>
             <span className="text-xs text-gray-500">Current period ({selectedValue})</span>
           </div>
         </div>
 
         {/* Chart Area */}
-        <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200  p-6 relative">
+        <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200  p-4 sm:p-6 relative overflow-x-auto">
           {/* Toggle at top right */}
-          <div className="absolute top-6 right-6 flex items-center gap-2 z-10">
-            <span className="text-xs text-gray-600 whitespace-nowrap">Show previous period</span>
+          <div className="absolute top-4 sm:top-6 right-4 sm:right-6 flex items-center gap-2 z-10">
+            <span className="text-xs text-gray-600 whitespace-nowrap hidden sm:inline">Show previous period</span>
+            <span className="text-xs text-gray-600 sm:hidden">Previous</span>
             <button
               onClick={() => setShowPreviousPeriod(!showPreviousPeriod)}
               className={`relative w-10 h-5 rounded-full transition-colors ${

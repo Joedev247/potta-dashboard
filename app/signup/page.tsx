@@ -57,12 +57,12 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen bg-white flex flex-col lg:flex-row">
       {/* Left Column - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-gray-50 to-white">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-white">
         <div className="w-full max-w-md">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2 tracking-tight text-center">Create an account</h1>
-          <p className="text-gray-500 mb-8 text-sm text-center">Get started with your free account today</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 tracking-tight text-center">Create an account</h1>
+          <p className="text-gray-500 mb-6 sm:mb-8 text-sm text-center">Get started with your free account today</p>
           
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username */}
@@ -78,14 +78,14 @@ export default function SignupPage() {
                   value={formData.username}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
+                  className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
                 />
                 <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
               </div>
             </div>
 
             {/* First Name and Last Name - Side by Side */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* First Name */}
               <div>
                 <label htmlFor="firstName" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -99,7 +99,7 @@ export default function SignupPage() {
                     value={formData.firstName}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
+                    className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
                   />
                   <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
                 </div>
@@ -118,7 +118,7 @@ export default function SignupPage() {
                     value={formData.lastName}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
+                    className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
                   />
                   <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
                 </div>
@@ -138,7 +138,7 @@ export default function SignupPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
+                  className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
                 />
                 <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
               </div>
@@ -157,7 +157,7 @@ export default function SignupPage() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3.5 border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
+                  className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
                 />
                 <button
                   type="button"
@@ -194,7 +194,7 @@ export default function SignupPage() {
       </div>
 
       {/* Right Column - Testimonial */}
-      <div className="flex-1 bg-gradient-to-br from-green-500 via-green-600 to-emerald-700 flex items-center justify-center p-12 relative overflow-hidden">
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-green-500 via-green-600 to-emerald-700 items-center justify-center p-8 lg:p-12 relative overflow-hidden">
         {/* Subtle Background Pattern */}
         <div className="absolute inset-0 opacity-[0.03]">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full -mr-48 -mt-48"></div>
@@ -202,7 +202,7 @@ export default function SignupPage() {
         </div>
         
         <div className="max-w-md text-white relative z-10">
-          <blockquote className="text-2xl font-medium leading-relaxed mb-6 text-white">
+          <blockquote className="text-xl lg:text-2xl font-medium leading-relaxed mb-6 text-white">
             "Fintech is the technology and innovation that aims to compete with traditional financial methods."
           </blockquote>
           
@@ -213,12 +213,12 @@ export default function SignupPage() {
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center border border-white/30">
-              <User className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white/20 rounded-full flex items-center justify-center border border-white/30">
+              <User className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
             </div>
             <div>
-              <p className="font-semibold text-lg text-white">Walapi Karaka</p>
-              <p className="text-green-100 text-sm">Financial Officer</p>
+              <p className="font-semibold text-base lg:text-lg text-white">Walapi Karaka</p>
+              <p className="text-green-100 text-xs lg:text-sm">Financial Officer</p>
             </div>
           </div>
         </div>

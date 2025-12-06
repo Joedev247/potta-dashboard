@@ -470,14 +470,14 @@ export default function BrowsePage() {
   }, [showFilterDropdown, showDateDropdown]);
 
   return (
-    <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-            <Eye className="w-6 h-6 text-white" />
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
             {activeTab === 'api-keys' ? 'API keys' :
              activeTab === 'access-tokens' ? 'Access tokens' :
              activeTab === 'webhooks' ? 'Webhooks' :
@@ -487,12 +487,12 @@ export default function BrowsePage() {
         </div>
         
         {/* Tabs */}
-        <div className="flex gap-1 border-b-2 border-gray-200">
+        <div className="flex gap-1 border-b-2 border-gray-200 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+              className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'text-gray-900'
                   : 'text-gray-600 hover:text-gray-900'
@@ -536,81 +536,85 @@ export default function BrowsePage() {
             </div>
 
             {/* API Key Details Box */}
-            <div className="bg-gray-50 border border-gray-200  p-6 space-y-6">
+            <div className="bg-gray-50 border border-gray-200  p-4 sm:p-6 space-y-4 sm:space-y-6">
               {/* Live API key */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <label className="text-sm font-medium text-gray-900">Live API key</label>
-                  <Info className="w-4 h-4 text-gray-400" />
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <label className="text-xs sm:text-sm font-medium text-gray-900">Live API key</label>
+                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-white border border-gray-200  px-4 py-1 font-mono text-sm text-gray-900">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                  <div className="flex-1 bg-white border border-gray-200  px-3 sm:px-4 py-2 sm:py-1 font-mono text-xs sm:text-sm text-gray-900 overflow-x-auto">
                     {showLiveKey ? apiKeys.liveApiKey : 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
                   </div>
-                  <button
-                    onClick={() => setShowLiveKey(!showLiveKey)}
-                    className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
-                  >
-                    {showLiveKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                  <button
-                    onClick={() => handleCopy(apiKeys.liveApiKey, 'live')}
-                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    <Copy className="w-4 h-4" />
-                    {copiedKey === 'live' ? 'Copied!' : 'Copy'}
-                  </button>
-                  <button
-                    onClick={() => setShowResetConfirm('live')}
-                    className="px-4 py-2 bg-white border border-gray-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Reset
-                  </button>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <button
+                      onClick={() => setShowLiveKey(!showLiveKey)}
+                      className="p-2 text-gray-600 hover:text-gray-900 transition-colors flex-shrink-0"
+                    >
+                      {showLiveKey ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+                    </button>
+                    <button
+                      onClick={() => handleCopy(apiKeys.liveApiKey, 'live')}
+                      className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors flex items-center gap-1 sm:gap-2"
+                    >
+                      <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
+                      {copiedKey === 'live' ? 'Copied!' : 'Copy'}
+                    </button>
+                    <button
+                      onClick={() => setShowResetConfirm('live')}
+                      className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-white border border-gray-200 text-red-600 font-medium hover:bg-red-50 transition-colors flex items-center gap-1 sm:gap-2"
+                    >
+                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">Reset</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Test API key */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <label className="text-sm font-medium text-gray-900">Test API key</label>
-                  <Info className="w-4 h-4 text-gray-400" />
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <label className="text-xs sm:text-sm font-medium text-gray-900">Test API key</label>
+                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-white border border-gray-200 rounded px-4 py-1 font-mono text-sm text-gray-900">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                  <div className="flex-1 bg-white border border-gray-200 rounded px-3 sm:px-4 py-2 sm:py-1 font-mono text-xs sm:text-sm text-gray-900 overflow-x-auto">
                     {apiKeys.testApiKey}
                   </div>
-                  <button
-                    onClick={() => handleCopy(apiKeys.testApiKey, 'test')}
-                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    <Copy className="w-4 h-4" />
-                    {copiedKey === 'test' ? 'Copied!' : 'Copy'}
-                  </button>
-                  <button
-                    onClick={() => setShowResetConfirm('test')}
-                    className="px-4 py-2 bg-white border border-gray-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Reset
-                  </button>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <button
+                      onClick={() => handleCopy(apiKeys.testApiKey, 'test')}
+                      className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors flex items-center gap-1 sm:gap-2"
+                    >
+                      <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
+                      {copiedKey === 'test' ? 'Copied!' : 'Copy'}
+                    </button>
+                    <button
+                      onClick={() => setShowResetConfirm('test')}
+                      className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-white border border-gray-200 text-red-600 font-medium hover:bg-red-50 transition-colors flex items-center gap-1 sm:gap-2"
+                    >
+                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">Reset</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Profile ID */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <label className="text-sm font-medium text-gray-900">Profile ID</label>
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <label className="text-xs sm:text-sm font-medium text-gray-900">Profile ID</label>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-white border border-gray-200 rounded px-4 py-1 font-mono text-sm text-gray-900">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                  <div className="flex-1 bg-white border border-gray-200 rounded px-3 sm:px-4 py-2 sm:py-1 font-mono text-xs sm:text-sm text-gray-900 overflow-x-auto">
                     pfl_CUowZbca8a
                   </div>
                   <button
                     onClick={() => handleCopy('pfl_CUowZbca8a', 'profile')}
-                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+                    className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors flex items-center gap-1 sm:gap-2"
                   >
-                    <Copy className="w-4 h-4" />
+                    <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
                     {copiedKey === 'profile' ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
@@ -623,22 +627,22 @@ export default function BrowsePage() {
 
       {/* Reset API Key Confirmation Modal */}
       {showResetConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Reset API Key</h3>
-            <p className="text-gray-600 mb-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Reset API Key</h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               Are you sure you want to reset your {showResetConfirm === 'live' ? 'live' : 'test'} API key? This action cannot be undone and will invalidate the current key.
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
               <button
                 onClick={() => setShowResetConfirm(null)}
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+                className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleResetApiKey(showResetConfirm as 'live' | 'test')}
-                className="px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
+                className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
               >
                 Reset
               </button>
@@ -673,8 +677,8 @@ export default function BrowsePage() {
 
           {/* Access Tokens List */}
           <div className="bg-white border border-gray-200  overflow-hidden">
-            <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-              <div className="grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
+            <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+              <div className="hidden lg:grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
                 <div>Name</div>
                 <div>Created</div>
                 <div>Expires</div>
@@ -684,8 +688,36 @@ export default function BrowsePage() {
             </div>
             <div className="divide-y divide-gray-200">
               {tokens.map((token) => (
-                <div key={token.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                  <div className="grid grid-cols-5 gap-4 items-center">
+                <div key={token.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                  {/* Mobile Card Layout */}
+                  <div className="lg:hidden space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm text-gray-900">{token.name}</div>
+                        <div className="text-xs text-gray-600 mt-1">Created: {token.created}</div>
+                        <div className="text-xs text-gray-600 mt-1">Expires: {token.expires}</div>
+                      </div>
+                      <span className="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700 flex-shrink-0 ml-2">
+                        {token.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
+                      <button
+                        onClick={() => setSelectedToken(token)}
+                        className="flex-1 text-green-600 hover:text-green-700 text-sm font-medium py-2 border border-green-200 hover:bg-green-50 transition-colors"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleRevokeToken(token.id)}
+                        className="flex-1 text-red-600 hover:text-red-700 text-sm font-medium py-2 border border-red-200 hover:bg-red-50 transition-colors"
+                      >
+                        Revoke
+                      </button>
+                    </div>
+                  </div>
+                  {/* Desktop Table Layout */}
+                  <div className="hidden lg:grid grid-cols-5 gap-4 items-center">
                     <div className="font-medium text-gray-900">{token.name}</div>
                     <div className="text-sm text-gray-600">{token.created}</div>
                     <div className="text-sm text-gray-600">{token.expires}</div>
@@ -892,8 +924,8 @@ export default function BrowsePage() {
 
           {/* Webhooks List */}
           <div className="bg-white border border-gray-200  overflow-hidden">
-            <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-              <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
+            <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+              <div className="hidden lg:grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
                 <div>URL</div>
                 <div>Events</div>
                 <div>Status</div>
@@ -902,8 +934,39 @@ export default function BrowsePage() {
             </div>
             <div className="divide-y divide-gray-200">
               {webhooks.map((webhook) => (
-                <div key={webhook.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                  <div className="grid grid-cols-4 gap-4 items-center">
+                <div key={webhook.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                  {/* Mobile Card Layout */}
+                  <div className="lg:hidden space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-mono text-xs sm:text-sm text-gray-900 truncate">{webhook.url}</div>
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">{webhook.events.join(', ')}</div>
+                      </div>
+                      <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${
+                        webhook.status === 'active' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {webhook.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
+                      <button
+                        onClick={() => handleEditWebhook(webhook)}
+                        className="flex-1 text-green-600 hover:text-green-700 text-sm font-medium py-2 border border-green-200 hover:bg-green-50 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWebhook(webhook.id)}
+                        className="flex-1 text-red-600 hover:text-red-700 text-sm font-medium py-2 border border-red-200 hover:bg-red-50 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  {/* Desktop Table Layout */}
+                  <div className="hidden lg:grid grid-cols-4 gap-4 items-center">
                     <div className="font-mono text-sm text-gray-900">{webhook.url}</div>
                     <div className="text-sm text-gray-600">{webhook.events.join(', ')}</div>
                     <div>
@@ -939,8 +1002,8 @@ export default function BrowsePage() {
 
       {/* Webhook Modal */}
       {showWebhookModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
                 {editingWebhook ? 'Edit Webhook' : 'Add Webhook'}
@@ -1047,7 +1110,7 @@ export default function BrowsePage() {
             </p>
 
             {/* Filters */}
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -1055,7 +1118,7 @@ export default function BrowsePage() {
                   placeholder="Search logs..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-green-500"
+                  className="w-full pl-10 pr-4 py-2 text-base border border-gray-200 rounded focus:outline-none focus:border-green-500"
                 />
               </div>
               <div className="relative" ref={filterRef}>
@@ -1064,7 +1127,7 @@ export default function BrowsePage() {
                     setShowFilterDropdown(!showFilterDropdown);
                     setShowDateDropdown(false);
                   }}
-                  className={`px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-2 ${
+                  className={`w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center justify-center gap-2 ${
                     selectedFilter ? 'border-green-500 bg-green-50' : ''
                   }`}
                 >
@@ -1094,7 +1157,7 @@ export default function BrowsePage() {
                     setShowDateDropdown(!showDateDropdown);
                     setShowFilterDropdown(false);
                   }}
-                  className={`px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-2 ${
+                  className={`w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center justify-center gap-2 ${
                     selectedDateFilter !== 'All' ? 'border-green-500 bg-green-50' : ''
                   }`}
                 >
@@ -1123,8 +1186,8 @@ export default function BrowsePage() {
 
           {/* API Logs Table */}
           <div className="bg-white border border-gray-200  overflow-hidden">
-            <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-              <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
+            <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+              <div className="hidden lg:grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
                 <div>Time</div>
                 <div>Method</div>
                 <div>Endpoint</div>
@@ -1135,8 +1198,43 @@ export default function BrowsePage() {
             </div>
             <div className="divide-y divide-gray-200">
               {getFilteredLogs().map((log) => (
-                <div key={log.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                  <div className="grid grid-cols-6 gap-4 items-center">
+                <div key={log.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                  {/* Mobile Card Layout */}
+                  <div className="lg:hidden space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs sm:text-sm text-gray-600">{log.time}</div>
+                        <div className="font-mono text-xs sm:text-sm text-gray-900 truncate mt-1">{log.endpoint}</div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-2">
+                        <span className={`px-2 py-1 text-xs font-medium rounded ${
+                          log.method === 'GET' ? 'bg-blue-100 text-blue-700' : 
+                          log.method === 'POST' ? 'bg-green-100 text-green-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {log.method}
+                        </span>
+                        <span className={`px-2 py-1 text-xs font-medium rounded ${
+                          log.status >= 200 && log.status < 300 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {log.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                      <div className="text-xs sm:text-sm text-gray-600">Response: {log.responseTime}</div>
+                      <button
+                        onClick={() => setSelectedLog(log)}
+                        className="text-green-600 hover:text-green-700 text-sm font-medium px-3 py-1 border border-green-200 hover:bg-green-50 transition-colors"
+                      >
+                        View
+                      </button>
+                    </div>
+                  </div>
+                  {/* Desktop Table Layout */}
+                  <div className="hidden lg:grid grid-cols-6 gap-4 items-center">
                     <div className="text-sm text-gray-600">{log.time}</div>
                     <div>
                       <span className={`px-2 py-1 text-xs font-medium rounded ${
@@ -1176,8 +1274,8 @@ export default function BrowsePage() {
 
       {/* View Log Modal */}
       {selectedLog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">API Log Details</h3>
               <button
@@ -1250,10 +1348,10 @@ export default function BrowsePage() {
       {/* Your Apps Tab */}
       {activeTab === 'your-apps' && (
         <div>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 mb-4 sm:mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Your apps</h2>
-              <p className="text-gray-600">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Your apps</h2>
+              <p className="text-sm sm:text-base text-gray-600">
                 Manage OAuth applications that have access to your account.
               </p>
             </div>
@@ -1265,7 +1363,7 @@ export default function BrowsePage() {
                 setAppError('');
                 setAppSuccess('');
               }}
-              className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded flex items-center gap-2"
+              className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Create app
@@ -1273,22 +1371,22 @@ export default function BrowsePage() {
           </div>
 
           {/* Apps List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {apps.map((app) => (
-              <div key={app.id} className="bg-white border border-gray-200  p-6 hover:border-green-300 transition-colors">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{app.name}</h3>
-                    <p className="text-sm text-gray-600 mb-3">{app.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+              <div key={app.id} className="bg-white border border-gray-200  p-4 sm:p-6 hover:border-green-300 transition-colors">
+                <div className="flex items-start justify-between mb-3 sm:mb-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">{app.name}</h3>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">{app.description}</p>
+                    <div className="flex items-center gap-4 text-xs text-gray-500 mb-2 sm:mb-3">
                       <span>Created: {app.created}</span>
                     </div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Globe className="w-3 h-3 text-gray-400" />
-                      <span className="text-xs text-gray-600 font-mono">{app.redirectUri}</span>
+                    <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                      <Globe className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                      <span className="text-xs text-gray-600 font-mono truncate">{app.redirectUri}</span>
                     </div>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded ${
+                  <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${
                     app.status === 'active' 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-gray-100 text-gray-700'
@@ -1296,7 +1394,7 @@ export default function BrowsePage() {
                     {app.status}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-3 sm:pt-4 border-t border-gray-200">
                   <button
                     onClick={() => handleEditApp(app)}
                     className="flex-1 px-3 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
@@ -1319,8 +1417,8 @@ export default function BrowsePage() {
 
       {/* Create/Edit App Modal */}
       {showCreateApp && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
                 {editingApp ? 'Edit App' : 'Create App'}
@@ -1449,27 +1547,27 @@ export default function BrowsePage() {
 
       {/* Revoke Token Confirmation Modal */}
       {showRevokeTokenConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-red-600" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full shadow-xl">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Revoke Token</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Revoke Token</h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               Are you sure you want to revoke this token? This action cannot be undone.
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
               <button
                 onClick={() => setShowRevokeTokenConfirm(null)}
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+                className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmRevokeToken}
-                className="px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
+                className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
               >
                 Revoke
               </button>
@@ -1480,27 +1578,27 @@ export default function BrowsePage() {
 
       {/* Delete Webhook Confirmation Modal */}
       {showDeleteWebhookConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-red-600" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full shadow-xl">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Delete Webhook</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Delete Webhook</h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               Are you sure you want to delete this webhook?
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
               <button
                 onClick={() => setShowDeleteWebhookConfirm(null)}
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+                className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDeleteWebhook}
-                className="px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
+                className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
               >
                 Delete
               </button>
@@ -1511,27 +1609,27 @@ export default function BrowsePage() {
 
       {/* Delete App Confirmation Modal */}
       {showDeleteAppConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-red-600" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full shadow-xl">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Delete App</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Delete App</h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               Are you sure you want to delete this app? This action cannot be undone.
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
               <button
                 onClick={() => setShowDeleteAppConfirm(null)}
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+                className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDeleteApp}
-                className="px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
+                className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors rounded"
               >
                 Delete
               </button>

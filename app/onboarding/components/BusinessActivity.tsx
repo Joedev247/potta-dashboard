@@ -26,19 +26,19 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-            <FileText className="w-6 h-6 text-green-600" />
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Business Activity</h1>
-            <p className="text-gray-600 mt-1">Tell us about your business</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Business Activity</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Tell us about your business</p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Business Name <span className="text-red-500">*</span>
@@ -48,7 +48,7 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
             required
             value={formData.businessName}
             onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-            className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+            className="w-full px-4 py-2.5 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
             placeholder="Your business name"
           />
         </div>
@@ -106,7 +106,7 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Registration Number
@@ -115,7 +115,7 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
               type="text"
               value={formData.registrationNumber}
               onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
-              className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+              className="w-full px-4 py-2.5 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
               placeholder="Ex: RC/DLA/2024/A/12345"
             />
           </div>
@@ -128,7 +128,7 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
               type="text"
               value={formData.vatNumber}
               onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value })}
-              className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+              className="w-full px-4 py-2.5 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
               placeholder="Ex: M123456789"
             />
           </div>
@@ -142,7 +142,7 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
             type="url"
             value={formData.website}
             onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-            className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+            className="w-full px-4 py-2.5 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
             placeholder="https://www.exemple.cm"
           />
         </div>
@@ -155,22 +155,22 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             rows={4}
-            className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+            className="w-full px-4 py-2.5 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
             placeholder="Describe what your business does..."
           />
         </div>
 
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={onPrevious}
-            className="px-4 py-1 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
           >
             Previous
           </button>
           <button
             type="submit"
-            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-green-500 text-white font-medium hover:bg-green-600 transition-colors"
           >
             Continue
           </button>

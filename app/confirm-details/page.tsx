@@ -93,32 +93,32 @@ export default function ConfirmDetailsPage() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
-      <div className="border-b border-gray-200 mt-20 bg-white flex-shrink-0">
-        <div className="max-w-4xl mx-auto px-8 py-6">
-          <div className="flex items-center justify-between mb-4">
+      <div className="border-b border-gray-200 mt-16 sm:mt-20 bg-white flex-shrink-0">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
             <button
               onClick={() => router.back()}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="flex items-center gap-1 sm:gap-2 text-gray-600 hover:text-gray-900 transition-colors text-sm sm:text-base"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back</span>
+              <span className="hidden sm:inline">Back</span>
             </button>
-            <span className="text-sm text-gray-600">step 3 of 3</span>
+            <span className="text-xs sm:text-sm text-gray-600">step 3 of 3</span>
           </div>
           
           {/* Progress Bar */}
-          <div className="w-full h-1 bg-gray-200 rounded-full mb-6">
+          <div className="w-full h-1 bg-gray-200 rounded-full mb-4 sm:mb-6">
             <div className="w-full h-full bg-green-500 rounded-full"></div>
           </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Confirm the details</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">Confirm the details</h1>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1">
-        <div className="w-full max-w-4xl mx-auto px-8 pt-8 pb-12">
-        <div className="bg-white  border-2 border-gray-200 p-8 space-y-6">
+        <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-8 sm:pb-12">
+        <div className="bg-white  border-2 border-gray-200 p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
           {/* Business Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -130,7 +130,7 @@ export default function ConfirmDetailsPage() {
               value={formData.businessName}
               onChange={handleChange}
               placeholder="Search by business name"
-              className="w-full px-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500"
+              className="w-full px-4 py-2.5 sm:py-3 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500"
             />
           </div>
 
@@ -199,7 +199,7 @@ export default function ConfirmDetailsPage() {
           </div>
 
           {/* Region and City */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Region / Province

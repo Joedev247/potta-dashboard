@@ -331,23 +331,23 @@ export default function PaymentsPage() {
   };
 
   return (
-    <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-            <Plus className="w-6 h-6 text-white" />
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900">Payments</h1>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Payments</h1>
         </div>
         
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b-2 border-gray-200">
+        <div className="flex gap-1 mb-4 sm:mb-6 border-b-2 border-gray-200 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
-                px-4 py-2 text-sm font-semibold transition-colors relative
+                px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition-colors relative whitespace-nowrap
                 ${activeTab === tab.id
                   ? 'text-gray-900'
                   : 'text-gray-600 hover:text-gray-900'
@@ -363,16 +363,16 @@ export default function PaymentsPage() {
         </div>
 
         {/* Search and Filters */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="relative">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 flex-1">
+            <div className="relative flex-1 sm:flex-initial">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search here"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-1 bg-white border-2 border-gray-200 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-green-500  w-64 transition-all"
+                className="w-full sm:w-64 pl-10 pr-4 py-2 sm:py-1 text-base bg-white border-2 border-gray-200 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-green-500 transition-all"
               />
             </div>
             <div className="relative">
@@ -443,19 +443,20 @@ export default function PaymentsPage() {
           </div>
           <button 
             onClick={() => setShowCreateLink(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all transform hover:scale-105"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 text-sm sm:text-base bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all transform hover:scale-105"
           >
             <Plus className="w-4 h-4" />
-            Create payment
+            <span className="hidden sm:inline">Create payment</span>
+            <span className="sm:hidden">Create</span>
           </button>
         </div>
       </div>
 
       {/* Create Link Form */}
       {showCreateLink ? (
-        <div className="bg-white max-w-4xl mx-auto px-8">
+        <div className="bg-white max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <button 
               onClick={() => {
                 setShowCreateLink(false);
@@ -474,16 +475,16 @@ export default function PaymentsPage() {
                 setReusable(false);
                 setSavXAFl(false);
               }}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+              className="flex items-center gap-2 text-sm sm:text-base text-gray-600 hover:text-gray-900 mb-3 sm:mb-4 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Payment links</span>
             </button>
             
-            <div className="flex items-center justify-between">
-              <h1 className="text-4xl font-bold text-gray-900">Create link</h1>
-              <div className="relative">
-                <select className="px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-20">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Create link</h1>
+              <div className="relative w-full sm:w-auto">
+                <select className="w-full sm:w-auto px-4 py-2 sm:py-1 text-base bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-20">
                   <option>Codev</option>
                 </select>
                 <div className="absolute right-10 top-1/2 transform -translate-y-1/2 pointer-events-none">
@@ -495,14 +496,14 @@ export default function PaymentsPage() {
           </div>
 
           {/* Type, Currency, Amount Row */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 sm:mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
               <div className="relative">
                 <select 
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10"
+                  className="w-full px-4 py-2 sm:py-1 text-base bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10"
                 >
                   <option value="Fixed">Fixed Amount</option>
                   <option value="Variable">Variable Amount</option>
@@ -517,7 +518,7 @@ export default function PaymentsPage() {
                 <select 
                   value={formData.currency}
                   onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                  className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10"
+                  className="w-full px-4 py-2 sm:py-1 text-base bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10"
                 >
                   <option value="XAF">XAF (Central African CFA Franc)</option>
                   <option value="USD">USD (US Dollar)</option>
@@ -532,7 +533,7 @@ export default function PaymentsPage() {
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 placeholder={formData.type === 'Variable' ? 'Leave empty for variable' : 'Enter amount'}
-                className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+                className="w-full px-4 py-2 sm:py-1 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
               />
             </div>
           </div>
@@ -890,28 +891,29 @@ export default function PaymentsPage() {
             return (
               <>
                 {/* Payments Stats */}
-                <div className="grid grid-cols-4 gap-6 mb-6">
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Total Payments</div>
-                    <div className="text-2xl font-bold text-gray-900">{totalPayments}</div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Total Payments</div>
+                    <div className="text-xl sm:text-2xl font-bold text-gray-900">{totalPayments}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Paid</div>
-                    <div className="text-2xl font-bold text-green-600">{paidCount}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Paid</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">{paidCount}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Pending</div>
-                    <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Pending</div>
+                    <div className="text-xl sm:text-2xl font-bold text-yellow-600">{pendingCount}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
-                    <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Total Revenue</div>
+                    <div className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</div>
                   </div>
                 </div>
 
                 {filteredPayments.length > 0 ? (
               <div className="bg-white border border-gray-200 overflow-hidden">
-                <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                {/* Desktop Table Header */}
+                <div className="hidden lg:block bg-gray-50 border-b border-gray-200 px-6 py-4">
                   <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
                     <div>Payment ID</div>
                     <div>Customer</div>
@@ -923,8 +925,44 @@ export default function PaymentsPage() {
                 </div>
                 <div className="divide-y divide-gray-200">
                   {filteredPayments.map((payment) => (
-                    <div key={payment.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                      <div className="grid grid-cols-6 gap-4 items-center">
+                    <div key={payment.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                      {/* Mobile Card Layout */}
+                      <div className="lg:hidden space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-mono text-xs sm:text-sm text-gray-900 truncate">{payment.id}</div>
+                            <div className="text-sm text-gray-600 mt-1">{formatDate(payment.createdAt)}</div>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${
+                            payment.status === 'paid'
+                              ? 'bg-green-100 text-green-700'
+                              : payment.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {payment.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-xs text-gray-600">Customer</div>
+                            <div className="text-sm font-medium text-gray-900">{payment.customer?.name || payment.customer?.email || 'N/A'}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-gray-600">Amount</div>
+                            <div className="text-sm font-semibold text-gray-900">{formatCurrency(payment.amount, payment.currency)}</div>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedItem({ ...payment, type: 'payment' })}
+                          className="w-full text-green-600 hover:text-green-700 text-sm font-medium flex items-center justify-center gap-1 py-2 border border-green-200 hover:bg-green-50 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View Details
+                        </button>
+                      </div>
+                      {/* Desktop Table Layout */}
+                      <div className="hidden lg:grid grid-cols-6 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{payment.id}</div>
                         <div className="text-sm text-gray-900">{payment.customer?.name || payment.customer?.email || 'N/A'}</div>
                         <div className="font-semibold text-gray-900">{formatCurrency(payment.amount, payment.currency)}</div>
@@ -1000,28 +1038,28 @@ export default function PaymentsPage() {
             return (
             <div>
                 {/* Refunds Stats */}
-                <div className="grid grid-cols-4 gap-6 mb-6">
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Total Refunds</div>
-                    <div className="text-2xl font-bold text-gray-900">{totalRefunds}</div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Total Refunds</div>
+                    <div className="text-xl sm:text-2xl font-bold text-gray-900">{totalRefunds}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Completed</div>
-                    <div className="text-2xl font-bold text-green-600">{completedCount}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Completed</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">{completedCount}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Pending</div>
-                    <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Pending</div>
+                    <div className="text-xl sm:text-2xl font-bold text-yellow-600">{pendingCount}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Total Refunded</div>
-                    <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalRefundAmount)}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Total Refunded</div>
+                    <div className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(totalRefundAmount)}</div>
                   </div>
                 </div>
 
                 <div className="bg-white border border-gray-200 overflow-hidden">
-                {/* Table Header */}
-                <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                {/* Desktop Table Header */}
+                <div className="hidden lg:block bg-gray-50 border-b border-gray-200 px-6 py-4">
                   <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
                     <div>Refund ID</div>
                     <div>Payment ID</div>
@@ -1035,8 +1073,38 @@ export default function PaymentsPage() {
                 {/* Table Body */}
                 <div className="divide-y divide-gray-200">
                     {filteredRefunds.map((refund) => (
-                    <div key={refund.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                      <div className="grid grid-cols-6 gap-4 items-center">
+                    <div key={refund.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                      {/* Mobile Card Layout */}
+                      <div className="lg:hidden space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-mono text-xs sm:text-sm text-gray-900 truncate">{refund.id}</div>
+                            <div className="text-xs text-gray-500 mt-1">Payment: {refund.paymentId}</div>
+                            <div className="text-sm text-gray-600 mt-1">{formatDate(refund.createdAt)}</div>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${
+                            refund.status === 'completed'
+                              ? 'bg-green-100 text-green-700'
+                              : refund.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {refund.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-semibold text-gray-900">{formatCurrency(refund.amount, refund.currency)}</div>
+                          <button 
+                            onClick={() => setSelectedItem({ ...refund, type: 'refund' })}
+                            className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1 px-3 py-1 border border-green-200 hover:bg-green-50 transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View
+                          </button>
+                        </div>
+                      </div>
+                      {/* Desktop Table Layout */}
+                      <div className="hidden lg:grid grid-cols-6 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{refund.id}</div>
                         <div className="font-mono text-sm text-gray-600">{refund.paymentId}</div>
                         <div className="font-semibold text-gray-900">{formatCurrency(refund.amount, refund.currency)}</div>
@@ -1101,28 +1169,28 @@ export default function PaymentsPage() {
             return (
             <div>
                 {/* Chargebacks Stats */}
-                <div className="grid grid-cols-4 gap-6 mb-6">
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Total Chargebacks</div>
-                    <div className="text-2xl font-bold text-gray-900">{totalChargebacks}</div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Total Chargebacks</div>
+                    <div className="text-xl sm:text-2xl font-bold text-gray-900">{totalChargebacks}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Open</div>
-                    <div className="text-2xl font-bold text-red-600">{openCount}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Open</div>
+                    <div className="text-xl sm:text-2xl font-bold text-red-600">{openCount}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Won</div>
-                    <div className="text-2xl font-bold text-green-600">{wonCount}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Won</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">{wonCount}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Open Amount</div>
-                    <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalChargebackAmount)}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Open Amount</div>
+                    <div className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(totalChargebackAmount)}</div>
                   </div>
                 </div>
 
                 <div className="bg-white border border-gray-200 overflow-hidden">
-                {/* Table Header */}
-                <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                {/* Desktop Table Header */}
+                <div className="hidden lg:block bg-gray-50 border-b border-gray-200 px-6 py-4">
                   <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
                     <div>Chargeback ID</div>
                     <div>Payment ID</div>
@@ -1136,8 +1204,39 @@ export default function PaymentsPage() {
                 {/* Table Body */}
                 <div className="divide-y divide-gray-200">
                     {filteredChargebacks.map((chargeback) => (
-                    <div key={chargeback.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                      <div className="grid grid-cols-6 gap-4 items-center">
+                    <div key={chargeback.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                      {/* Mobile Card Layout */}
+                      <div className="lg:hidden space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-mono text-xs sm:text-sm text-gray-900 truncate">{chargeback.id}</div>
+                            <div className="text-xs text-gray-500 mt-1">Payment: {chargeback.paymentId}</div>
+                            <div className="text-sm text-gray-600 mt-1">{formatDate(chargeback.createdAt)}</div>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded flex items-center gap-1 flex-shrink-0 ml-2 ${
+                            chargeback.status === 'open'
+                              ? 'bg-red-100 text-red-700'
+                              : chargeback.status === 'won'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {chargeback.status === 'open' && <AlertCircle className="w-3 h-3" />}
+                            {chargeback.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-semibold text-gray-900">{formatCurrency(chargeback.amount, chargeback.currency)}</div>
+                          <button 
+                            onClick={() => setSelectedItem({ ...chargeback, type: 'chargeback' })}
+                            className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1 px-3 py-1 border border-green-200 hover:bg-green-50 transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View
+                          </button>
+                        </div>
+                      </div>
+                      {/* Desktop Table Layout */}
+                      <div className="hidden lg:grid grid-cols-6 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{chargeback.id}</div>
                         <div className="font-mono text-sm text-gray-600">{chargeback.paymentId}</div>
                         <div className="font-semibold text-gray-900">{formatCurrency(chargeback.amount, chargeback.currency)}</div>
@@ -1170,7 +1269,7 @@ export default function PaymentsPage() {
               </div>
 
               {/* Chargeback Info Banner */}
-                <div className="mt-6 bg-yellow-50 border border-yellow-200 p-4">
+                <div className="mt-4 sm:mt-6 bg-yellow-50 border border-yellow-200 p-3 sm:p-4">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                   <div>
@@ -1218,28 +1317,28 @@ export default function PaymentsPage() {
             return (
               <div>
                 {/* Orders Stats */}
-                <div className="grid grid-cols-4 gap-6 mb-6">
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Total Orders</div>
-                    <div className="text-2xl font-bold text-gray-900">{totalOrders}</div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Total Orders</div>
+                    <div className="text-xl sm:text-2xl font-bold text-gray-900">{totalOrders}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Paid</div>
-                    <div className="text-2xl font-bold text-green-600">{paidCount}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Paid</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">{paidCount}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Pending</div>
-                    <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Pending</div>
+                    <div className="text-xl sm:text-2xl font-bold text-yellow-600">{pendingCount}</div>
                   </div>
-                  <div className="bg-white border border-gray-200 p-4">
-                    <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
-                    <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</div>
+                  <div className="bg-white border border-gray-200 p-3 sm:p-4">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Total Revenue</div>
+                    <div className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</div>
                   </div>
                 </div>
 
                 <div className="bg-white border border-gray-200 overflow-hidden">
-                  {/* Table Header */}
-                  <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                  {/* Desktop Table Header */}
+                  <div className="hidden lg:block bg-gray-50 border-b border-gray-200 px-6 py-4">
                     <div className="grid grid-cols-7 gap-4 text-sm font-medium text-gray-700">
                       <div>Order ID</div>
                       <div>Customer</div>
@@ -1254,8 +1353,51 @@ export default function PaymentsPage() {
                   {/* Table Body */}
                   <div className="divide-y divide-gray-200">
                     {filteredOrders.map((order) => (
-                    <div key={order.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                      <div className="grid grid-cols-7 gap-4 items-center">
+                    <div key={order.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                      {/* Mobile Card Layout */}
+                      <div className="lg:hidden space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-mono text-xs sm:text-sm text-gray-900 truncate">{order.id}</div>
+                            <div className="text-sm text-gray-600 mt-1">{formatDate(order.createdAt)}</div>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${
+                            order.status === 'paid'
+                              ? 'bg-green-100 text-green-700'
+                              : order.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : order.status === 'shipped'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-600">Customer</div>
+                          <div className="font-medium text-sm text-gray-900">{order.customer.name}</div>
+                          <div className="text-xs text-gray-500">{order.customer.email}</div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-xs text-gray-600">Amount</div>
+                            <div className="text-sm font-semibold text-gray-900">{formatCurrency(order.amount, order.currency)}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-gray-600">Items</div>
+                            <div className="text-sm text-gray-900">{order.items.length} items</div>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedItem({ ...order, type: 'order' })}
+                          className="w-full text-green-600 hover:text-green-700 text-sm font-medium flex items-center justify-center gap-1 py-2 border border-green-200 hover:bg-green-50 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View Details
+                        </button>
+                      </div>
+                      {/* Desktop Table Layout */}
+                      <div className="hidden lg:grid grid-cols-7 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{order.id}</div>
                         <div>
                           <div className="font-medium text-gray-900">{order.customer.name}</div>
@@ -1289,7 +1431,7 @@ export default function PaymentsPage() {
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
                 </div>
               </div>
             );

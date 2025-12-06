@@ -16,8 +16,10 @@ import {
   UserPlus,
   Plus,
   ChevronDown,
+  X,
 } from 'lucide-react';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 const navigationItems = [
   { name: 'Get started', href: '/', icon: Home },
@@ -32,11 +34,30 @@ const navigationItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { organization } = useOrganization();
+  const { isOpen, closeSidebar } = useSidebar();
   const [showOrgMenu, setShowOrgMenu] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   const orgInitials = organization?.name ? organization.name.substring(0, 2).toUpperCase() : 'CO';
   const orgName = organization?.name || 'Codev';
+
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (window.innerWidth < 1024 && isOpen && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+        closeSidebar();
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, closeSidebar]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -55,26 +76,56 @@ export default function Sidebar() {
   }, [showOrgMenu]);
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-green-50 to-emerald-50 border-r border-green-100 z-40">
-      <div className="flex flex-col h-full">
-        {/* Logo with Organization Selector */}
-        <div className="p-3 border-b border-green-100 relative" ref={orgMenuRef}>
-          <button
-            onClick={() => setShowOrgMenu(!showOrgMenu)}
-            className="flex items-center gap-3 cursor-pointer group w-full hover:bg-green-100/50  p-2 -m-2 transition-colors"
-          >
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
+          onClick={closeSidebar}
+        />
+      )}
+      
+      <aside 
+        ref={sidebarRef}
+        className={`
+          fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-green-50 to-emerald-50 border-r border-green-100 z-50
+          transform transition-transform duration-300 ease-in-out
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:translate-x-0
+        `}
+      >
+        <div className="flex flex-col h-full">
+          {/* Close Button - Mobile Only */}
+          <div className="lg:hidden flex items-center justify-between p-3 border-b border-green-100">
             <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
               <span className="text-white text-sm font-bold">{orgInitials}</span>
             </div>
-            <div className="flex-1 text-left">
-              <div className="font-bold text-gray-900 text-base">{orgName}</div>
-              <div className="text-xs text-gray-500">Organization</div>
-            </div>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showOrgMenu ? 'rotate-180' : ''}`} />
-          </button>
+            <button
+              onClick={closeSidebar}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-          {showOrgMenu && (
-            <div className="absolute left-0 top-full mt-2 w-72 bg-white  border border-gray-200 overflow-hidden z-50">
+          {/* Logo with Organization Selector - Desktop */}
+          <div className="p-3 border-b border-green-100 relative hidden lg:block" ref={orgMenuRef}>
+            <button
+              onClick={() => setShowOrgMenu(!showOrgMenu)}
+              className="flex items-center gap-3 cursor-pointer group w-full hover:bg-green-100/50  p-2 -m-2 transition-colors"
+            >
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-bold">{orgInitials}</span>
+              </div>
+              <div className="flex-1 text-left">
+                <div className="font-bold text-gray-900 text-base">{orgName}</div>
+                <div className="text-xs text-gray-500">Organization</div>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showOrgMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showOrgMenu && (
+              <div className="absolute left-0 top-full mt-2 w-72 bg-white  border border-gray-200 overflow-hidden z-50">
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -131,6 +182,12 @@ export default function Sidebar() {
                 <li key={item.name}>
                   <Link
                     href={item.href}
+                    onClick={() => {
+                      // Close sidebar on mobile when link is clicked
+                      if (window.innerWidth < 1024) {
+                        closeSidebar();
+                      }
+                    }}
                     className={`
                       flex items-center gap-3 px-4 py-3  transition-all group relative
                       ${isActive
@@ -142,7 +199,7 @@ export default function Sidebar() {
                     {isActive && (
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>
                     )}
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-700'}`} />
+                    <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-700'}`} />
                     <span className="text-sm font-medium">{item.name}</span>
                     {isActive && (
                       <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
@@ -168,5 +225,6 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }

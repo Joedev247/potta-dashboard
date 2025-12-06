@@ -88,16 +88,16 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-8">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4 text-center">Verify email</h1>
-        <p className="text-gray-600 mb-4 text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4 text-center">Verify email</h1>
+        <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 text-center px-4">
           The code will be sent to {email || 'your email'}.
         </p>
         
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* OTP Input */}
-          <div className="flex gap-3 justify-center">
+          <div className="flex gap-2 sm:gap-3 justify-center px-4">
             {otp.map((digit, index) => (
               <input
                 key={index}
@@ -109,7 +109,7 @@ export default function VerifyEmailPage() {
                 onChange={(e) => handleOtpChange(index, e.target.value.replace(/\D/g, ''))}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
-                className="w-14 h-14 text-center text-2xl font-semibold border-2 border-gray-200  focus:outline-none focus:border-green-500"
+                className="w-12 h-12 sm:w-14 sm:h-14 text-center text-xl sm:text-2xl font-semibold border-2 border-gray-200  focus:outline-none focus:border-green-500"
               />
             ))}
           </div>

@@ -226,54 +226,54 @@ export default function SelectCountryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-8">
-      <div className="w-full max-w-lg bg-white border border-gray-200 p-8">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-lg bg-white border border-gray-200 p-4 sm:p-6 lg:p-8">
         {/* Progress Indicator */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">step 1 of 2</span>
+            <span className="text-xs sm:text-sm text-gray-600">step 1 of 2</span>
           </div>
           <div className="w-full h-1 bg-gray-200 rounded-full">
             <div className="w-1/2 h-full bg-green-500 rounded-full"></div>
           </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">
           What country is your business registered in?
         </h1>
 
         {/* Search Bar */}
-        <div className="relative mb-6">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <div className="relative mb-4 sm:mb-6">
+          <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
           <input
             type="text"
             placeholder="Search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border-2 border-green-500  focus:outline-none focus:ring-2 focus:ring-green-200"
+            className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 text-base border-2 border-green-500  focus:outline-none focus:ring-2 focus:ring-green-200"
           />
         </div>
 
         {/* Country List */}
-        <div className="max-h-96 overflow-y-auto mb-6 space-y-2">
+        <div className="max-h-64 sm:max-h-96 overflow-y-auto mb-4 sm:mb-6 space-y-2">
           {filteredCountries.map((country) => (
             <button
               key={country.code}
               onClick={() => setSelectedCountry(country.code)}
-              className={`w-full flex items-center gap-4 p-4  transition-colors ${
+              className={`w-full flex items-center gap-2 sm:gap-4 p-3 sm:p-4  transition-colors ${
                 selectedCountry === country.code
                   ? 'bg-green-50 border-2 border-green-500'
                   : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
               }`}
             >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm flex-shrink-0 ${
                 selectedCountry === country.code
                   ? 'bg-green-500 text-white'
                   : 'bg-green-100 text-green-700'
               }`}>
                 {country.code}
               </div>
-              <span className="flex-1 text-left font-medium text-gray-900">{country.name}</span>
+              <span className="flex-1 text-left text-sm sm:text-base font-medium text-gray-900">{country.name}</span>
               {selectedCountry === country.code && (
                 <ChevronRight className="w-5 h-5 text-green-500" />
               )}

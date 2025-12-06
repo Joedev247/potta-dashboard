@@ -53,16 +53,17 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Progress Bar */}
       <div className="bg-gradient-to-r from-gray-50 to-white border-b-2 border-gray-200">
-        <div className="max-w-4xl mx-auto px-8 py-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
             <button
               onClick={handlePrevious}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="flex items-center gap-1 sm:gap-2 text-gray-600 hover:text-gray-900 transition-colors text-sm sm:text-base"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>{currentStep === 0 ? 'Back to Get Started' : 'Previous'}</span>
+              <span className="hidden sm:inline">{currentStep === 0 ? 'Back to Get Started' : 'Previous'}</span>
+              <span className="sm:hidden">{currentStep === 0 ? 'Back' : 'Prev'}</span>
             </button>
-            <div className="text-sm text-gray-600">
+            <div className="text-xs sm:text-sm text-gray-600">
               Step {currentStep + 1} of {steps.length}
             </div>
           </div>
@@ -79,11 +80,11 @@ export default function OnboardingPage() {
                   <button
                     onClick={() => handleStepClick(index)}
                     disabled={!isAccessible}
-                    className={`flex flex-col items-center gap-2 ${
+                    className={`flex flex-col items-center gap-1 sm:gap-2 ${
                       isAccessible ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all ${
                       isCompleted
                         ? 'bg-green-500 border-green-500 text-white'
                         : isCurrent
@@ -91,19 +92,19 @@ export default function OnboardingPage() {
                         : 'bg-white border-gray-300 text-gray-400'
                     }`}>
                       {isCompleted ? (
-                        <CheckCircle2 className="w-6 h-6" />
+                        <CheckCircle2 className="w-4 h-4 sm:w-6 sm:h-6" />
                       ) : (
-                        <span className="font-semibold">{index + 1}</span>
+                        <span className="font-semibold text-xs sm:text-sm">{index + 1}</span>
                       )}
                     </div>
-                    <span className={`text-xs font-medium text-center max-w-[100px] ${
+                    <span className={`text-[10px] sm:text-xs font-medium text-center max-w-[60px] sm:max-w-[100px] ${
                       isCurrent ? 'text-gray-900' : 'text-gray-600'
                     }`}>
                       {step.title}
                     </span>
                   </button>
                   {index < steps.length - 1 && (
-                    <div className={`flex-1 h-0.5 mx-2 ${
+                    <div className={`flex-1 h-0.5 mx-1 sm:mx-2 ${
                       isCompleted ? 'bg-green-500' : 'bg-gray-300'
                     }`} />
                   )}
@@ -115,7 +116,7 @@ export default function OnboardingPage() {
       </div>
 
       {/* Step Content */}
-      <div className="max-w-4xl mx-auto px-8 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         <CurrentStepComponent onNext={handleNext} onPrevious={handlePrevious} />
       </div>
     </div>

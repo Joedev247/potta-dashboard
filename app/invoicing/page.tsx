@@ -471,26 +471,26 @@ export default function InvoicingPage() {
   };
 
   return (
-    <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-            <FileText className="w-6 h-6 text-white" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 mb-6 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900">Invoices</h1>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Invoices</h1>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
           <Link 
             href="/settings"
-            className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 text-sm font-semibold hover:border-green-400 hover:bg-green-50 transition-all flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2 text-sm bg-white border-2 border-gray-200 text-gray-700 font-semibold hover:border-green-400 hover:bg-green-50 transition-all flex items-center justify-center gap-2"
           >
             <Settings className="w-4 h-4" />
             Settings
           </Link>
           <button 
             onClick={() => setShowCreateInvoice(true)}
-            className="px-5 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 transform hover:scale-105"
+            className="w-full sm:w-auto px-4 sm:px-5 py-2 text-sm bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center justify-center gap-2 transform hover:scale-105"
           >
             <Plus className="w-4 h-4" />
             Create
@@ -499,13 +499,13 @@ export default function InvoicingPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b-2 border-gray-200">
+      <div className="flex gap-1 mb-4 sm:mb-6 border-b-2 border-gray-200 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`
-              px-4 py-1 text-sm font-semibold transition-colors relative
+              px-3 sm:px-4 py-1 text-xs sm:text-sm font-semibold transition-colors relative whitespace-nowrap
               ${activeTab === tab.id
                 ? 'text-gray-900'
                 : 'text-gray-600 hover:text-gray-900'
@@ -522,15 +522,15 @@ export default function InvoicingPage() {
 
       {/* Filters */}
       {!showCreateInvoice && (
-        <div className="flex items-center gap-3 mb-6">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search invoices..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+              className="w-full pl-10 pr-4 py-2 sm:py-1 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
             />
           </div>
 
@@ -663,9 +663,9 @@ export default function InvoicingPage() {
               <span>Invoices</span>
             </button>
             
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h1 className="text-4xl font-bold text-gray-900">Create invoice</h1>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Create invoice</h1>
                 <div className="flex gap-1 bg-gray-100 p-1 rounded">
                   <button
                     onClick={() => setInvoiceType('one-off')}
@@ -835,8 +835,8 @@ export default function InvoicingPage() {
             </div>
 
             {/* Items Table */}
-            <div className="border border-gray-200 rounded">
-              <div className="grid grid-cols-12 gap-4 p-4 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-700">
+            <div className="border border-gray-200 rounded overflow-x-auto">
+              <div className="hidden lg:grid grid-cols-12 gap-4 p-4 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-700 min-w-[800px]">
                 <div className="col-span-5">Product</div>
                 <div className="col-span-2">Qty</div>
                 <div className="col-span-2">Price</div>
@@ -846,15 +846,83 @@ export default function InvoicingPage() {
               
               <div className="divide-y divide-gray-200">
                 {formData.items.map((item, index) => (
-                  <div key={index} className="p-4">
-                    <div className="grid grid-cols-12 gap-4 items-center">
+                  <div key={index} className="p-3 sm:p-4">
+                    {/* Mobile Card Layout */}
+                    <div className="lg:hidden space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-gray-600 mb-1">Product</div>
+                          <input
+                            type="text"
+                            value={item.product}
+                            onChange={(e) => handleItemChange(index, 'product', e.target.value)}
+                            placeholder="Product name"
+                            className="w-full px-3 py-2 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+                          />
+                        </div>
+                        {formData.items.length > 1 && (
+                          <button
+                            onClick={() => handleRemoveItem(index)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-xs text-gray-600 mb-1">Quantity</div>
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 1)}
+                            min="1"
+                            className="w-full px-3 py-2 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+                          />
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-600 mb-1">VAT</div>
+                          <select
+                            value={item.vat}
+                            onChange={(e) => handleItemChange(index, 'vat', parseFloat(e.target.value))}
+                            className="w-full px-3 py-2 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+                          >
+                            <option value={0}>0%</option>
+                            <option value={5.5}>5.5%</option>
+                            <option value={10}>10%</option>
+                            <option value={18}>18%</option>
+                            <option value={19.25}>19.25%</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-600 mb-1">Price (XAF)</div>
+                        <input
+                          type="number"
+                          value={item.price}
+                          onChange={(e) => handleItemChange(index, 'price', e.target.value)}
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                          className="w-full px-3 py-2 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                        <span className="text-xs text-gray-600">Total</span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          XAF {item.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Desktop Table Layout */}
+                    <div className="hidden lg:grid grid-cols-12 gap-4 items-center min-w-[800px]">
                       <div className="col-span-5">
                         <input
                           type="text"
                           value={item.product}
                           onChange={(e) => handleItemChange(index, 'product', e.target.value)}
                           placeholder="Product name"
-                          className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+                          className="w-full px-4 py-1 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
                         />
                       </div>
                       <div className="col-span-2">
@@ -863,7 +931,7 @@ export default function InvoicingPage() {
                           value={item.quantity}
                           onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 1)}
                           min="1"
-                          className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+                          className="w-full px-4 py-1 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
                         />
                       </div>
                       <div className="col-span-2 flex items-center gap-2">
@@ -875,14 +943,14 @@ export default function InvoicingPage() {
                           placeholder="0.00"
                           step="0.01"
                           min="0"
-                          className="flex-1 px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+                          className="flex-1 px-4 py-1 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
                         />
                       </div>
                       <div className="col-span-2">
                         <select
                           value={item.vat}
                           onChange={(e) => handleItemChange(index, 'vat', parseFloat(e.target.value))}
-                          className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+                          className="w-full px-4 py-1 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
                         >
                           <option value={0}>0%</option>
                           <option value={5.5}>5.5%</option>
@@ -1074,8 +1142,8 @@ export default function InvoicingPage() {
           {/* Recurring Tab */}
           {activeTab === 'recurring' && (
             <div className="bg-white border border-gray-200  overflow-hidden">
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                <div className="grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
+              <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                <div className="hidden lg:grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
                   <div>Recurring Invoice</div>
                   <div>Customer</div>
                   <div>Frequency</div>
@@ -1089,8 +1157,30 @@ export default function InvoicingPage() {
                   { id: 'REC-002', customer: 'Jane Smith', frequency: 'Weekly', next: '2024-01-22', amount: 200.00, email: 'jane@example.com', status: 'active', startDate: '2024-01-01' },
                   { id: 'REC-003', customer: 'Bob Johnson', frequency: 'Monthly', next: '2024-02-05', amount: 1000.00, email: 'bob@example.com', status: 'active', startDate: '2024-01-01' },
                 ].map((recurring) => (
-                  <div key={recurring.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                    <div className="grid grid-cols-5 gap-4 items-center">
+                  <div key={recurring.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                    {/* Mobile Card Layout */}
+                    <div className="lg:hidden space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-mono text-xs sm:text-sm text-gray-900 font-semibold truncate">{recurring.id}</div>
+                          <div className="text-xs sm:text-sm text-gray-600 mt-1">Next: {recurring.next}</div>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedItem({ ...recurring, type: 'recurring' })}
+                          className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1 px-3 py-1 border border-green-200 hover:bg-green-50 transition-colors flex-shrink-0"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View
+                        </button>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-600">Customer</div>
+                        <div className="text-sm font-medium text-gray-900">{recurring.customer}</div>
+                      </div>
+                      <div className="text-xs sm:text-sm text-gray-600">Frequency: {recurring.frequency}</div>
+                    </div>
+                    {/* Desktop Table Layout */}
+                    <div className="hidden lg:grid grid-cols-5 gap-4 items-center">
                       <div className="font-mono text-sm text-gray-900 font-semibold">{recurring.id}</div>
                       <div className="text-sm text-gray-900">{recurring.customer}</div>
                       <div className="text-sm text-gray-600">{recurring.frequency}</div>
@@ -1114,8 +1204,8 @@ export default function InvoicingPage() {
           {/* Credit Notes Tab */}
           {activeTab === 'credit-notes' && (
             <div className="bg-white border border-gray-200  overflow-hidden">
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                <div className="grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
+              <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                <div className="hidden lg:grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
                   <div>Credit Note #</div>
                   <div>Invoice</div>
                   <div>Date</div>
@@ -1128,8 +1218,27 @@ export default function InvoicingPage() {
                   { id: 'CN-001', invoice: 'INV-2024-001', date: '2024-01-10', amount: 150.00, customer: 'John Doe', reason: 'Refund for cancelled service', status: 'applied' },
                   { id: 'CN-002', invoice: 'INV-2024-003', date: '2024-01-08', amount: 75.00, customer: 'Bob Johnson', reason: 'Discount adjustment', status: 'applied' },
                 ].map((creditNote) => (
-                  <div key={creditNote.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                    <div className="grid grid-cols-5 gap-4 items-center">
+                  <div key={creditNote.id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                    {/* Mobile Card Layout */}
+                    <div className="lg:hidden space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-mono text-xs sm:text-sm text-gray-900 font-semibold truncate">{creditNote.id}</div>
+                          <div className="text-xs sm:text-sm text-gray-600 mt-1">Invoice: {creditNote.invoice}</div>
+                          <div className="text-xs sm:text-sm text-gray-600 mt-1">{creditNote.date}</div>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedItem({ ...creditNote, type: 'credit-note' })}
+                          className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1 px-3 py-1 border border-green-200 hover:bg-green-50 transition-colors flex-shrink-0"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View
+                        </button>
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900">XAF {creditNote.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                    {/* Desktop Table Layout */}
+                    <div className="hidden lg:grid grid-cols-5 gap-4 items-center">
                       <div className="font-mono text-sm text-gray-900 font-semibold">{creditNote.id}</div>
                       <div className="text-sm text-gray-600">{creditNote.invoice}</div>
                       <div className="text-sm text-gray-600">{creditNote.date}</div>
@@ -1153,8 +1262,8 @@ export default function InvoicingPage() {
           {/* Customers Tab */}
           {activeTab === 'customers' && (
             <div className="bg-white border border-gray-200  overflow-hidden">
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
+              <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                <div className="hidden lg:grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
                   <div>Customer</div>
                   <div>Email</div>
                   <div>Total Invoices</div>
@@ -1167,8 +1276,26 @@ export default function InvoicingPage() {
                   { name: 'Jane Smith', email: 'jane@example.com', invoices: 3, total: 2550.00, phone: '+237 6 87 65 43 21', address: 'Yaoundé, Cameroon', status: 'active' },
                   { name: 'Bob Johnson', email: 'bob@example.com', invoices: 4, total: 4200.00, phone: '+237 6 98 76 54 32', address: 'Bafoussam, Cameroon', status: 'active' },
                 ].map((customer, index) => (
-                  <div key={index} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                    <div className="grid grid-cols-4 gap-4 items-center">
+                  <div key={index} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                    {/* Mobile Card Layout */}
+                    <div className="lg:hidden space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                          <div className="text-xs sm:text-sm text-gray-600 mt-1">{customer.email}</div>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedItem({ ...customer, type: 'customer' })}
+                          className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1 px-3 py-1 border border-green-200 hover:bg-green-50 transition-colors flex-shrink-0"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View
+                        </button>
+                      </div>
+                      <div className="text-xs sm:text-sm text-gray-600">{customer.invoices} invoices</div>
+                    </div>
+                    {/* Desktop Table Layout */}
+                    <div className="hidden lg:grid grid-cols-4 gap-4 items-center">
                       <div className="text-sm font-medium text-gray-900">{customer.name}</div>
                       <div className="text-sm text-gray-600">{customer.email}</div>
                       <div className="text-sm text-gray-600">{customer.invoices} invoices</div>
@@ -1191,8 +1318,8 @@ export default function InvoicingPage() {
           {/* Products Tab */}
           {activeTab === 'products' && (
             <div className="bg-white border border-gray-200  overflow-hidden">
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                <div className="grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
+              <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                <div className="hidden lg:grid grid-cols-4 gap-4 text-sm font-medium text-gray-700">
                   <div>Product</div>
                   <div>Price</div>
                   <div>Used In</div>
@@ -1205,8 +1332,26 @@ export default function InvoicingPage() {
                   { name: 'Consulting Services', price: 200.00, used: 12, description: 'Business consulting and advisory', category: 'Services', vat: 19.25 },
                   { name: 'Design Package', price: 850.00, used: 5, description: 'Complete design package including logo and branding', category: 'Services', vat: 19.25 },
                 ].map((product, index) => (
-                  <div key={index} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                    <div className="grid grid-cols-4 gap-4 items-center">
+                  <div key={index} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                    {/* Mobile Card Layout */}
+                    <div className="lg:hidden space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                          <div className="text-xs sm:text-sm text-gray-600 mt-1">Used in {product.used} invoices</div>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedItem({ ...product, type: 'product' })}
+                          className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1 px-3 py-1 border border-green-200 hover:bg-green-50 transition-colors flex-shrink-0"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View
+                        </button>
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900">XAF {product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                    {/* Desktop Table Layout */}
+                    <div className="hidden lg:grid grid-cols-4 gap-4 items-center">
                       <div className="text-sm font-medium text-gray-900">{product.name}</div>
                       <div className="text-sm text-gray-900 font-semibold">XAF {product.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                       <div className="text-sm text-gray-600">{product.used} invoices</div>
@@ -1256,10 +1401,10 @@ export default function InvoicingPage() {
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               {/* Invoice Details */}
               {selectedItem.type === 'invoice' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-gray-600 font-medium">Invoice Number</label>
                     <p className="text-lg font-semibold text-gray-900 mt-1">{selectedItem.id}</p>
@@ -1305,7 +1450,7 @@ export default function InvoicingPage() {
 
               {/* Recurring Invoice Details */}
               {selectedItem.type === 'recurring' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-gray-600 font-medium">Recurring Invoice ID</label>
                     <p className="text-lg font-semibold text-gray-900 mt-1">{selectedItem.id}</p>
@@ -1349,7 +1494,7 @@ export default function InvoicingPage() {
 
               {/* Credit Note Details */}
               {selectedItem.type === 'credit-note' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-gray-600 font-medium">Credit Note Number</label>
                     <p className="text-lg font-semibold text-gray-900 mt-1">{selectedItem.id}</p>
@@ -1389,7 +1534,7 @@ export default function InvoicingPage() {
 
               {/* Customer Details */}
               {selectedItem.type === 'customer' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-gray-600 font-medium">Customer Name</label>
                     <p className="text-lg font-semibold text-gray-900 mt-1">{selectedItem.name}</p>
@@ -1429,7 +1574,7 @@ export default function InvoicingPage() {
 
               {/* Product Details */}
               {selectedItem.type === 'product' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-gray-600 font-medium">Product Name</label>
                     <p className="text-lg font-semibold text-gray-900 mt-1">{selectedItem.name}</p>

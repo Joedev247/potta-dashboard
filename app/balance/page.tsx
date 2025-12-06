@@ -235,25 +235,25 @@ export default function WalletPage() {
   };
 
   return (
-    <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Header Section */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
-              <Wallet className="w-6 h-6 text-white" />
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+              <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Wallet</h1>
-              <p className="text-sm text-gray-600">Manage your balance and transactions</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Wallet</h1>
+              <p className="text-xs sm:text-sm text-gray-600">Manage your balance and transactions</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setShowBalance(!showBalance)}
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
             >
-              {showBalance ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showBalance ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
             <button
               onClick={() => {
@@ -263,96 +263,96 @@ export default function WalletPage() {
               }}
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
             >
-              <RefreshCw className={`w-5 h-5 ${loading.balance ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${loading.balance ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
       </div>
 
       {/* Balance Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Main Balance Card */}
-        <div className="md:col-span-2 bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 p-8 text-white shadow-xl transform hover:scale-[1.02] transition-transform duration-300">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                <Wallet className="w-6 h-6" />
+        <div className="lg:col-span-2 bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 p-4 sm:p-6 lg:p-8 text-white shadow-xl transform hover:scale-[1.02] transition-transform duration-300">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+                <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <p className="text-green-100 text-sm font-medium">Available Balance</p>
+                <p className="text-green-100 text-xs sm:text-sm font-medium">Available Balance</p>
                 <p className="text-white/80 text-xs">{balance.currency}</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-green-100 text-sm">Last updated</p>
+            <div className="text-left sm:text-right">
+              <p className="text-green-100 text-xs sm:text-sm">Last updated</p>
               <p className="text-white/80 text-xs">{balance.lastUpdated ? formatDate(balance.lastUpdated) : 'Just now'}</p>
             </div>
           </div>
           
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             {loading.balance ? (
-              <Loader2 className="w-12 h-12 animate-spin" />
+              <Loader2 className="w-8 h-8 sm:w-12 sm:h-12 animate-spin" />
             ) : (
-              <div className="text-5xl font-bold mb-2">
+              <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
                 {showBalance ? formatCurrency(balance.available, balance.currency) : '••••••'}
               </div>
             )}
-            <div className="flex items-center gap-4 text-green-100">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-green-100">
               <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                <span className="text-sm">Pending: {showBalance ? formatCurrency(balance.pending, balance.currency) : '••••'}</span>
+                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm">Pending: {showBalance ? formatCurrency(balance.pending, balance.currency) : '••••'}</span>
               </div>
               {balance.reserved > 0 && (
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="text-sm">Reserved: {showBalance ? formatCurrency(balance.reserved, balance.currency) : '••••'}</span>
+                  <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="text-xs sm:text-sm">Reserved: {showBalance ? formatCurrency(balance.reserved, balance.currency) : '••••'}</span>
                 </div>
               )}
             </div>
           </div>
 
           {/* Quick Actions */}
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <button
               onClick={() => setShowDepositModal(true)}
-              className="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold py-4 px-4 transition-all flex items-center justify-center gap-2 transform hover:scale-105"
+              className="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold py-3 sm:py-4 px-4 transition-all flex items-center justify-center gap-2 transform hover:scale-105 text-sm sm:text-base"
             >
-              <ArrowDown className="w-5 h-5" />
+              <ArrowDown className="w-4 h-4 sm:w-5 sm:h-5" />
               Deposit
             </button>
             <button
               onClick={() => setShowWithdrawModal(true)}
-              className="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold py-4 px-4 transition-all flex items-center justify-center gap-2 transform hover:scale-105"
+              className="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold py-3 sm:py-4 px-4 transition-all flex items-center justify-center gap-2 transform hover:scale-105 text-sm sm:text-base"
             >
-              <ArrowUp className="w-5 h-5" />
+              <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5" />
               Withdraw
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Income Card */}
-          <div className="bg-white p-6 border-2 border-gray-200 hover:border-green-400 transition-all shadow-sm">
+          <div className="bg-white p-4 sm:p-6 border-2 border-gray-200 hover:border-green-400 transition-all shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-green-600" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
               </div>
             </div>
-            <p className="text-gray-600 text-sm font-medium mb-1">Total Income</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalIncome, balance.currency)}</p>
+            <p className="text-gray-600 text-xs sm:text-sm font-medium mb-1">Total Income</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(stats.totalIncome, balance.currency)}</p>
             <p className="text-xs text-gray-500 mt-1">From payments</p>
           </div>
 
           {/* Expenses Card */}
-          <div className="bg-white p-6 border-2 border-gray-200 hover:border-red-400 transition-all shadow-sm">
+          <div className="bg-white p-4 sm:p-6 border-2 border-gray-200 hover:border-red-400 transition-all shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <TrendingDown className="w-5 h-5 text-red-600" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
             </div>
-            <p className="text-gray-600 text-sm font-medium mb-1">Total Expenses</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalExpenses, balance.currency)}</p>
+            <p className="text-gray-600 text-xs sm:text-sm font-medium mb-1">Total Expenses</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(stats.totalExpenses, balance.currency)}</p>
             <p className="text-xs text-gray-500 mt-1">Payouts & fees</p>
           </div>
         </div>
@@ -360,20 +360,20 @@ export default function WalletPage() {
 
       {/* Pending Payouts Section */}
       {stats.pendingPayouts > 0 && (
-        <div className="mb-8 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                <ArrowUpRight className="w-6 h-6 text-white" />
+        <div className="mb-6 sm:mb-8 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Pending Payouts</h3>
-                <p className="text-sm text-gray-600">{stats.pendingPayouts} payout{stats.pendingPayouts > 1 ? 's' : ''} being processed</p>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">Pending Payouts</h3>
+                <p className="text-xs sm:text-sm text-gray-600">{stats.pendingPayouts} payout{stats.pendingPayouts > 1 ? 's' : ''} being processed</p>
               </div>
             </div>
             <Link
               href="/payments?tab=refunds"
-              className="px-4 py-2 bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors"
+              className="w-full sm:w-auto px-4 py-2 text-sm sm:text-base bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors text-center"
             >
               View All
             </Link>
@@ -384,15 +384,15 @@ export default function WalletPage() {
       {/* Transactions Section */}
       <div className="bg-white  border-2 border-gray-200 shadow-sm overflow-hidden">
         {/* Transactions Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-                <History className="w-5 h-5 text-white" />
+        <div className="p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-3 sm:mb-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <History className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Transaction History</h2>
-                <p className="text-sm text-gray-600">{filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}</p>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Transaction History</h2>
+                <p className="text-xs sm:text-sm text-gray-600">{filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -400,32 +400,32 @@ export default function WalletPage() {
                 onClick={() => setShowFilters(!showFilters)}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
               >
-                <Filter className="w-5 h-5" />
+                <Filter className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
-                <Download className="w-5 h-5" />
+                <Download className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>
 
           {/* Search and Filters */}
-          <div className="flex flex-col md:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search transactions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 focus:outline-none focus:border-green-500"
+                className="w-full pl-9 sm:pl-10 pr-4 py-2 text-base border-2 border-gray-200 focus:outline-none focus:border-green-500"
               />
             </div>
             {showFilters && (
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="px-4 py-2 border-2 border-gray-200 focus:outline-none focus:border-green-500"
+                  className="px-4 py-2 text-base border-2 border-gray-200 focus:outline-none focus:border-green-500"
                 >
                   <option value="all">All Types</option>
                   <option value="payment">Payments</option>
@@ -437,7 +437,7 @@ export default function WalletPage() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="px-4 py-2 border-2 border-gray-200 focus:outline-none focus:border-green-500"
+                  className="px-4 py-2 text-base border-2 border-gray-200 focus:outline-none focus:border-green-500"
                 >
                   <option value="all">All Status</option>
                   <option value="completed">Completed</option>

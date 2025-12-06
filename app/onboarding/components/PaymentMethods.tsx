@@ -33,20 +33,20 @@ export default function PaymentMethods({ onNext, onPrevious }: PaymentMethodsPro
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-            <TrendingUp className="w-6 h-6 text-green-600" />
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Payment Methods</h1>
-            <p className="text-gray-600 mt-1">Select the payment methods you want to accept</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Payment Methods</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Select the payment methods you want to accept</p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {paymentMethods.map((method) => {
             const Icon = method.icon;
             const isSelected = selectedMethods.includes(method.id);
@@ -56,27 +56,27 @@ export default function PaymentMethods({ onNext, onPrevious }: PaymentMethodsPro
                 key={method.id}
                 type="button"
                 onClick={() => toggleMethod(method.id)}
-                className={`p-4 border-2  text-left transition-all ${
+                className={`p-3 sm:p-4 border-2  text-left transition-all ${
                   isSelected
                     ? 'border-green-500 bg-green-50'
                     : 'border-gray-200 bg-white hover:border-green-300'
                 }`}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                <div className="flex items-start justify-between gap-2 sm:gap-0 mb-2">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                       isSelected ? 'bg-green-500' : 'bg-gray-100'
                     }`}>
-                      <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-gray-600'}`} />
+                      <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isSelected ? 'text-white' : 'text-gray-600'}`} />
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{method.name}</h3>
-                      <p className="text-sm text-gray-600">{method.description}</p>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-sm sm:text-base text-gray-900">{method.name}</h3>
+                      <p className="text-xs sm:text-sm text-gray-600">{method.description}</p>
                     </div>
                   </div>
                   {isSelected && (
-                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Check className="w-4 h-4 text-white" />
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                     </div>
                   )}
                 </div>
@@ -91,18 +91,18 @@ export default function PaymentMethods({ onNext, onPrevious }: PaymentMethodsPro
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={onPrevious}
-            className="px-4 py-1 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
           >
             Previous
           </button>
           <button
             type="submit"
             disabled={selectedMethods.length === 0}
-            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continue
           </button>

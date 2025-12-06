@@ -29,20 +29,20 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-            <Users className="w-6 h-6 text-green-600" />
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Stakeholder information</h1>
-            <p className="text-gray-600 mt-1">Please provide your personal information to continue</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Stakeholder information</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Please provide your personal information to continue</p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-2 gap-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               First name <span className="text-red-500">*</span>
@@ -52,7 +52,7 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
               required
               value={formData.firstName}
               onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+              className="w-full px-4 py-2.5 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
               placeholder="Enter your first name"
             />
           </div>
@@ -66,7 +66,7 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
               required
               value={formData.lastName}
               onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-              className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+              className="w-full px-4 py-2.5 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
               placeholder="Enter your last name"
             />
           </div>
@@ -110,7 +110,7 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
               required
               value={formData.dateOfBirth}
               onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-              className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+              className="w-full px-4 py-2.5 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
             />
           </div>
 
@@ -169,7 +169,7 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
               required
               value={formData.city}
               onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-              className="w-full px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
+              className="w-full px-4 py-2.5 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
               placeholder="Douala, Yaoundé, etc."
             />
           </div>
@@ -231,17 +231,17 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={onPrevious}
-            className="px-4 py-1 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
           >
             Previous
           </button>
           <button
             type="submit"
-            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-green-500 text-white font-medium hover:bg-green-600 transition-colors"
           >
             Continue
           </button>

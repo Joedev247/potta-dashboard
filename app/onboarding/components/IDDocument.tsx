@@ -75,30 +75,30 @@ export default function IDDocument({ onNext, onPrevious }: IDDocumentProps) {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-            <FileText className="w-6 h-6 text-green-600" />
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">ID Document</h1>
-            <p className="text-gray-600 mt-1">Upload a valid government-issued identification document for verification</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">ID Document</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Upload a valid government-issued identification document for verification</p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Document Type <span className="text-red-500">*</span>
           </label>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             {['Passport', 'Driver\'s License', 'National ID'].map((type) => (
               <button
                 key={type}
                 type="button"
                 onClick={() => handleDocumentTypeChange(type)}
-                className={`p-4 border-2  text-center transition-all ${
+                className={`p-3 sm:p-4 border-2  text-center transition-all ${
                   documentType === type
                     ? 'border-green-500 bg-green-50'
                     : 'border-gray-200 bg-white hover:border-green-300'
@@ -106,12 +106,12 @@ export default function IDDocument({ onNext, onPrevious }: IDDocumentProps) {
               >
                 <div className="flex items-center justify-center mb-2">
                   {documentType === type && (
-                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                      <Check className="w-4 h-4 text-white" />
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center">
+                      <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                     </div>
                   )}
                 </div>
-                <span className={`font-medium ${documentType === type ? 'text-gray-900' : 'text-gray-600'}`}>
+                <span className={`text-sm sm:text-base font-medium ${documentType === type ? 'text-gray-900' : 'text-gray-600'}`}>
                   {type}
                 </span>
               </button>
@@ -128,10 +128,10 @@ export default function IDDocument({ onNext, onPrevious }: IDDocumentProps) {
               
               {!frontFile ? (
                 <label className="block">
-                  <div className="border-2 border-dashed border-gray-300  p-12 text-center hover:border-green-400 transition-colors cursor-pointer bg-gray-50">
-                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-2">Click to upload or drag and drop</p>
-                    <p className="text-sm text-gray-500">PNG, JPG, PDF up to 10MB</p>
+                  <div className="border-2 border-dashed border-gray-300  p-6 sm:p-12 text-center hover:border-green-400 transition-colors cursor-pointer bg-gray-50">
+                    <Upload className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
+                    <p className="text-sm sm:text-base text-gray-600 mb-2">Click to upload or drag and drop</p>
+                    <p className="text-xs sm:text-sm text-gray-500">PNG, JPG, PDF up to 10MB</p>
                   </div>
                   <input
                     type="file"
@@ -174,10 +174,10 @@ export default function IDDocument({ onNext, onPrevious }: IDDocumentProps) {
               
               {!backFile ? (
                 <label className="block">
-                  <div className="border-2 border-dashed border-gray-300  p-12 text-center hover:border-green-400 transition-colors cursor-pointer bg-gray-50">
-                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-2">Click to upload or drag and drop</p>
-                    <p className="text-sm text-gray-500">PNG, JPG, PDF up to 10MB</p>
+                  <div className="border-2 border-dashed border-gray-300  p-6 sm:p-12 text-center hover:border-green-400 transition-colors cursor-pointer bg-gray-50">
+                    <Upload className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
+                    <p className="text-sm sm:text-base text-gray-600 mb-2">Click to upload or drag and drop</p>
+                    <p className="text-xs sm:text-sm text-gray-500">PNG, JPG, PDF up to 10MB</p>
                   </div>
                   <input
                     type="file"
@@ -268,18 +268,18 @@ export default function IDDocument({ onNext, onPrevious }: IDDocumentProps) {
           </p>
         </div>
 
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={onPrevious}
-            className="px-4 py-1 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
           >
             Previous
           </button>
           <button
             type="submit"
             disabled={!isFormValid()}
-            className="px-4 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continue
           </button>

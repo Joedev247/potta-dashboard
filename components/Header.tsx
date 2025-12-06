@@ -2,14 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, User, Search, HelpCircle, Settings, LogOut, Download, MessageSquare, ExternalLink } from 'lucide-react';
+import { Bell, User, Search, HelpCircle, Settings, LogOut, Download, MessageSquare, ExternalLink, Menu } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSidebar } from '@/contexts/SidebarContext';
 import Link from 'next/link';
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { toggleSidebar } = useSidebar();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationTab, setNotificationTab] = useState<'primary' | 'notification'>('primary');
@@ -37,9 +39,17 @@ export default function Header() {
   }, [showUserMenu, showNotifications]);
 
   return (
-    <header className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-gray-200 z-30 flex items-center justify-between px-6">
+    <header className="fixed top-0 left-0 lg:left-64 right-0 h-16 bg-white border-b border-gray-200 z-30 flex items-center justify-between px-4 sm:px-6">
+      {/* Left side - Hamburger Menu (Mobile) */}
+      <button
+        onClick={toggleSidebar}
+        className="lg:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
       {/* Right side - Search, Help (for invoicing), Notifications, User */}
-      <div className="flex items-center gap-4 ml-auto">
+      <div className="flex items-center gap-2 sm:gap-4 ml-auto">
        
         
         {pathname === '/invoicing' && (
@@ -58,7 +68,7 @@ export default function Header() {
 
           {/* Notifications Popup */}
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-96 bg-white  border border-gray-200 z-50">
+            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white  border border-gray-200 z-50 shadow-lg">
               <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50">
                 <div className="flex gap-2">
                   <button 
@@ -124,7 +134,7 @@ export default function Header() {
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-white  border border-gray-200 overflow-hidden z-50">
+            <div className="absolute right-0 top-full mt-2 w-56 sm:w-64 bg-white  border border-gray-200 overflow-hidden z-50 shadow-lg">
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
                 <p className="font-semibold text-gray-900">
                   {user && user.firstName && user.lastName 

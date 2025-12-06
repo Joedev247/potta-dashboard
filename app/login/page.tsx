@@ -45,11 +45,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen bg-white flex flex-col lg:flex-row">
       {/* Left Column - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
         <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Sign in</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8 text-center">Sign in</h1>
           
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
@@ -65,7 +65,7 @@ export default function LoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500 pr-12"
+                  className="w-full px-4 py-3 text-base border-2 border-gray-200 focus:outline-none focus:border-green-500 pr-12"
                 />
                 <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               </div>
@@ -84,7 +84,7 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500 pr-12"
+                  className="w-full px-4 py-3 text-base border-2 border-gray-200 focus:outline-none focus:border-green-500 pr-12"
                 />
                 <button
                   type="button"
@@ -119,9 +119,9 @@ export default function LoginPage() {
       </div>
 
       {/* Right Column - Testimonial */}
-      <div className="flex-1 bg-gradient-to-br from-green-400 via-green-500 to-blue-600 flex items-center justify-center p-12">
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-green-400 via-green-500 to-blue-600 items-center justify-center p-8 lg:p-12">
         <div className="max-w-md text-white">
-          <blockquote className="text-2xl font-medium leading-relaxed mb-6">
+          <blockquote className="text-xl lg:text-2xl font-medium leading-relaxed mb-6">
             "Fintech is the technology and innovation that aims to compete with traditional financial methods."
           </blockquote>
           <div className="flex gap-2 mb-4">
@@ -130,8 +130,8 @@ export default function LoginPage() {
             <div className="w-2 h-2 bg-white rounded-full"></div>
           </div>
           <div>
-            <p className="font-semibold text-lg">Walapi Karaka</p>
-            <p className="text-green-100">Financial Officer</p>
+            <p className="font-semibold text-base lg:text-lg">Walapi Karaka</p>
+            <p className="text-green-100 text-sm lg:text-base">Financial Officer</p>
           </div>
         </div>
       </div>
