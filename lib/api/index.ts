@@ -58,24 +58,4 @@ export type {
   CustomersListResponse
 } from './customers';
 
-export { apiClient } from './client';
-export { authService } from './auth';
-export { paymentsService } from './payments';
-export { balanceService } from './balance';
-export { reportsService } from './reports';
-export { invoicingService } from './invoicing';
-export { browseService } from './browse';
-export { usersService } from './users';
-export { organizationService } from './organization';
-export { notificationsService } from './notifications';
-export { statisticsService } from './statistics';
-export { onboardingService } from './onboarding';
-export { customersService } from './customers';
-export { productsService } from './products';
-export { ordersService } from './orders';
-export { refundsService } from './refunds';
-export { chargebacksService } from './chargebacks';
-export { bankAccountsService } from './bank-accounts';
-export { applicationsService } from './applications';
-export { adminService } from './admin';
 
