@@ -2,26 +2,44 @@
  * Centralized API Service Exports
  */
 
+// Core exports (avoid blanket re-exports for modules that declare colliding type names)
 export * from './client';
 export * from './auth';
-export * from './payments';
 export * from './balance';
 export * from './reports';
-export * from './invoicing';
 export * from './browse';
 export * from './users';
 export * from './organization';
 export * from './notifications';
 export * from './statistics';
 export * from './onboarding';
-export * from './customers';
-export * from './products';
-export * from './orders';
-export * from './refunds';
-export * from './chargebacks';
 export * from './bank-accounts';
 export * from './applications';
-export * from './admin';
+
+// Explicitly export services and canonical types for modules that may export overlapping names
+export { paymentsService } from './payments';
+export type { Payment, PaymentsListResponse } from './payments';
+
+export { invoicingService } from './invoicing';
+export type { Invoice } from './invoicing';
+
+export { customersService } from './customers';
+export type { Customer } from './customers';
+
+export { productsService } from './products';
+export type { Product } from './products';
+
+export { ordersService } from './orders';
+export type { Order, OrderItem, OrdersListResponse } from './orders';
+
+export { refundsService } from './refunds';
+export type { Refund, RefundsListResponse } from './refunds';
+
+export { chargebacksService } from './chargebacks';
+export type { Chargeback, ChargebacksListResponse } from './chargebacks';
+
+export { adminService } from './admin';
+export type { User as AdminUserType } from './admin';
 
 // Export customer self-service types
 export type { 
