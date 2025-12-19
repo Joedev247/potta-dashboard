@@ -90,7 +90,7 @@ export default function FindBusinessPage() {
         {hasSearched && searchQuery && (
           <div className="mt-8 sm:mt-12 flex flex-col items-center justify-center text-center py-8 sm:py-16 px-4">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 sm:mb-6">
-              <Search className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
+              <MagnifyingGlass className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">No results</h2>
             <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-md">

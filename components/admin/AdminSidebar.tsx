@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import {
   Shield,
-  FileCheck,
+  FileText,
   SignOut,
   List,
   X,
@@ -15,7 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const adminNavigationItems = [
   { name: 'Dashboard', href: '/admin', icon: Shield },
-  { name: 'Onboarding Review', href: '/admin/onboarding', icon: FileCheck },
+  { name: 'Onboarding Review', href: '/admin/onboarding', icon: FileText },
   { name: 'Logs', href: '/admin/logs', icon: ClipboardText },
 ];
 

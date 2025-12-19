@@ -274,7 +274,7 @@ export default function RefundsPage() {
       {/* Search and Filters */}
       <div className="mb-4 sm:mb-6 space-y-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <MagnifyingGlass className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             placeholder="Search refunds by ID, payment ID, reason, or amount..."
@@ -284,7 +284,7 @@ export default function RefundsPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-500" />
+          <Funnel className="w-4 h-4 text-gray-500" />
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
@@ -471,7 +471,7 @@ export default function RefundsPage() {
                   Refund Amount <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <CurrencyDollar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="number"
                     step="0.01"
@@ -597,7 +597,7 @@ export default function RefundsPage() {
                 </div>
                 <div>
                   <label className="text-sm text-gray-600 font-medium flex items-center gap-1">
-                    <DollarSign className="w-4 h-4" />
+                    <CurrencyDollar className="w-4 h-4" />
                     Refund Amount
                   </label>
                   <p className="text-lg font-semibold text-gray-900 mt-1">

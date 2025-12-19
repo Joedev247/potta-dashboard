@@ -448,7 +448,7 @@ export default function AdminOnboardingPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <MagnifyingGlass className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             placeholder={activeTab === 'documents' ? 'Search documents by type, organization, or document number...' : 'Search steps by name or organization...'}
@@ -467,7 +467,7 @@ export default function AdminOnboardingPage() {
                 selectedFilter ? 'border-green-500 bg-green-50 text-gray-900' : 'text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <Filter className="w-4 h-4" />
+              <Funnel className="w-4 h-4" />
               <span>{selectedFilter || 'Document Type'}</span>
               <CaretDown className="w-4 h-4" />
             </button>
@@ -498,7 +498,7 @@ export default function AdminOnboardingPage() {
                 selectedFilter ? 'border-green-500 bg-green-50 text-gray-900' : 'text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <Filter className="w-4 h-4" />
+              <Funnel className="w-4 h-4" />
               <span>{selectedFilter || 'Step Type'}</span>
               <CaretDown className="w-4 h-4" />
             </button>

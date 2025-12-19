@@ -1190,7 +1190,7 @@ export default function BrowsePage() {
             {/* Filters */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search logs..."
@@ -1209,7 +1209,7 @@ export default function BrowsePage() {
                     selectedFilter ? 'border-green-500 bg-green-50' : ''
                   }`}
                 >
-                  <Filter className="w-4 h-4" />
+                  <Funnel className="w-4 h-4" />
                   {selectedFilter || 'Filter'}
                 </button>
                 {showFilterDropdown && (

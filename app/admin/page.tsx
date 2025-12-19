@@ -19,8 +19,7 @@ import {
   Building,
   Envelope,
   Calendar,
-  Power,
-  PowerOff
+  Power
 } from '@phosphor-icons/react';
 import { adminService, type RegisterUserData, type ChangeUserStatusData } from '@/lib/api';
 import type { User } from '@/lib/api/admin';
@@ -398,7 +397,7 @@ export default function AdminPage() {
           {/* Search and Filters */}
           <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <MagnifyingGlass className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <div className="flex gap-2">
                 <select
                   value={searchType}
@@ -435,7 +434,7 @@ export default function AdminPage() {
                 </>
               ) : (
                 <>
-                  <Search className="w-4 h-4" />
+                  <MagnifyingGlass className="w-4 h-4" />
                   Search
                 </>
               )}
@@ -447,7 +446,7 @@ export default function AdminPage() {
                   selectedFilter ? 'border-green-500 bg-green-50 text-gray-900' : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <Filter className="w-4 h-4" />
+                <Funnel className="w-4 h-4" />
                 <span>{selectedFilter || 'Status'}</span>
                 <CaretDown className="w-4 h-4" />
               </button>
@@ -526,7 +525,7 @@ export default function AdminPage() {
                         >
                           {user.status === 'ACTIVE' ? (
                             <>
-                              <PowerOff className="w-4 h-4" />
+                              <Power className="w-4 h-4" />
                               Disable
                             </>
                           ) : (
@@ -844,8 +843,8 @@ export default function AdminPage() {
                 }`}
               >
                 {selectedUser.status === 'ACTIVE' ? (
-                  <>
-                    <PowerOff className="w-4 h-4" />
+                    <>
+                    <Power className="w-4 h-4" />
                     Disable User
                   </>
                 ) : (

@@ -341,7 +341,7 @@ export default function OrdersPage() {
       {/* Search and Filters */}
       <div className="mb-4 sm:mb-6 space-y-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <MagnifyingGlass className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             placeholder="Search orders by ID, customer, or item name..."
@@ -351,7 +351,7 @@ export default function OrdersPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-500" />
+          <Funnel className="w-4 h-4 text-gray-500" />
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
