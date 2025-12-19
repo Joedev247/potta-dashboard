@@ -14,6 +14,8 @@ import { ApiResponse, PaginationResponse, apiClient } from './client';
 export interface Refund {
   id: string;
   payment_id: string;
+  // camelCase alias
+  paymentId?: string;
   amount: number;
   currency?: string;
   reason: string;
@@ -21,7 +23,10 @@ export interface Refund {
   status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | string;
   payment?: Record<string, any>;
   createdAt?: string;
+  created_at?: string;
   updatedAt?: string;
+  updated_at?: string;
+  [key: string]: any;
 }
 
 export interface CreateRefundData {

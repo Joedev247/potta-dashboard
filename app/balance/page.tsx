@@ -4,6 +4,7 @@ import { Wallet, ArrowDown, ArrowUp, ArrowUpRight, X, CheckCircle, WarningCircle
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { balanceService } from '@/lib/api';
+import type { ApiResponse } from '@/lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils/format';
 
 export default function WalletPage() {
@@ -265,7 +266,7 @@ export default function WalletPage() {
 
       // In production, this would call: paymentsService.requestPayout() or payoutsService.create()
       // For now, simulate success
-      const response = { success: true };
+      const response: ApiResponse<any> = { success: true };
 
       if (response.success) {
         setActionSuccess(true);

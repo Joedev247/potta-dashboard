@@ -18,6 +18,9 @@ export interface Payment {
   };
   createdAt: string;
   paidAt?: string | null;
+  // Allow backend variations and extra fields
+  created_at?: string;
+  [key: string]: any;
 }
 
 export interface PaymentLink {
@@ -44,22 +47,32 @@ export interface CreatePaymentLinkData {
 export interface Refund {
   id: string;
   paymentId: string;
+  // also accept snake_case
+  payment_id?: string;
   amount: number;
   currency: string;
   status: 'pending' | 'processing' | 'completed' | 'failed' | string;
   description?: string;
   reason?: string;
   createdAt: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
+  [key: string]: any;
 }
 
 export interface Chargeback {
   id: string;
   paymentId: string;
+  // also accept snake_case
+  payment_id?: string;
   amount: number;
   currency: string;
   status: 'open' | 'won' | 'lost' | 'pending' | 'resolved' | string;
   reason?: string;
   createdAt: string;
+  created_at?: string;
+  [key: string]: any;
 }
 
 export interface OrderItem {
@@ -68,6 +81,7 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   totalPrice?: number;
+  [key: string]: any;
 }
 
 export interface Order {
@@ -82,6 +96,8 @@ export interface Order {
   items: OrderItem[];
   status: string;
   createdAt: string;
+  created_at?: string;
+  [key: string]: any;
 }
 
 export interface PaymentsListResponse {
