@@ -13,7 +13,7 @@ import { ApiResponse, PaginationResponse, apiClient } from './client';
 
 export interface Refund {
   id: string;
-  payment_id: string;
+  payment_id?: string;
   // camelCase alias
   paymentId?: string;
   amount: number;

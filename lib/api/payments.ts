@@ -48,12 +48,12 @@ export interface Refund {
   id: string;
   paymentId: string;
   // also accept snake_case
-  payment_id?: string;
+  payment_id: string;
   amount: number;
   currency: string;
   status: 'pending' | 'processing' | 'completed' | 'failed' | string;
   description?: string;
-  reason?: string;
+  reason: string;
   createdAt: string;
   created_at?: string;
   updatedAt?: string;
@@ -65,11 +65,11 @@ export interface Chargeback {
   id: string;
   paymentId: string;
   // also accept snake_case
-  payment_id?: string;
+  payment_id: string;
   amount: number;
   currency: string;
   status: 'open' | 'won' | 'lost' | 'pending' | 'resolved' | string;
-  reason?: string;
+  reason: string;
   createdAt: string;
   created_at?: string;
   [key: string]: any;
@@ -86,6 +86,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  customer_id: string;
   customer: {
     id?: string;
     name?: string;
@@ -600,6 +601,7 @@ class PaymentsService {
     const refunds: Refund[] = rawRefunds.map((r: any) => ({
       id: r.id || '',
       paymentId: r.payment_id || r.paymentId || '',
+      payment_id: r.payment_id || r.paymentId || '',
       amount: r.amount ?? 0,
       currency: r.currency || 'XAF',
       status: r.status || 'pending',
@@ -632,6 +634,7 @@ class PaymentsService {
     const chargebacks: Chargeback[] = raw.map((c: any) => ({
       id: c.id || '',
       paymentId: c.payment_id || c.paymentId || '',
+      payment_id: c.payment_id || c.paymentId || '',
       amount: c.amount ?? 0,
       currency: c.currency || 'XAF',
       status: c.status || 'pending',
@@ -662,6 +665,7 @@ class PaymentsService {
 
     const orders: Order[] = rawOrders.map((o: any) => ({
       id: o.id || '',
+      customer_id: o.customer_id || o.customer?.id || '',
       customer: {
         id: o.customer_id || o.customer?.id,
         name: o.customer?.name,

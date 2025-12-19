@@ -5,6 +5,7 @@ import { FileText, Download, Calendar, Funnel, CaretDown, Eye, CheckCircle, Prin
 import { reportsService, invoicingService } from '@/lib/api';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { formatDate as formatDateUtil, formatCurrency } from '@/lib/utils/format';
+import type { ApiResponse } from '@/lib/api';
 
 export default function ReportsPage() {
   const { organization } = useOrganization();

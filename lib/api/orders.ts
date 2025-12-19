@@ -22,7 +22,13 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
-  customer_id: string;
+  customer_id?: string;
+  // optional customer object for compatibility with other services
+  customer?: {
+    id?: string;
+    name?: string;
+    email?: string;
+  };
   organization_id?: string;
   items: OrderItem[];
   amount: number;
@@ -32,6 +38,7 @@ export interface Order {
   payments?: any[];
   createdAt?: string;
   updatedAt?: string;
+  [key: string]: any;
 }
 
 export interface CreateOrderData {
