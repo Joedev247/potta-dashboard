@@ -39,7 +39,7 @@ export { chargebacksService } from './chargebacks';
 export type { Chargeback, ChargebacksListResponse } from './chargebacks';
 
 export { adminService } from './admin';
-export type { User as AdminUserType } from './admin';
+export type { User as AdminUserType, LogEntry, LogsResponse, Organization as AdminOrganization } from './admin';
 
 // Export customer self-service types
 export type { 
