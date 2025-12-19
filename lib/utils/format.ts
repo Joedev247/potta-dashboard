@@ -18,13 +18,25 @@ export const formatDateTime = (dateString: string): string => {
   });
 };
 
-export const formatCurrency = (amount: number, currency: string = 'XAF'): string => {
-  return `${currency} ${amount.toFixed(2)}`;
+export const formatCurrency = (amount: number | string | null | undefined, currency: string = 'XAF'): string => {
+  // Handle null, undefined, or empty string
+  if (amount === null || amount === undefined || amount === '') {
+    return `${currency} 0.00`;
+  }
+  
+  // Convert to number if it's a string
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  
+  // Handle NaN or invalid numbers
+  if (isNaN(numAmount) || !isFinite(numAmount)) {
+    return `${currency} 0.00`;
+  }
+  
+  return `${currency} ${numAmount.toFixed(2)}`;
 };
 
-export const formatAmount = (amount: number | string, currency: string = 'XAF'): string => {
-  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return formatCurrency(numAmount, currency);
+export const formatAmount = (amount: number | string | null | undefined, currency: string = 'XAF'): string => {
+  return formatCurrency(amount, currency);
 };
 
 

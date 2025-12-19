@@ -1,12 +1,12 @@
 'use client';
 
-import { Download, Smartphone, Monitor, Tablet, CheckCircle } from 'lucide-react';
+import { Download, DeviceMobile, Monitor, DeviceTablet, CheckCircle } from '@phosphor-icons/react';
 
 export default function DownloadPage() {
   const platforms = [
     {
       name: 'iOS',
-      icon: Smartphone,
+      icon: DeviceMobile,
       description: 'Download for iPhone and iPad',
       version: '2.1.0',
       size: '45.2 MB',
@@ -17,7 +17,7 @@ export default function DownloadPage() {
     },
     {
       name: 'Android',
-      icon: Smartphone,
+      icon: DeviceMobile,
       description: 'Download for Android devices',
       version: '2.1.0',
       size: '52.8 MB',
@@ -50,7 +50,7 @@ export default function DownloadPage() {
     },
     {
       name: 'Web App',
-      icon: Tablet,
+      icon: DeviceTablet,
       description: 'Access via browser',
       version: 'Always up to date',
       size: 'No download required',
@@ -124,7 +124,7 @@ export default function DownloadPage() {
           <div className="mb-8">
             <div className="bg-white border-2 border-gray-200 p-8 hover:border-green-500 transition-all">
               <div className={`w-16 h-16 bg-gradient-to-br ${platforms[4].color} ${platforms[4].borderColor} border-2 rounded-full flex items-center justify-center mx-auto mb-4`}>
-                <Tablet className="w-8 h-8 text-gray-700" />
+                <DeviceTablet className="w-8 h-8 text-gray-700" />
               </div>
               <div className="text-center mb-4">
                 <h3 className="text-xl font-bold text-gray-900 mb-1">{platforms[4].name}</h3>

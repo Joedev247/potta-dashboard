@@ -5,18 +5,18 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    // Wait for auth to finish loading before checking authentication
+    if (!loading && !isAuthenticated) {
       router.push('/login');
-    } else if (user && !user.isVerified) {
-      router.push('/verify-email');
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, loading, router]);
 
-  if (!isAuthenticated || (user && !user.isVerified)) {
+  // Show nothing while auth is loading or if not authenticated
+  if (loading || !isAuthenticated) {
     return null;
   }
 

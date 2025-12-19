@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Building, CheckCircle2 } from 'lucide-react';
+import { Building, CheckCircle } from '@phosphor-icons/react';
 
 interface LinkBankAccountProps {
   onNext: () => void;
@@ -33,7 +33,7 @@ export default function LinkBankAccount({ onNext, onPrevious }: LinkBankAccountP
       <div className="max-w-2xl mx-auto text-center">
         <div className="mb-8">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-green-600" />
+            <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Bank account linked!</h1>
           <p className="text-gray-600">Your bank account has been successfully connected.</p>

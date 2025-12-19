@@ -1,14 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { Users, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, CaretDown } from '@phosphor-icons/react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { onboardingService } from '@/lib/api';
 
 interface StakeholderInformationProps {
   onNext: () => void;
   onPrevious: () => void;
+  onSkip?: () => void; // Optional for type compatibility
 }
 
 export default function StakeholderInformation({ onNext, onPrevious }: StakeholderInformationProps) {
+  const { user } = useAuth();
+  const { organization } = useOrganization();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -21,10 +27,67 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
     region: '',
     country: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Pre-fill email from user
+  useEffect(() => {
+    if (user?.email) {
+      setFormData(prev => ({ ...prev, email: user.email }));
+    }
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onNext();
+    setError('');
+    setLoading(true);
+
+    try {
+      // Organization is REQUIRED for onboarding according to backend API
+      const organizationId = (organization as any)?.id || localStorage.getItem('currentOrganizationId');
+      
+      if (!organizationId) {
+        setError('Organization is required for onboarding. Please create an organization first.');
+        setLoading(false);
+        return;
+      }
+
+      const data = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        dateOfBirth: formData.dateOfBirth,
+        nationality: formData.nationality,
+        address: formData.address,
+        city: formData.city,
+        region: formData.region || null,
+        country: formData.country,
+      };
+
+      const response = await onboardingService.submitStakeholderInfo(data, organizationId);
+      
+      if (response.success) {
+        onNext();
+      } else {
+        // Check if error is about missing organization
+        const errorMessage = response.error?.message || 'Failed to submit stakeholder information. Please try again.';
+        if (errorMessage.includes('Organization is required') || errorMessage.includes('organization')) {
+          setError('Organization is required for onboarding. Please go back and create an organization first.');
+        } else {
+          setError(errorMessage);
+        }
+      }
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to submit stakeholder information. Please try again.';
+      if (errorMessage.includes('Organization is required') || errorMessage.includes('organization')) {
+        setError('Organization is required for onboarding. Please go back and create an organization first.');
+      } else {
+        setError(errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -140,7 +203,7 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
                 <option value="DE">Germany</option>
                 <option value="OTHER">Other</option>
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <CaretDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
           </div>
         </div>
@@ -200,7 +263,7 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
                 <option value="DE">Germany</option>
                 <option value="OTHER">Other</option>
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <CaretDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
           </div>
         </div>
@@ -231,19 +294,27 @@ export default function StakeholderInformation({ onNext, onPrevious }: Stakehold
           </div>
         </div>
 
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+            {error}
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={onPrevious}
-            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            disabled={loading}
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             Previous
           </button>
           <button
             type="submit"
-            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-green-500 text-white font-medium hover:bg-green-600 transition-colors"
+            disabled={loading}
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Continue
+            {loading ? 'Submitting...' : 'Continue'}
           </button>
         </div>
       </form>

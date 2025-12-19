@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { 
-  MessageSquare, 
-  Mail, 
+  ChatCircle, 
+  Envelope, 
   Phone, 
   Clock, 
-  Send,
+  PaperPlaneTilt,
   CheckCircle
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 export default function SupportPage() {
   const [formData, setFormData] = useState({
@@ -52,7 +52,7 @@ export default function SupportPage() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-              <MessageSquare className="w-6 h-6 text-white" />
+              <ChatCircle className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-4xl font-bold text-gray-900">Get Support</h1>
           </div>
@@ -62,7 +62,7 @@ export default function SupportPage() {
         <div className="grid grid-cols-3 gap-6 mb-8">
           <div className="bg-white border-2 border-gray-200 p-6 text-center hover:border-green-500 transition-all">
             <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageSquare className="w-6 h-6 text-green-600" />
+              <ChatCircle className="w-6 h-6 text-green-600" />
             </div>
             <h3 className="font-bold text-gray-900 mb-2">Live Chat</h3>
             <p className="text-sm text-gray-600 mb-4">Chat with our support team</p>
@@ -73,7 +73,7 @@ export default function SupportPage() {
 
           <div className="bg-white border-2 border-gray-200 p-6 text-center hover:border-green-500 transition-all">
             <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Mail className="w-6 h-6 text-green-600" />
+              <Envelope className="w-6 h-6 text-green-600" />
             </div>
             <h3 className="font-bold text-gray-900 mb-2">Email Support</h3>
             <p className="text-sm text-gray-600 mb-4">Get help via email</p>
@@ -94,7 +94,7 @@ export default function SupportPage() {
         <div className="bg-white border-2 border-gray-200 p-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
-              <MessageSquare className="w-5 h-5 text-green-600" />
+              <ChatCircle className="w-5 h-5 text-green-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Submit a Support Ticket</h2>
           </div>
@@ -186,7 +186,7 @@ export default function SupportPage() {
                   type="submit"
                   className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2"
                 >
-                  <Send className="w-4 h-4" />
+                  <PaperPlaneTilt className="w-4 h-4" />
                   Submit Ticket
                 </button>
               </div>

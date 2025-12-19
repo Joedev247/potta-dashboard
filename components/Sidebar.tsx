@@ -4,31 +4,36 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import {
-  Home,
+  House,
   CreditCard,
-  BarChart3,
-  Building2,
+  ChartBar,
+  Building,
   Wallet,
   FileText,
   Receipt,
-  Grid3x3,
-  Settings,
+  SquaresFour,
+  Gear,
   UserPlus,
   Plus,
-  ChevronDown,
+  CaretDown,
   X,
-} from 'lucide-react';
+  Users,
+  Package,
+  Shield,
+} from '@phosphor-icons/react';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useSidebar } from '@/contexts/SidebarContext';
 
 const navigationItems = [
-  { name: 'Get started', href: '/', icon: Home },
+  { name: 'Get started', href: '/', icon: House },
   { name: 'Payments', href: '/payments', icon: CreditCard },
-  { name: 'Statistics', href: '/statistics', icon: BarChart3 },
+  { name: 'Statistics', href: '/statistics', icon: ChartBar },
   { name: 'Balance', href: '/balance', icon: Wallet },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Invoicing', href: '/invoicing', icon: Receipt },
-  { name: 'Browse', href: '/browse', icon: Grid3x3 },
+  { name: 'Customers', href: '/customers', icon: Users },
+  { name: 'Products', href: '/products', icon: Package },
+  { name: 'Applications', href: '/applications', icon: SquaresFour },
 ];
 
 export default function Sidebar() {
@@ -36,8 +41,27 @@ export default function Sidebar() {
   const { organization } = useOrganization();
   const { isOpen, closeSidebar } = useSidebar();
   const [showOrgMenu, setShowOrgMenu] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Check if onboarding is complete from localStorage
+  useEffect(() => {
+    const onboardingData = localStorage.getItem('onboardingProgress');
+    if (onboardingData) {
+      try {
+        const parsed = JSON.parse(onboardingData);
+        setOnboardingComplete(parsed.isComplete || false);
+      } catch (error) {
+        console.error('Failed to parse onboarding data:', error);
+      }
+    }
+  }, []);
+
+  // Filter navigation items based on onboarding completion
+  const filteredNavItems = onboardingComplete 
+    ? navigationItems.filter(item => item.name !== 'Get started')
+    : navigationItems;
 
   const orgInitials = organization?.name ? organization.name.substring(0, 2).toUpperCase() : 'CO';
   const orgName = organization?.name || 'Codev';
@@ -112,68 +136,65 @@ export default function Sidebar() {
           <div className="p-3 border-b border-green-100 relative hidden lg:block" ref={orgMenuRef}>
             <button
               onClick={() => setShowOrgMenu(!showOrgMenu)}
-              className="flex items-center gap-3 cursor-pointer group w-full hover:bg-green-100/50  p-2 -m-2 transition-colors"
+              className={`flex items-center gap-3 cursor-pointer group w-full p-2 -m-2  transition-all duration-200 ${
+                showOrgMenu 
+                  ? 'bg-green-100/70 shadow-sm' 
+                  : 'hover:bg-green-100/50'
+              }`}
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-sm ring-2 ring-white">
                 <span className="text-white text-sm font-bold">{orgInitials}</span>
               </div>
-              <div className="flex-1 text-left">
-                <div className="font-bold text-gray-900 text-base">{orgName}</div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="font-bold text-gray-900 text-base truncate">{orgName}</div>
                 <div className="text-xs text-gray-500">Organization</div>
               </div>
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showOrgMenu ? 'rotate-180' : ''}`} />
+              <CaretDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showOrgMenu ? 'rotate-180' : ''}`} />
             </button>
 
             {showOrgMenu && (
-              <div className="absolute left-0 top-full mt-2 w-72 bg-white  border border-gray-200 overflow-hidden z-50">
-              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
-                <div className="flex items-center justify-between">
+              <div className="absolute left-full top-0 ml-2 w-72 bg-white border border-gray-200  shadow-xl overflow-hidden z-50 transform transition-all duration-200 ease-out">
+                <div className="p-4 border-b border-gray-200 bg-gradient-to-br from-green-50 via-emerald-50 to-green-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">{orgInitials}</span>
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-md ring-2 ring-white">
+                      <span className="text-white text-sm font-bold">{orgInitials}</span>
                     </div>
-                    <div>
-                      <div className="font-semibold text-gray-900 text-sm">{orgName}</div>
-                      <div className="text-xs text-gray-500">Organization</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 text-sm truncate">{orgName}</div>
+                      <div className="text-xs text-gray-600 mt-0.5">Organization</div>
                     </div>
                   </div>
-                  <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-md font-medium">#19395753</span>
+                </div>
+                <div className="py-2">
+                  <Link
+                    href="/team-member"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:text-green-700 transition-all duration-200 group/item"
+                    onClick={() => setShowOrgMenu(false)}
+                  >
+                    <div className="w-8 h-8  bg-green-100 group-hover/item:bg-green-200 flex items-center justify-center transition-colors">
+                      <UserPlus className="w-4 h-4 text-green-600 group-hover/item:text-green-700" />
+                    </div>
+                    <span className="text-sm font-medium">Add team member</span>
+                  </Link>
+                  <Link
+                    href="/settings?tab=organization"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:text-green-700 transition-all duration-200 group/item"
+                    onClick={() => setShowOrgMenu(false)}
+                  >
+                    <div className="w-8 h-8  bg-gray-100 group-hover/item:bg-green-200 flex items-center justify-center transition-colors">
+                      <Gear className="w-4 h-4 text-gray-600 group-hover/item:text-green-700" />
+                    </div>
+                    <span className="text-sm font-medium">Organization settings</span>
+                  </Link>
                 </div>
               </div>
-              <div className="py-2">
-                <Link
-                  href="/team-member"
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
-                  onClick={() => setShowOrgMenu(false)}
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span className="text-sm font-medium">Add team member</span>
-                </Link>
-                <Link
-                  href="/settings?tab=organization"
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
-                  onClick={() => setShowOrgMenu(false)}
-                >
-                  <Settings className="w-4 h-4" />
-                  <span className="text-sm font-medium">Organization settings</span>
-                </Link>
-                <Link
-                  href="/organization/new"
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
-                  onClick={() => setShowOrgMenu(false)}
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="text-sm font-medium">Create new organization</span>
-                </Link>
-              </div>
-            </div>
           )}
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-1">
-            {navigationItems.map((item) => {
+            {filteredNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || 
                 (item.href !== '/' && pathname?.startsWith(item.href));

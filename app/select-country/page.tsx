@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, ChevronRight } from 'lucide-react';
+import { MagnifyingGlass, CaretRight } from '@phosphor-icons/react';
 
 interface Country {
   code: string;
@@ -244,7 +244,7 @@ export default function SelectCountryPage() {
 
         {/* Search Bar */}
         <div className="relative mb-4 sm:mb-6">
-          <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+          <MagnifyingGlass className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
           <input
             type="text"
             placeholder="Search"
@@ -275,7 +275,7 @@ export default function SelectCountryPage() {
               </div>
               <span className="flex-1 text-left text-sm sm:text-base font-medium text-gray-900">{country.name}</span>
               {selectedCountry === country.code && (
-                <ChevronRight className="w-5 h-5 text-green-500" />
+                <CaretRight className="w-5 h-5 text-green-500" />
               )}
             </button>
           ))}

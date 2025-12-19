@@ -1,18 +1,27 @@
 /**
- * Organization API Service
+ * Organization API Service (backend)
  */
 
-import { ApiResponse } from './client';
+import { ApiResponse, apiClient } from './client';
+import { usersService } from './users';
 
 export interface Organization {
+  id?: string;
   name: string;
   legalForm?: string;
+  type?: string;
+  registration_number?: string;
   registrationNumber?: string;
+  vat_number?: string;
   address?: string;
   region?: string;
   city?: string;
   country?: string;
   countryName?: string;
+  phone_number?: string;
+  email?: string;
+  website?: string;
+  description?: string;
 }
 
 export interface UpdateOrganizationData {
@@ -22,78 +31,70 @@ export interface UpdateOrganizationData {
   region?: string;
 }
 
-// Mock data storage key
-const STORAGE_KEY = 'organization_data';
-
-// Initialize default organization if not exists
-function initializeOrganization(): Organization {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      // If parsing fails, create default
-    }
-  }
-  
-  const defaultOrg: Organization = {
-    name: 'Codev',
-    legalForm: 'SARL',
-    registrationNumber: 'RC/DLA/2024/A/12345',
-    address: '123 Business Street',
-    city: 'Douala',
-    region: 'Littoral',
-    country: 'CM',
-    countryName: 'Cameroon',
-  };
-  
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultOrg));
-  return defaultOrg;
-}
-
 class OrganizationService {
-  async getOrganization(): Promise<ApiResponse<Organization>> {
+  async listOrganizations(params?: { page?: number; limit?: number }): Promise<ApiResponse<Organization[]>> {
+    const response = await apiClient.get<any>('/organizations', params);
+    if (!response.success || !response.data) return response as ApiResponse<Organization[]>;
+    const data = Array.isArray(response.data) ? response.data : (response.data as any).data || response.data;
+    return { success: true, data };
+  }
+
+  async getOrganizationById(id: string): Promise<ApiResponse<Organization>> {
+    return apiClient.get<Organization>(`/organizations/${id}`);
+  }
+
+  async createOrganization(data: Partial<Organization>): Promise<ApiResponse<Organization>> {
+    // Try to create organization - API client will attempt to get/generate API key automatically
+    // If backend endpoints don't exist (404), we'll proceed without API key and let backend decide
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const response = await apiClient.post<Organization>('/organizations', data);
       
-      const organization = initializeOrganization();
+      // If we get a 403, provide helpful error message
+      if (!response.success && response.error?.code === 'FORBIDDEN') {
+        const errorDetails = response.error?.details || {};
+        
+        // Check if API key was the issue
+        if (errorDetails.hasApiKey === false) {
+          return {
+            success: false,
+            error: {
+              code: 'API_KEY_REQUIRED',
+              message: 'API key is required to create an organization. Please contact support to set up your API credentials, or check if your backend has the credentials endpoint implemented.',
+              details: {
+                ...errorDetails,
+                suggestion: 'The backend may need to implement the /customer/genarate-credentials endpoint, or API keys may be provided through a different method.',
+              },
+            },
+          };
+        }
+      }
       
-      return {
-        success: true,
-        data: organization,
-      };
+      return response;
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'Failed to fetch organization',
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error?.message || 'Failed to create organization. Please check your connection and try again.',
+        },
       };
     }
   }
 
-  async updateOrganization(data: UpdateOrganizationData): Promise<ApiResponse<Organization>> {
+  async updateOrganization(id: string | undefined, data: UpdateOrganizationData): Promise<ApiResponse<Organization>> {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const current = initializeOrganization();
-      const updated: Organization = {
-        ...current,
-        ...data,
-      };
-      
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      
-      return {
-        success: true,
-        data: updated,
-      };
+      if (id) {
+        return apiClient.put<Organization>(`/organizations/${id}`, data);
+      }
+      // If no id provided, attempt to update /organizations via PUT
+      return apiClient.put<Organization>('/organizations', data);
     } catch (error: any) {
-      return {
-        success: false,
-        error: error.message || 'Failed to update organization',
-      };
+      return { success: false, error: { code: 'NETWORK_ERROR', message: error?.message || 'Failed to update organization' } };
     }
+  }
+
+  async deleteOrganization(id: string): Promise<ApiResponse<void>> {
+    return apiClient.delete<void>(`/organizations/${id}`);
   }
 }
 

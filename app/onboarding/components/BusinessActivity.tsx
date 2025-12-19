@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, ChevronDown } from 'lucide-react';
+import { FileText, CaretDown } from '@phosphor-icons/react';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { onboardingService } from '@/lib/api';
 
 interface BusinessActivityProps {
   onNext: () => void;
@@ -9,19 +11,69 @@ interface BusinessActivityProps {
 }
 
 export default function BusinessActivity({ onNext, onPrevious }: BusinessActivityProps) {
+  const { organization } = useOrganization();
   const [formData, setFormData] = useState({
-    businessName: '',
-    businessType: '',
+    businessName: organization?.name || '',
+    businessType: organization?.legalForm || '',
     industry: '',
-    registrationNumber: '',
+    registrationNumber: organization?.registrationNumber || '',
     vatNumber: '',
     website: '',
     description: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onNext();
+    setError('');
+    setLoading(true);
+
+    try {
+      // Organization is REQUIRED for onboarding according to backend API
+      const organizationId = (organization as any)?.id || localStorage.getItem('currentOrganizationId');
+      
+      if (!organizationId) {
+        setError('Organization is required for onboarding. Please create an organization first.');
+        setLoading(false);
+        return;
+      }
+
+      // Map to backend expected field names (tested via console)
+      const data = {
+        primaryActivity: formData.description || `${formData.industry} - ${formData.businessName}`,
+        business_name: formData.businessName,
+        business_type: formData.businessType,
+        industry_sector: formData.industry,
+        registration_number: formData.registrationNumber || '',
+        vat_number: formData.vatNumber || null,
+        website: formData.website || null,
+        description: formData.description || '',
+      };
+
+      const response = await onboardingService.submitBusiness(data, organizationId);
+      
+      if (response.success) {
+        onNext();
+      } else {
+        // Check if error is about missing organization
+        const errorMessage = response.error?.message || 'Failed to submit business activity. Please try again.';
+        if (errorMessage.includes('Organization is required') || errorMessage.includes('organization')) {
+          setError('Organization is required for onboarding. Please go back and create an organization first.');
+        } else {
+          setError(errorMessage);
+        }
+      }
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to submit business activity. Please try again.';
+      if (errorMessage.includes('Organization is required') || errorMessage.includes('organization')) {
+        setError('Organization is required for onboarding. Please go back and create an organization first.');
+      } else {
+        setError(errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -72,7 +124,7 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
               <option value="association">Association</option>
               <option value="autre">Other</option>
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <CaretDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
         </div>
 
@@ -102,7 +154,7 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
               <option value="extraction">Extraction / Mines</option>
               <option value="autre">Other</option>
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <CaretDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
         </div>
 
@@ -160,19 +212,27 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
           />
         </div>
 
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+            {error}
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={onPrevious}
-            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            disabled={loading}
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             Previous
           </button>
           <button
             type="submit"
-            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-green-500 text-white font-medium hover:bg-green-600 transition-colors"
+            disabled={loading}
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Continue
+            {loading ? 'Submitting...' : 'Continue'}
           </button>
         </div>
       </form>

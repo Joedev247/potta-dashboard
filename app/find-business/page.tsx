@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Search, X } from 'lucide-react';
+import { ArrowLeft, MagnifyingGlass, X } from '@phosphor-icons/react';
 
 export default function FindBusinessPage() {
   const router = useRouter();
@@ -59,7 +59,7 @@ export default function FindBusinessPage() {
             Business legal name
           </label>
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <MagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               value={searchQuery}

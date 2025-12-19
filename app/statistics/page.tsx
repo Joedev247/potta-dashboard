@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
-import { Info, ChevronLeft, ChevronRight, Grid3x3, TrendingUp, Loader2 } from 'lucide-react';
+import { Info, CaretLeft, CaretRight, SquaresFour, TrendUp, Spinner } from '@phosphor-icons/react';
 import { statisticsService } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils/format';
 
@@ -327,7 +327,7 @@ export default function StatisticsPage() {
   
   const totalTransactions = statistics?.totals?.transactions ?? 
     (currentPeriodData.length > 0 
-      ? currentPeriodData.length * Math.floor(Math.random() * 50 + 20)
+      ? currentPeriodData.reduce((sum, item) => sum + (item.revenue || 0), 0) / 100 // Estimate based on revenue
       : 0);
   
   const totalRefunds = statistics?.totals?.refunds ?? Math.round(totalRevenue * 0.02);
@@ -387,14 +387,14 @@ export default function StatisticsPage() {
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
         <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-          <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          <TrendUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Statistics</h1>
       </div>
 
       {loading && (
         <div className="flex items-center justify-center py-12 sm:py-20">
-          <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-green-600" />
+          <Spinner className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-green-600" />
         </div>
       )}
 
@@ -427,7 +427,7 @@ export default function StatisticsPage() {
             onClick={() => scrollSelector('left')}
             className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <CaretLeft className="w-4 h-4" />
           </button>
           <div 
             ref={selectorScrollRef}
@@ -456,7 +456,7 @@ export default function StatisticsPage() {
             onClick={() => scrollSelector('right')}
             className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
           >
-            <ChevronRight className="w-4 h-4" />
+            <CaretRight className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -721,7 +721,7 @@ export default function StatisticsPage() {
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Per day</h2>
         <div className="bg-white border border-gray-200  p-12">
           <div className="flex flex-col items-center justify-center text-center">
-            <Grid3x3 className="w-8 h-8 text-gray-400 mb-3" />
+            <SquaresFour className="w-8 h-8 text-gray-400 mb-3" />
             <p className="text-sm text-gray-500">No statistics found for this period</p>
           </div>
         </div>

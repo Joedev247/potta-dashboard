@@ -3,7 +3,7 @@
  * MOCK MODE: Using localStorage for browse data (no backend required)
  */
 
-import { ApiResponse, PaginationResponse } from './client';
+import { ApiResponse, PaginationResponse, apiClient } from './client';
 
 export interface ApiKeys {
   liveApiKey: string;
@@ -281,10 +281,7 @@ function initializeMockData() {
   }
 }
 
-// Initialize on module load
-if (typeof window !== 'undefined') {
-  initializeMockData();
-}
+// Note: mock data initialization removed so app will prefer backend data.
 
 // Helper for pagination
 function paginate<T>(items: T[], page: number = 1, limit: number = 20): { items: T[]; pagination: PaginationResponse } {
@@ -331,82 +328,80 @@ function filterApiLogs(logs: ApiLog[], params?: {
 class BrowseService {
   // API Keys
   async getApiKeys(): Promise<ApiResponse<ApiKeys>> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
+    // Try backend first
+    try {
+      const res = await apiClient.get<any>('/customer/credentials');
+      if (res.success && res.data) {
+        const apiKeys = res.data as ApiKeys;
+        const maskedKeys: ApiKeys = {
+          ...apiKeys,
+          liveApiKey: apiKeys.liveApiKey ? `${apiKeys.liveApiKey.substring(0, 8)}...${apiKeys.liveApiKey.slice(-4)}` : '',
+          testApiKey: apiKeys.testApiKey ? `${apiKeys.testApiKey.substring(0, 8)}...${apiKeys.testApiKey.slice(-4)}` : '',
+        };
+        return { success: true, data: maskedKeys };
+      }
+    } catch (e) {
+      // fall through to mock
+      console.warn('getApiKeys backend failed, falling back to mock', e);
+    }
+
+    // Fallback to mock/localStorage
+    await new Promise(resolve => setTimeout(resolve, 150));
     if (typeof window === 'undefined') {
-      return {
-        success: false,
-        error: { code: 'SERVER_ERROR', message: 'Not available on server' },
-      };
+      return { success: false, error: { code: 'SERVER_ERROR', message: 'Not available on server' } };
     }
-    
+
     const apiKeys = getStorageSingle<ApiKeys>(MOCK_API_KEYS_KEY);
-    
     if (!apiKeys) {
-      return {
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'API keys not found' },
-      };
+      return { success: false, error: { code: 'NOT_FOUND', message: 'API keys not found' } };
     }
-    
-    // Mask the keys for display (show only last 4 characters)
+
     const maskedKeys: ApiKeys = {
       ...apiKeys,
       liveApiKey: apiKeys.liveApiKey ? `${apiKeys.liveApiKey.substring(0, 8)}...${apiKeys.liveApiKey.slice(-4)}` : '',
       testApiKey: apiKeys.testApiKey ? `${apiKeys.testApiKey.substring(0, 8)}...${apiKeys.testApiKey.slice(-4)}` : '',
     };
-    
+
     return { success: true, data: maskedKeys };
   }
 
   async generateApiKey(type: 'live' | 'test'): Promise<ApiResponse<{ key: string }>> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (typeof window === 'undefined') {
-      return {
-        success: false,
-        error: { code: 'SERVER_ERROR', message: 'Not available on server' },
-      };
+    // Try backend
+    try {
+      const res = await apiClient.put<any>('/customer/genarate-credentials', { type });
+      if (res.success && res.data) {
+        return { success: true, data: { key: (res.data as any).api_key || (res.data as any).key || '' } };
+      }
+    } catch (e) {
+      console.warn('generateApiKey backend failed, falling back to mock', e);
     }
-    
+
+    // Fallback to mock
+    await new Promise(resolve => setTimeout(resolve, 200));
+    if (typeof window === 'undefined') return { success: false, error: { code: 'SERVER_ERROR', message: 'Not available on server' } };
+
     const newKey = generateApiKey();
-    const apiKeys = getStorageSingle<ApiKeys>(MOCK_API_KEYS_KEY) || {
-      liveApiKey: '',
-      testApiKey: '',
-      createdAt: new Date().toISOString(),
-      lastUsed: null,
-    };
-    
-    if (type === 'live') {
-      apiKeys.liveApiKey = newKey;
-    } else {
-      apiKeys.testApiKey = `test_${newKey}`;
-    }
-    
+    const apiKeys = getStorageSingle<ApiKeys>(MOCK_API_KEYS_KEY) || { liveApiKey: '', testApiKey: '', createdAt: new Date().toISOString(), lastUsed: null };
+    if (type === 'live') apiKeys.liveApiKey = newKey; else apiKeys.testApiKey = `test_${newKey}`;
     apiKeys.createdAt = new Date().toISOString();
     saveStorageSingle(MOCK_API_KEYS_KEY, apiKeys);
-    
     return { success: true, data: { key: newKey } };
   }
 
   async revokeApiKey(keyId: string): Promise<ApiResponse<void>> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    if (typeof window === 'undefined') {
-      return { success: true };
+    // Try backend
+    try {
+      const res = await apiClient.put<any>('/customer/credentials/revoke', { keyId });
+      if (res.success) return { success: true };
+    } catch (e) {
+      console.warn('revokeApiKey backend failed, falling back to mock', e);
     }
-    
+
+    // Fallback mock
+    await new Promise(resolve => setTimeout(resolve, 150));
+    if (typeof window === 'undefined') return { success: true };
     const apiKeys = getStorageSingle<ApiKeys>(MOCK_API_KEYS_KEY);
-    if (apiKeys) {
-      // In a real app, you'd revoke a specific key
-      // For mock, we'll just clear the keys
-      apiKeys.liveApiKey = '';
-      apiKeys.testApiKey = '';
-      saveStorageSingle(MOCK_API_KEYS_KEY, apiKeys);
-    }
-    
-    console.log(`[MOCK] API key revoked: ${keyId}`);
-    
+    if (apiKeys) { apiKeys.liveApiKey = ''; apiKeys.testApiKey = ''; saveStorageSingle(MOCK_API_KEYS_KEY, apiKeys); }
     return { success: true };
   }
 
@@ -416,27 +411,23 @@ class BrowseService {
     startDate?: string;
     endDate?: string;
   }): Promise<ApiResponse<ApiLogsResponse>> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    if (typeof window === 'undefined') {
-      return {
-        success: true,
-        data: { logs: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false } },
-      };
+    // Try backend admin logs endpoint
+    try {
+      const res = await apiClient.get<any>('/admin/logs', params);
+      if (res.success && res.data) {
+        return { success: true, data: { logs: (res.data as any).logs || [], pagination: (res.data as any).pagination || { page: params?.page || 1, limit: params?.limit || 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false } } };
+      }
+    } catch (e) {
+      console.warn('getApiLogs backend failed, falling back to mock', e);
     }
-    
+
+    // Fallback mock
+    await new Promise(resolve => setTimeout(resolve, 200));
+    if (typeof window === 'undefined') return { success: true, data: { logs: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false } } };
     let logs = getStorage<ApiLog>(MOCK_API_LOGS_KEY);
     logs = filterApiLogs(logs, params);
-    
     const { items, pagination } = paginate(logs, params?.page || 1, params?.limit || 20);
-    
-    return {
-      success: true,
-      data: {
-        logs: items,
-        pagination,
-      },
-    };
+    return { success: true, data: { logs: items, pagination } };
   }
 
   // Access Tokens
@@ -444,79 +435,64 @@ class BrowseService {
     name: string;
     scopes: string[];
   }): Promise<ApiResponse<AccessToken>> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (typeof window === 'undefined') {
-      return {
-        success: false,
-        error: { code: 'SERVER_ERROR', message: 'Not available on server' },
-      };
+    // Try backend tokens endpoint
+    try {
+      const res = await apiClient.post<any>('/customer/tokens', { name: data.name, scopes: data.scopes });
+      if (res.success && res.data) return { success: true, data: res.data as AccessToken };
+    } catch (e) {
+      console.warn('createAccessToken backend failed, falling back to mock', e);
     }
-    
-    const now = new Date();
-    const expiresAt = new Date(now);
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1); // 1 year from now
-    
-    const token: AccessToken = {
-      id: generateId('tok'),
-      name: data.name,
-      token: generateToken(),
-      scopes: data.scopes,
-      createdAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-    };
-    
-    const tokens = getStorage<AccessToken>(MOCK_ACCESS_TOKENS_KEY);
-    tokens.unshift(token);
-    saveStorage(MOCK_ACCESS_TOKENS_KEY, tokens);
-    
+
+    // Fallback mock
+    await new Promise(resolve => setTimeout(resolve, 200));
+    if (typeof window === 'undefined') return { success: false, error: { code: 'SERVER_ERROR', message: 'Not available on server' } };
+    const now = new Date(); const expiresAt = new Date(now); expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    const token: AccessToken = { id: generateId('tok'), name: data.name, token: generateToken(), scopes: data.scopes, createdAt: now.toISOString(), expiresAt: expiresAt.toISOString() };
+    const tokens = getStorage<AccessToken>(MOCK_ACCESS_TOKENS_KEY); tokens.unshift(token); saveStorage(MOCK_ACCESS_TOKENS_KEY, tokens);
     return { success: true, data: token };
   }
 
   async getAccessTokens(): Promise<ApiResponse<AccessToken[]>> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    if (typeof window === 'undefined') {
-      return { success: true, data: [] };
+    try {
+      const res = await apiClient.get<any>('/customer/tokens');
+      if (res.success && res.data) return { success: true, data: (res.data as any).tokens || res.data };
+    } catch (e) {
+      console.warn('getAccessTokens backend failed, falling back to mock', e);
     }
-    
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    if (typeof window === 'undefined') return { success: true, data: [] };
     const tokens = getStorage<AccessToken>(MOCK_ACCESS_TOKENS_KEY);
-    
-    // Mask tokens for display (show only first and last few characters)
-    const maskedTokens = tokens.map(token => ({
-      ...token,
-      token: token.token ? `${token.token.substring(0, 8)}...${token.token.slice(-4)}` : '',
-    }));
-    
+    const maskedTokens = tokens.map(token => ({ ...token, token: token.token ? `${token.token.substring(0, 8)}...${token.token.slice(-4)}` : '' }));
     return { success: true, data: maskedTokens };
   }
 
   async revokeAccessToken(tokenId: string): Promise<ApiResponse<void>> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    if (typeof window === 'undefined') {
-      return { success: true };
+    try {
+      const res = await apiClient.delete<any>(`/customer/tokens/${tokenId}`);
+      if (res.success) return { success: true };
+    } catch (e) {
+      console.warn('revokeAccessToken backend failed, falling back to mock', e);
     }
-    
-    const tokens = getStorage<AccessToken>(MOCK_ACCESS_TOKENS_KEY);
-    const filtered = tokens.filter(t => t.id !== tokenId);
-    saveStorage(MOCK_ACCESS_TOKENS_KEY, filtered);
-    
-    console.log(`[MOCK] Access token revoked: ${tokenId}`);
-    
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    if (typeof window === 'undefined') return { success: true };
+    const tokens = getStorage<AccessToken>(MOCK_ACCESS_TOKENS_KEY); const filtered = tokens.filter(t => t.id !== tokenId); saveStorage(MOCK_ACCESS_TOKENS_KEY, filtered);
     return { success: true };
   }
 
   // Webhooks
   async getWebhooks(): Promise<ApiResponse<{ webhooks: Webhook[] }>> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    if (typeof window === 'undefined') {
-      return { success: true, data: { webhooks: [] } };
+    try {
+      const res = await apiClient.get<any>('/webhooks');
+      if (res.success && res.data) return { success: true, data: { webhooks: res.data.webhooks || res.data } };
+    } catch (e) {
+      console.warn('getWebhooks backend failed, falling back to mock', e);
     }
-    
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    if (typeof window === 'undefined') return { success: true, data: { webhooks: [] } };
     const webhooks = getStorage<Webhook>(MOCK_WEBHOOKS_KEY);
-    
     return { success: true, data: { webhooks } };
   }
 
@@ -524,27 +500,17 @@ class BrowseService {
     url: string;
     events: string[];
   }): Promise<ApiResponse<Webhook>> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (typeof window === 'undefined') {
-      return {
-        success: false,
-        error: { code: 'SERVER_ERROR', message: 'Not available on server' },
-      };
+    try {
+      const res = await apiClient.post<any>('/webhooks', data);
+      if (res.success && res.data) return { success: true, data: res.data as Webhook };
+    } catch (e) {
+      console.warn('createWebhook backend failed, falling back to mock', e);
     }
-    
-    const webhook: Webhook = {
-      id: generateId('wh'),
-      url: data.url,
-      events: data.events,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-    };
-    
-    const webhooks = getStorage<Webhook>(MOCK_WEBHOOKS_KEY);
-    webhooks.unshift(webhook);
-    saveStorage(MOCK_WEBHOOKS_KEY, webhooks);
-    
+
+    await new Promise(resolve => setTimeout(resolve, 200));
+    if (typeof window === 'undefined') return { success: false, error: { code: 'SERVER_ERROR', message: 'Not available on server' } };
+    const webhook: Webhook = { id: generateId('wh'), url: data.url, events: data.events, status: 'active', createdAt: new Date().toISOString() };
+    const webhooks = getStorage<Webhook>(MOCK_WEBHOOKS_KEY); webhooks.unshift(webhook); saveStorage(MOCK_WEBHOOKS_KEY, webhooks);
     return { success: true, data: webhook };
   }
 
@@ -553,66 +519,48 @@ class BrowseService {
     events?: string[];
     status?: 'active' | 'inactive';
   }): Promise<ApiResponse<Webhook>> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    if (typeof window === 'undefined') {
-      return {
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Webhook not found' },
-      };
+    try {
+      const res = await apiClient.put<any>(`/webhooks/${webhookId}`, data);
+      if (res.success && res.data) return { success: true, data: res.data as Webhook };
+    } catch (e) {
+      console.warn('updateWebhook backend failed, falling back to mock', e);
     }
-    
-    const webhooks = getStorage<Webhook>(MOCK_WEBHOOKS_KEY);
-    const webhook = webhooks.find(w => w.id === webhookId);
-    
-    if (!webhook) {
-      return {
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Webhook not found' },
-      };
-    }
-    
-    if (data.url) webhook.url = data.url;
-    if (data.events) webhook.events = data.events;
-    if (data.status) webhook.status = data.status;
-    
-    saveStorage(MOCK_WEBHOOKS_KEY, webhooks);
-    
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    if (typeof window === 'undefined') return { success: false, error: { code: 'NOT_FOUND', message: 'Webhook not found' } };
+    const webhooks = getStorage<Webhook>(MOCK_WEBHOOKS_KEY); const webhook = webhooks.find(w => w.id === webhookId);
+    if (!webhook) return { success: false, error: { code: 'NOT_FOUND', message: 'Webhook not found' } };
+    if (data.url) webhook.url = data.url; if (data.events) webhook.events = data.events; if (data.status) webhook.status = data.status; saveStorage(MOCK_WEBHOOKS_KEY, webhooks);
     return { success: true, data: webhook };
   }
 
   async deleteWebhook(webhookId: string): Promise<ApiResponse<void>> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    if (typeof window === 'undefined') {
-      return { success: true };
+    try {
+      const res = await apiClient.delete<any>(`/webhooks/${webhookId}`);
+      if (res.success) return { success: true };
+    } catch (e) {
+      console.warn('deleteWebhook backend failed, falling back to mock', e);
     }
-    
-    const webhooks = getStorage<Webhook>(MOCK_WEBHOOKS_KEY);
-    const filtered = webhooks.filter(w => w.id !== webhookId);
-    saveStorage(MOCK_WEBHOOKS_KEY, filtered);
-    
-    console.log(`[MOCK] Webhook deleted: ${webhookId}`);
-    
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    if (typeof window === 'undefined') return { success: true };
+    const webhooks = getStorage<Webhook>(MOCK_WEBHOOKS_KEY); const filtered = webhooks.filter(w => w.id !== webhookId); saveStorage(MOCK_WEBHOOKS_KEY, filtered);
     return { success: true };
   }
 
   // Apps
   async getApps(): Promise<ApiResponse<{ apps: App[] }>> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    if (typeof window === 'undefined') {
-      return { success: true, data: { apps: [] } };
+    try {
+      const res = await apiClient.get<any>('/apps');
+      if (res.success && res.data) return { success: true, data: { apps: res.data.apps || res.data } };
+    } catch (e) {
+      console.warn('getApps backend failed, falling back to mock', e);
     }
-    
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    if (typeof window === 'undefined') return { success: true, data: { apps: [] } };
     const apps = getStorage<App>(MOCK_APPS_KEY);
-    
-    // Mask client secrets for display
-    const maskedApps = apps.map(app => ({
-      ...app,
-      clientSecret: app.clientSecret ? `${app.clientSecret.substring(0, 8)}...${app.clientSecret.slice(-4)}` : '',
-    }));
-    
+    const maskedApps = apps.map(app => ({ ...app, clientSecret: app.clientSecret ? `${app.clientSecret.substring(0, 8)}...${app.clientSecret.slice(-4)}` : '' }));
     return { success: true, data: { apps: maskedApps } };
   }
 
@@ -621,30 +569,17 @@ class BrowseService {
     description?: string;
     redirectUri: string;
   }): Promise<ApiResponse<App>> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (typeof window === 'undefined') {
-      return {
-        success: false,
-        error: { code: 'SERVER_ERROR', message: 'Not available on server' },
-      };
+    try {
+      const res = await apiClient.post<any>('/apps', data);
+      if (res.success && res.data) return { success: true, data: res.data as App };
+    } catch (e) {
+      console.warn('createApp backend failed, falling back to mock', e);
     }
-    
-    const app: App = {
-      id: generateId('app'),
-      name: data.name,
-      description: data.description,
-      status: 'active',
-      created: new Date().toISOString(),
-      redirectUri: data.redirectUri,
-      clientId: generateClientId(),
-      clientSecret: generateClientSecret(),
-    };
-    
-    const apps = getStorage<App>(MOCK_APPS_KEY);
-    apps.unshift(app);
-    saveStorage(MOCK_APPS_KEY, apps);
-    
+
+    await new Promise(resolve => setTimeout(resolve, 200));
+    if (typeof window === 'undefined') return { success: false, error: { code: 'SERVER_ERROR', message: 'Not available on server' } };
+    const app: App = { id: generateId('app'), name: data.name, description: data.description, status: 'active', created: new Date().toISOString(), redirectUri: data.redirectUri, clientId: generateClientId(), clientSecret: generateClientSecret() };
+    const apps = getStorage<App>(MOCK_APPS_KEY); apps.unshift(app); saveStorage(MOCK_APPS_KEY, apps);
     return { success: true, data: app };
   }
 
@@ -653,47 +588,31 @@ class BrowseService {
     description?: string;
     redirectUri?: string;
   }): Promise<ApiResponse<App>> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    if (typeof window === 'undefined') {
-      return {
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'App not found' },
-      };
+    try {
+      const res = await apiClient.put<any>(`/apps/${appId}`, data);
+      if (res.success && res.data) return { success: true, data: res.data as App };
+    } catch (e) {
+      console.warn('updateApp backend failed, falling back to mock', e);
     }
-    
-    const apps = getStorage<App>(MOCK_APPS_KEY);
-    const app = apps.find(a => a.id === appId);
-    
-    if (!app) {
-      return {
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'App not found' },
-      };
-    }
-    
-    if (data.name) app.name = data.name;
-    if (data.description !== undefined) app.description = data.description;
-    if (data.redirectUri) app.redirectUri = data.redirectUri;
-    
-    saveStorage(MOCK_APPS_KEY, apps);
-    
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    if (typeof window === 'undefined') return { success: false, error: { code: 'NOT_FOUND', message: 'App not found' } };
+    const apps = getStorage<App>(MOCK_APPS_KEY); const app = apps.find(a => a.id === appId); if (!app) return { success: false, error: { code: 'NOT_FOUND', message: 'App not found' } };
+    if (data.name) app.name = data.name; if (data.description !== undefined) app.description = data.description; if (data.redirectUri) app.redirectUri = data.redirectUri; saveStorage(MOCK_APPS_KEY, apps);
     return { success: true, data: app };
   }
 
   async deleteApp(appId: string): Promise<ApiResponse<void>> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    if (typeof window === 'undefined') {
-      return { success: true };
+    try {
+      const res = await apiClient.delete<any>(`/apps/${appId}`);
+      if (res.success) return { success: true };
+    } catch (e) {
+      console.warn('deleteApp backend failed, falling back to mock', e);
     }
-    
-    const apps = getStorage<App>(MOCK_APPS_KEY);
-    const filtered = apps.filter(a => a.id !== appId);
-    saveStorage(MOCK_APPS_KEY, filtered);
-    
-    console.log(`[MOCK] App deleted: ${appId}`);
-    
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+    if (typeof window === 'undefined') return { success: true };
+    const apps = getStorage<App>(MOCK_APPS_KEY); const filtered = apps.filter(a => a.id !== appId); saveStorage(MOCK_APPS_KEY, filtered);
     return { success: true };
   }
 }

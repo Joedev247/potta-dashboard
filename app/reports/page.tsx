@@ -1,16 +1,42 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { FileText, Download, Calendar, Filter, ChevronDown, Eye, CheckCircle2, Printer, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import { FileText, Download, Calendar, Funnel, CaretDown, Eye, CheckCircle, Printer, CaretLeft, CaretRight, X, Spinner } from '@phosphor-icons/react';
 import { reportsService, invoicingService } from '@/lib/api';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { formatDate as formatDateUtil, formatCurrency } from '@/lib/utils/format';
 
 export default function ReportsPage() {
+  const { organization } = useOrganization();
   const [activeTab, setActiveTab] = useState('settlements');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedRange, setSelectedRange] = useState({ start: '27/11/2025', end: '28/11/2025' });
-  const [calendarMonth, setCalendarMonth] = useState(11); // November
-  const [calendarYear, setCalendarYear] = useState(2025);
+  const [selectedRange, setSelectedRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  const [calendarMonth, setCalendarMonth] = useState(0);
+  const [calendarYear, setCalendarYear] = useState(0);
+  
+  // Initialize date range and calendar on client side only to avoid hydration mismatch
+  useEffect(() => {
+    if (!selectedRange.start || !selectedRange.end) {
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      
+      const formatDateForRange = (date: Date) => {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      };
+      
+      setSelectedRange({
+        start: formatDateForRange(yesterday),
+        end: formatDateForRange(today),
+      });
+      
+      setCalendarMonth(today.getMonth() + 1);
+      setCalendarYear(today.getFullYear());
+    }
+  }, []);
   const [selectedDates, setSelectedDates] = useState<{ start: string | null; end: string | null }>({ start: null, end: null });
   const [predefinedRange, setPredefinedRange] = useState<string | null>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -24,7 +50,15 @@ export default function ReportsPage() {
   const [selectedFilter, setSelectedFilter] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('Last 30 days');
   const [selectedBalance, setSelectedBalance] = useState('');
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [selectedYear, setSelectedYear] = useState<string>('');
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('');
+  
+  // Initialize year on client side only to avoid hydration mismatch
+  useEffect(() => {
+    if (!selectedYear) {
+      setSelectedYear(new Date().getFullYear().toString());
+    }
+  }, []);
   
   const filterRef = useRef<HTMLDivElement>(null);
   const periodRef = useRef<HTMLDivElement>(null);
@@ -189,13 +223,6 @@ export default function ReportsPage() {
     // The period filter is already applied when dates are selected
   };
 
-  // Handle period change for balance report
-  useEffect(() => {
-    if (activeTab === 'balance-report' && selectedRange.start && selectedRange.end) {
-      // Update balance report data based on selected period
-      // This will trigger re-render with new period
-    }
-  }, [selectedRange, activeTab]);
 
   // Generate calendar days
   const generateCalendarDays = () => {
@@ -220,9 +247,11 @@ export default function ReportsPage() {
 
   // API data state
   const [settlements, setSettlements] = useState<any[]>([]);
+  const [paymentSummary, setPaymentSummary] = useState<{ total: number; successful: number; failed: number } | null>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [balanceReport, setBalanceReport] = useState<any>(null);
+  const [financialReport, setFinancialReport] = useState<any>(null);
   const [loading, setLoading] = useState({ settlements: false, invoices: false, balanceReport: false });
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Helper to convert date format for API
   const convertToAPIDate = (dateStr: string): string => {
@@ -234,13 +263,16 @@ export default function ReportsPage() {
     return dateStr;
   };
 
-  // Fetch settlements
+  // Fetch settlements (Payment Report)
   const fetchSettlements = useCallback(async () => {
     setLoading(prev => ({ ...prev, settlements: true }));
     try {
       const params: any = {};
       
-      if (selectedPeriod && selectedPeriod !== 'All') {
+      if (selectedRange.start && selectedRange.end) {
+        params.startDate = convertToAPIDate(selectedRange.start);
+        params.endDate = convertToAPIDate(selectedRange.end);
+      } else if (selectedPeriod && selectedPeriod !== 'All') {
         const today = new Date();
         let startDate: Date = today;
         
@@ -270,16 +302,39 @@ export default function ReportsPage() {
         params.status = selectedFilter.toLowerCase();
       }
       
-      const response = await reportsService.getSettlements(params);
+      if (organization?.id) {
+        params.organizationId = organization.id;
+      }
+      
+      if (selectedCurrency && selectedCurrency !== 'All') {
+        params.currency = selectedCurrency;
+      }
+      
+      const response = await reportsService.getPaymentReport(params);
       if (response.success && response.data) {
-        setSettlements(response.data.settlements || []);
+        // Normalize payment data to match expected structure
+        const payments = (response.data.payments || []).map((payment: any) => ({
+          id: payment.id || payment.transaction_id || payment.payment_id || '',
+          date: payment.createdAt || payment.created_at || payment.date || new Date().toISOString(),
+          amount: payment.amount || 0,
+          currency: payment.currency || 'XAF',
+          status: (payment.status || 'pending').toLowerCase(),
+          ...payment, // Keep original data for details
+        }));
+        setSettlements(payments);
+        setPaymentSummary(response.data.summary || { total: 0, successful: 0, failed: 0 });
+      } else {
+        setSettlements([]);
+        setPaymentSummary(null);
       }
     } catch (error) {
-      console.error('Error fetching settlements:', error);
+      console.error('Error fetching payment report:', error);
+      setSettlements([]);
+      setPaymentSummary(null);
     } finally {
       setLoading(prev => ({ ...prev, settlements: false }));
     }
-  }, [selectedPeriod, selectedFilter]);
+  }, [selectedPeriod, selectedFilter, selectedRange]);
 
   // Fetch invoices
   const fetchInvoices = useCallback(async () => {
@@ -319,7 +374,9 @@ export default function ReportsPage() {
       
       const response = await invoicingService.getInvoices(params);
       if (response.success && response.data) {
-        setInvoices(response.data.invoices || []);
+        setInvoices(Array.isArray(response.data) ? response.data : []);
+      } else {
+        setInvoices([]);
       }
     } catch (error) {
       console.error('Error fetching invoices:', error);
@@ -328,25 +385,42 @@ export default function ReportsPage() {
     }
   }, [selectedPeriod, selectedFilter]);
 
-  // Fetch balance report
+  // Fetch balance report (Financial Report)
   const fetchBalanceReport = useCallback(async () => {
-    if (!selectedRange.start || !selectedRange.end) return;
+    if (!selectedRange.start || !selectedRange.end) {
+      setFinancialReport(null);
+      return;
+    }
     
     setLoading(prev => ({ ...prev, balanceReport: true }));
     try {
       const startDate = convertToAPIDate(selectedRange.start);
       const endDate = convertToAPIDate(selectedRange.end);
       
-      const response = await reportsService.getBalanceReport({
+      const params: any = {
         startDate,
         endDate,
-      });
+        format: 'JSON',
+      };
+      
+      if (organization?.id) {
+        params.organizationId = organization.id;
+      }
+      
+      if (selectedCurrency && selectedCurrency !== 'All') {
+        params.currency = selectedCurrency;
+      }
+      
+      const response = await reportsService.getFinancialReport(params);
       
       if (response.success && response.data) {
-        setBalanceReport(response.data);
+        setFinancialReport(response.data);
+      } else {
+        setFinancialReport(null);
       }
     } catch (error) {
-      console.error('Error fetching balance report:', error);
+      console.error('Error fetching financial report:', error);
+      setFinancialReport(null);
     } finally {
       setLoading(prev => ({ ...prev, balanceReport: false }));
     }
@@ -362,6 +436,19 @@ export default function ReportsPage() {
       fetchBalanceReport();
     }
   }, [activeTab, fetchSettlements, fetchInvoices, fetchBalanceReport]);
+
+  // Trigger API calls when date range changes
+  useEffect(() => {
+    if (selectedRange.start && selectedRange.end) {
+      if (activeTab === 'settlements') {
+        fetchSettlements();
+      } else if (activeTab === 'invoices') {
+        fetchInvoices();
+      } else if (activeTab === 'balance-report') {
+        fetchBalanceReport();
+      }
+    }
+  }, [selectedRange, activeTab, fetchSettlements, fetchInvoices, fetchBalanceReport]);
 
   // Filter data based on selected filters
   const getFilteredData = () => {
@@ -458,25 +545,22 @@ export default function ReportsPage() {
     `;
 
     if (type === 'annual' || activeTab === 'balance-report') {
+      const report = financialReport || { revenue: 0, refunds: 0, net: 0, byCurrency: {} };
       htmlContent += `
         <table>
           <thead>
             <tr>
               <th>Category</th>
-              <th style="text-align: right;">Pending</th>
-              <th style="text-align: right;">Available</th>
+              <th style="text-align: right;">Amount</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>Opening balance (${selectedRange.start})</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Payments</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Refunds</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Chargebacks</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Transfers</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Top-ups</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Corrections</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Fees charged</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr style="background-color: #f9fafb; font-weight: bold;"><td>Closing balance (${selectedRange.end})</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
+            <tr><td>Revenue</td><td style="text-align: right;">${formatCurrency(report.revenue || 0, 'XAF')}</td></tr>
+            <tr><td>Refunds</td><td style="text-align: right;">${formatCurrency(report.refunds || 0, 'XAF')}</td></tr>
+            <tr style="background-color: #f9fafb; font-weight: bold;"><td>Net Amount</td><td style="text-align: right;">${formatCurrency(report.net || 0, 'XAF')}</td></tr>
+            ${Object.entries(report.byCurrency || {}).map(([currency, amount]) => 
+              `<tr><td>${currency}</td><td style="text-align: right;">${formatCurrency(amount as number, currency)}</td></tr>`
+            ).join('')}
           </tbody>
         </table>
       `;
@@ -535,8 +619,9 @@ export default function ReportsPage() {
     let headers: string[] = [];
     
     if (activeTab === 'balance-report') {
-      title = 'Balance Report';
-      headers = ['Category', 'Pending', 'Available'];
+      title = 'Financial Report';
+      headers = ['Category', 'Amount'];
+      const report = financialReport || { revenue: 0, refunds: 0, net: 0, byCurrency: {} };
       tableContent = `
         <table>
           <thead>
@@ -545,15 +630,12 @@ export default function ReportsPage() {
             </tr>
           </thead>
           <tbody>
-            <tr><td>Opening balance (${selectedRange.start})</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Payments</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Refunds</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Chargebacks</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Transfers</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Top-ups</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Corrections</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr><td>Fees charged</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
-            <tr style="background-color: #f9fafb; font-weight: bold;"><td>Closing balance (${selectedRange.end})</td><td style="text-align: right;">XAF 0.00</td><td style="text-align: right;">XAF 0.00</td></tr>
+            <tr><td>Revenue</td><td style="text-align: right;">${formatCurrency(report.revenue || 0, 'XAF')}</td></tr>
+            <tr><td>Refunds</td><td style="text-align: right;">${formatCurrency(report.refunds || 0, 'XAF')}</td></tr>
+            <tr style="background-color: #f9fafb; font-weight: bold;"><td>Net Amount</td><td style="text-align: right;">${formatCurrency(report.net || 0, 'XAF')}</td></tr>
+            ${Object.entries(report.byCurrency || {}).map(([currency, amount]) => 
+              `<tr><td>${currency}</td><td style="text-align: right;">${formatCurrency(amount as number, currency)}</td></tr>`
+            ).join('')}
           </tbody>
         </table>
       `;
@@ -714,45 +796,76 @@ export default function ReportsPage() {
 
   // Export report in different formats
   const handleExportReport = async (format: 'csv' | 'pdf' | 'excel' = 'csv') => {
+    if (!selectedRange.start || !selectedRange.end) {
+      alert('Please select a date range before exporting');
+      return;
+    }
+
+    setExportLoading(true);
     try {
-      // For server-side exports, use API
-      if (format === 'pdf' && (activeTab === 'settlements' || activeTab === 'invoices' || activeTab === 'balance-report')) {
-        const startDate = selectedRange.start ? convertToAPIDate(selectedRange.start) : new Date().toISOString().split('T')[0];
-        const endDate = selectedRange.end ? convertToAPIDate(selectedRange.end) : new Date().toISOString().split('T')[0];
-        
-        const reportType: 'settlements' | 'balance' | 'invoices' | 'payments' = 
-          activeTab === 'settlements' ? 'settlements' : 
-          activeTab === 'invoices' ? 'invoices' : 
-          'balance';
-        
-        const exportData = {
-          reportType,
-          format: 'pdf' as const,
+      const startDate = convertToAPIDate(selectedRange.start);
+      const endDate = convertToAPIDate(selectedRange.end);
+      const exportFormat = format === 'excel' ? 'XLSX' : format === 'pdf' ? 'PDF' : 'CSV';
+      
+      let response: ApiResponse<Blob> | null = null;
+      
+      // Use appropriate export endpoint based on active tab
+      if (activeTab === 'settlements') {
+        response = await reportsService.exportPaymentReport({
           startDate,
           endDate,
-          filters: {
-            status: selectedFilter || undefined,
-            period: selectedPeriod || undefined,
-          },
-        };
-        
-        const response = await reportsService.exportReport(exportData);
-        if (response.success && response.data) {
-          // Handle blob download
-          const blob = new Blob([response.data as any], { type: 'application/pdf' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `${activeTab}-report-${new Date().toISOString().split('T')[0]}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          return;
-        }
+          status: selectedFilter && selectedFilter !== 'All' ? selectedFilter : undefined,
+          format: exportFormat as 'CSV' | 'XLSX' | 'PDF',
+        });
+      } else if (activeTab === 'balance-report') {
+        response = await reportsService.exportFinancialReport({
+          startDate,
+          endDate,
+          format: exportFormat as 'CSV' | 'XLSX' | 'PDF',
+        });
+      } else if (activeTab === 'invoices') {
+        // For invoices, we can use transaction report export or handle separately
+        // For now, use transaction export as fallback
+        response = await reportsService.exportTransactionReport({
+          startDate,
+          endDate,
+          format: exportFormat as 'CSV' | 'XLSX' | 'PDF',
+        });
       }
-    } catch (apiError) {
+      
+      if (response?.success && response.data) {
+        // Determine MIME type based on format
+        let mimeType = 'application/octet-stream';
+        let fileExtension = 'bin';
+        if (format === 'pdf') {
+          mimeType = 'application/pdf';
+          fileExtension = 'pdf';
+        } else if (format === 'excel') {
+          mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+          fileExtension = 'xlsx';
+        } else {
+          mimeType = 'text/csv';
+          fileExtension = 'csv';
+        }
+        
+        const blob = new Blob([response.data], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${activeTab}-report-${new Date().toISOString().split('T')[0]}.${fileExtension}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setShowExportDropdown(false);
+      } else {
+        alert(response?.error?.message || 'Export failed. Please try again.');
+      }
+    } catch (apiError: any) {
       console.error('API export failed:', apiError);
+      alert('Export failed. Please try again.');
+    } finally {
+      setExportLoading(false);
     }
     
     try {
@@ -777,16 +890,14 @@ export default function ReportsPage() {
             csvContent += `${item.id},${item.date},XAF ${item.amount.toFixed(2)},${item.status}\n`;
           });
         } else if (activeTab === 'balance-report') {
-          csvContent = 'Category,Pending,Available\n';
-          csvContent += `Opening balance (${selectedRange.start}),XAF 0.00,XAF 0.00\n`;
-          csvContent += 'Payments,XAF 0.00,XAF 0.00\n';
-          csvContent += 'Refunds,XAF 0.00,XAF 0.00\n';
-          csvContent += 'Chargebacks,XAF 0.00,XAF 0.00\n';
-          csvContent += 'Transfers,XAF 0.00,XAF 0.00\n';
-          csvContent += 'Top-ups,XAF 0.00,XAF 0.00\n';
-          csvContent += 'Corrections,XAF 0.00,XAF 0.00\n';
-          csvContent += 'Fees charged,XAF 0.00,XAF 0.00\n';
-          csvContent += `Closing balance (${selectedRange.end}),XAF 0.00,XAF 0.00\n`;
+          const report = financialReport || { revenue: 0, refunds: 0, net: 0, byCurrency: {} };
+          csvContent = 'Category,Amount\n';
+          csvContent += `Revenue,${formatCurrency(report.revenue || 0, 'XAF')}\n`;
+          csvContent += `Refunds,${formatCurrency(report.refunds || 0, 'XAF')}\n`;
+          csvContent += `Net Amount,${formatCurrency(report.net || 0, 'XAF')}\n`;
+          Object.entries(report.byCurrency || {}).forEach(([currency, amount]) => {
+            csvContent += `${currency},${formatCurrency(amount as number, currency)}\n`;
+          });
         }
         
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -858,8 +969,15 @@ export default function ReportsPage() {
   };
 
   // Generate year options (current year and past 5 years)
-  const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 6 }, (_, i) => (currentYear - i).toString());
+  const [yearOptions, setYearOptions] = useState<string[]>([]);
+  
+  // Initialize year options on client side only to avoid hydration mismatch
+  useEffect(() => {
+    if (yearOptions.length === 0) {
+      const currentYear = new Date().getFullYear();
+      setYearOptions(Array.from({ length: 6 }, (_, i) => (currentYear - i).toString()));
+    }
+  }, [yearOptions.length]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -897,7 +1015,7 @@ export default function ReportsPage() {
             >
               <Download className="w-4 h-4" />
               Export Report
-              <ChevronDown className="w-4 h-4" />
+              <CaretDown className="w-4 h-4" />
             </button>
             {showExportDropdown && (
               <div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 shadow-lg z-50 min-w-[180px] rounded overflow-hidden">
@@ -965,9 +1083,9 @@ export default function ReportsPage() {
               selectedFilter ? 'border-green-500 bg-green-50 text-gray-900' : 'text-gray-700 hover:bg-gray-50'
             }`}
           >
-          <Filter className="w-4 h-4" />
+          <Funnel className="w-4 h-4" />
             <span>{selectedFilter || 'Filter'}</span>
-          <ChevronDown className="w-4 h-4" />
+          <CaretDown className="w-4 h-4" />
           </button>
           {showFilterDropdown && (
             <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 shadow-lg z-50 min-w-[150px] rounded">
@@ -1002,7 +1120,7 @@ export default function ReportsPage() {
           >
           <Calendar className="w-4 h-4" />
             <span>{selectedPeriod}</span>
-          <ChevronDown className="w-4 h-4" />
+          <CaretDown className="w-4 h-4" />
           </button>
           {showPeriodDropdown && (
             <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 shadow-lg z-50 min-w-[150px] rounded">
@@ -1036,7 +1154,7 @@ export default function ReportsPage() {
             }`}
           >
             {selectedBalance || 'Balance'}
-            <ChevronDown className="w-4 h-4 inline-block ml-2" />
+            <CaretDown className="w-4 h-4 inline-block ml-2" />
           </button>
           {showBalanceDropdown && (
             <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 shadow-lg z-50 min-w-[150px] rounded">
@@ -1070,7 +1188,7 @@ export default function ReportsPage() {
             }`}
           >
             {selectedYear || 'Year'}
-            <ChevronDown className="w-4 h-4 inline-block ml-2" />
+            <CaretDown className="w-4 h-4 inline-block ml-2" />
         </button>
           {showYearDropdown && (
             <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 shadow-lg z-50 min-w-[100px] rounded max-h-48 overflow-y-auto">
@@ -1098,7 +1216,7 @@ export default function ReportsPage() {
         if (loading.settlements) {
           return (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+              <Spinner className="w-8 h-8 animate-spin text-green-600" />
             </div>
           );
         }
@@ -1186,7 +1304,7 @@ export default function ReportsPage() {
         if (loading.invoices) {
           return (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+              <Spinner className="w-8 h-8 animate-spin text-green-600" />
             </div>
           );
         }
@@ -1284,7 +1402,7 @@ export default function ReportsPage() {
               <span className="font-medium">Period</span>
               <span className="text-gray-400">|</span>
               <span>{selectedRange.start} - {selectedRange.end}</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
+              <CaretDown className={`w-4 h-4 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Date Picker Dropdown */}
@@ -1433,63 +1551,72 @@ export default function ReportsPage() {
           <div className="bg-white border border-gray-200  overflow-hidden">
             {loading.balanceReport ? (
               <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+                <Spinner className="w-8 h-8 animate-spin text-green-600" />
               </div>
-            ) : balanceReport ? (
+            ) : financialReport ? (
               <>
                 <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                  <div className="grid grid-cols-3 gap-4 text-sm font-medium text-gray-700">
+                  <div className="grid grid-cols-2 gap-4 text-sm font-medium text-gray-700">
                     <div>Category</div>
-                    <div className="text-right">Pending</div>
-                    <div className="text-right">Available</div>
+                    <div className="text-right">Amount</div>
                   </div>
                 </div>
                 <div className="divide-y divide-gray-200">
-                  {/* Opening Balance */}
+                  {/* Revenue */}
                   <div className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                    <div className="grid grid-cols-3 gap-4 items-center">
-                      <div className="text-sm text-gray-700">
-                        Opening balance ({formatDateUtil(balanceReport.startDate)})
-                      </div>
-                      <div className="text-sm text-right text-gray-600">-</div>
-                      <div className="text-sm text-right text-gray-600">
-                        {formatCurrency(balanceReport.openingBalance)}
+                    <div className="grid grid-cols-2 gap-4 items-center">
+                      <div className="text-sm text-gray-700">Revenue</div>
+                      <div className="text-sm text-right font-semibold text-green-700">
+                        {formatCurrency(financialReport.revenue || 0, 'XAF')}
                       </div>
                     </div>
                   </div>
                   
-                  {/* Categories */}
-                  {balanceReport.categories?.map((category: any, index: number) => (
-                    <div key={index} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                      <div className="grid grid-cols-3 gap-4 items-center">
-                        <div className="text-sm text-gray-700">{category.category}</div>
-                        <div className="text-sm text-right text-gray-600">
-                          {formatCurrency(category.pending)}
-                        </div>
-                        <div className="text-sm text-right text-gray-600">
-                          {formatCurrency(category.available)}
-                        </div>
+                  {/* Refunds */}
+                  <div className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div className="grid grid-cols-2 gap-4 items-center">
+                      <div className="text-sm text-gray-700">Refunds</div>
+                      <div className="text-sm text-right font-semibold text-red-700">
+                        {formatCurrency(financialReport.refunds || 0, 'XAF')}
                       </div>
                     </div>
-                  ))}
+                  </div>
                   
-                  {/* Closing Balance */}
-                  <div className="px-6 py-4 bg-gray-50 font-semibold">
-                    <div className="grid grid-cols-3 gap-4 items-center">
-                      <div className="text-sm text-gray-900">
-                        Closing balance ({formatDateUtil(balanceReport.endDate)})
-                      </div>
-                      <div className="text-sm text-right text-gray-900">-</div>
+                  {/* Net Amount */}
+                  <div className="px-6 py-4 bg-gray-50 font-semibold border-t-2 border-gray-300">
+                    <div className="grid grid-cols-2 gap-4 items-center">
+                      <div className="text-sm text-gray-900">Net Amount</div>
                       <div className="text-sm text-right text-gray-900">
-                        {formatCurrency(balanceReport.closingBalance)}
+                        {formatCurrency(financialReport.net || 0, 'XAF')}
                       </div>
                     </div>
                   </div>
+                  
+                  {/* By Currency */}
+                  {financialReport.byCurrency && Object.keys(financialReport.byCurrency).length > 0 && (
+                    <>
+                      <div className="px-6 py-3 bg-gray-100 border-t-2 border-gray-300">
+                        <div className="text-sm font-medium text-gray-700">By Currency</div>
+                      </div>
+                      {Object.entries(financialReport.byCurrency).map(([currency, amount]) => (
+                        <div key={currency} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                          <div className="grid grid-cols-2 gap-4 items-center">
+                            <div className="text-sm text-gray-700">{currency}</div>
+                            <div className="text-sm text-right font-semibold text-gray-900">
+                              {formatCurrency(amount as number, currency)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </>
             ) : (
               <div className="px-6 py-12 text-center text-gray-500">
-                No balance report data available. Select a date range to view the report.
+                {selectedRange.start && selectedRange.end 
+                  ? 'No financial report data available for the selected date range.'
+                  : 'Select a date range to view the financial report.'}
               </div>
             )}
           </div>
@@ -1504,7 +1631,7 @@ export default function ReportsPage() {
           onClick={() => setSelectedItem(null)}
         >
           <div 
-            className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white  max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}

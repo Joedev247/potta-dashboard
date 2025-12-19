@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Plus, ExternalLink, ArrowLeft, ChevronDown, Calendar, X, RotateCcw, ChevronUp, ArrowRight, AlertCircle, Package, RefreshCw, Eye, CheckCircle2, Copy, Loader2 } from 'lucide-react';
+import { MagnifyingGlass, Plus, ArrowSquareOut, ArrowLeft, CaretDown, Calendar, X, ArrowCounterClockwise, CaretUp, ArrowRight, WarningCircle, Package, ArrowClockwise, Eye, CheckCircle, Copy, Spinner, CreditCard, UserCheck, Phone } from '@phosphor-icons/react';
 import { useState, useEffect, useCallback } from 'react';
 import { paymentsService, type Payment, type Refund, type Chargeback, type Order } from '@/lib/api';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
@@ -48,10 +48,43 @@ export default function PaymentsPage() {
 
   const tabs = [
     { id: 'payments', label: 'Payments' },
+    { id: 'make-payment', label: 'Make Payment' },
+    { id: 'payment-status', label: 'Payment Status' },
+    { id: 'verify-account', label: 'Verify Account' },
     { id: 'refunds', label: 'Refunds' },
     { id: 'chargebacks', label: 'Chargebacks' },
     { id: 'orders', label: 'Orders' },
   ];
+  
+  // Make Payment states
+  const [makePaymentForm, setMakePaymentForm] = useState({
+    amount: '',
+    currency: 'XAF',
+    phoneNumber: '',
+    username: '',
+    type: 'DEPOSIT' as 'DEPOSIT' | 'COLLECTION',
+    provider: 'MTN_CAM' as 'MTN_CAM' | 'ORANGE_CAM',
+    description: '',
+  });
+  const [makePaymentLoading, setMakePaymentLoading] = useState(false);
+  const [makePaymentResult, setMakePaymentResult] = useState<any>(null);
+  const [makePaymentError, setMakePaymentError] = useState<string | null>(null);
+  
+  // Payment Status states
+  const [statusTransactionId, setStatusTransactionId] = useState('');
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [statusResult, setStatusResult] = useState<any>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  
+  // Verify Account states
+  const [verifyForm, setVerifyForm] = useState({
+    phoneNumber: '',
+    type: 'DEPOSIT' as 'DEPOSIT' | 'COLLECTION',
+  });
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<any>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verifyType, setVerifyType] = useState<'active' | 'basic-info'>('active');
 
   // Fetch data functions
   const fetchPayments = useCallback(async () => {
@@ -171,6 +204,162 @@ export default function PaymentsPage() {
       fetchOrders();
     }
   }, [activeTab, fetchPayments, fetchRefunds, fetchChargebacks, fetchOrders]);
+
+  // Handle make payment
+  const handleMakePayment = async () => {
+    setMakePaymentLoading(true);
+    setMakePaymentError(null);
+    setMakePaymentResult(null);
+
+    // Validation
+    if (!makePaymentForm.amount || !makePaymentForm.phoneNumber || !makePaymentForm.provider || !makePaymentForm.username) {
+      setMakePaymentError('Amount, phone number, username, and payment provider are required');
+      setMakePaymentLoading(false);
+      return;
+    }
+
+    // Clean username: remove spaces, special characters, and Unicode characters, keep only ASCII alphanumeric, convert to lowercase
+    const cleanedUsername = makePaymentForm.username
+      .trim()
+      .replace(/\s+/g, '') // Remove all whitespace
+      .replace(/[^a-zA-Z0-9]/g, '') // Remove all non-alphanumeric characters
+      .toLowerCase()
+      .normalize('NFD') // Normalize to decompose Unicode characters
+      .replace(/[\u0300-\u036f]/g, ''); // Remove diacritics
+    
+    // Validate it's pure ASCII alphanumeric
+    if (!/^[a-z0-9]+$/.test(cleanedUsername)) {
+      setMakePaymentError('Username must contain only lowercase letters and numbers (a-z, 0-9). No spaces, special characters, or Unicode characters allowed.');
+      setMakePaymentLoading(false);
+      return;
+    }
+    
+    // Validate length (4-15 characters)
+    if (cleanedUsername.length < 4 || cleanedUsername.length > 15) {
+      setMakePaymentError(`Username must be between 4 and 15 characters long after cleaning. Original: "${makePaymentForm.username}" (${makePaymentForm.username.length} chars), Cleaned: "${cleanedUsername}" (${cleanedUsername.length} chars)`);
+      setMakePaymentLoading(false);
+      return;
+    }
+
+    try {
+      const response = await paymentsService.makePayment({
+        amount: parseFloat(makePaymentForm.amount),
+        currency: makePaymentForm.currency,
+        phoneNumber: makePaymentForm.phoneNumber,
+        username: cleanedUsername, // Use cleaned username (alphanumeric only, no spaces)
+        type: makePaymentForm.type,
+        provider: makePaymentForm.provider,
+        description: makePaymentForm.description || undefined,
+      });
+
+      if (response.success && response.data) {
+        setMakePaymentResult(response.data);
+        setMakePaymentForm({
+          amount: '',
+          currency: 'XAF',
+          phoneNumber: '',
+          username: '',
+          type: 'DEPOSIT',
+          provider: 'MTN_CAM',
+          description: '',
+        });
+      } else {
+        setMakePaymentError(response.error?.message || 'Failed to make payment. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Make payment error:', error);
+      setMakePaymentError(error?.message || 'Failed to make payment. Please try again.');
+    } finally {
+      setMakePaymentLoading(false);
+    }
+  };
+
+  // Handle get payment status
+  const handleGetPaymentStatus = async () => {
+    if (!statusTransactionId.trim()) {
+      setStatusError('Transaction ID is required');
+      return;
+    }
+
+    setStatusLoading(true);
+    setStatusError(null);
+    setStatusResult(null);
+
+    try {
+      const response = await paymentsService.getPaymentStatus(statusTransactionId.trim());
+
+      if (response.success && response.data) {
+        setStatusResult(response.data);
+      } else {
+        setStatusError(response.error?.message || 'Failed to get payment status. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Get payment status error:', error);
+      setStatusError(error?.message || 'Failed to get payment status. Please try again.');
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  // Handle verify account holder active
+  const handleVerifyAccountActive = async () => {
+    if (!verifyForm.phoneNumber.trim()) {
+      setVerifyError('Phone number is required');
+      return;
+    }
+
+    setVerifyLoading(true);
+    setVerifyError(null);
+    setVerifyResult(null);
+
+    try {
+      const response = await paymentsService.verifyAccountHolderActive(
+        verifyForm.phoneNumber.trim(),
+        verifyForm.type
+      );
+
+      if (response.success && response.data) {
+        setVerifyResult({ type: 'active', ...response.data });
+      } else {
+        setVerifyError(response.error?.message || 'Failed to verify account holder. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Verify account active error:', error);
+      setVerifyError(error?.message || 'Failed to verify account holder. Please try again.');
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  // Handle verify account holder basic info
+  const handleVerifyAccountBasicInfo = async () => {
+    if (!verifyForm.phoneNumber.trim()) {
+      setVerifyError('Phone number is required');
+      return;
+    }
+
+    setVerifyLoading(true);
+    setVerifyError(null);
+    setVerifyResult(null);
+
+    try {
+      const response = await paymentsService.verifyAccountHolderBasicInfo(
+        verifyForm.phoneNumber.trim(),
+        verifyForm.type
+      );
+
+      if (response.success && response.data) {
+        setVerifyResult({ type: 'basic-info', ...response.data });
+      } else {
+        setVerifyError(response.error?.message || 'Failed to get account holder info. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Verify account basic info error:', error);
+      setVerifyError(error?.message || 'Failed to get account holder info. Please try again.');
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
 
   // Helper function to extract numeric amount from string
   const extractAmount = (amountStr: string): number => {
@@ -366,7 +555,7 @@ export default function PaymentsPage() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 flex-1">
             <div className="relative flex-1 sm:flex-initial">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <MagnifyingGlass className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search here"
@@ -385,7 +574,7 @@ export default function PaymentsPage() {
                 className={`px-4 py-1 bg-white border-2 ${selectedStatus ? 'border-green-500 bg-green-50' : 'border-gray-200'} text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all font-medium flex items-center gap-2`}
               >
                 Status {selectedStatus && `(${selectedStatus})`}
-                <ChevronDown className="w-4 h-4" />
+                <CaretDown className="w-4 h-4" />
               </button>
               {showStatusFilter && (
                 <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 shadow-lg z-10 min-w-[150px]">
@@ -441,421 +630,10 @@ export default function PaymentsPage() {
               )}
             </div>
           </div>
-          <button 
-            onClick={() => setShowCreateLink(true)}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 text-sm sm:text-base bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all transform hover:scale-105"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Create payment</span>
-            <span className="sm:hidden">Create</span>
-          </button>
         </div>
       </div>
 
-      {/* Create Link Form */}
-      {showCreateLink ? (
-        <div className="bg-white max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="mb-6 sm:mb-8">
-            <button 
-              onClick={() => {
-                setShowCreateLink(false);
-                setError(null);
-                setCreatedLink(null);
-                // Reset form when closing
-                setFormData({
-                  type: 'Fixed',
-                  currency: 'XAF',
-                  amount: '',
-                  description: '',
-                  expiryDate: '',
-                  redirectUrl: '',
-                });
-                setPaymentMethods(['MTN Mobile Money', 'Orange Money']);
-                setReusable(false);
-                setSavXAFl(false);
-              }}
-              className="flex items-center gap-2 text-sm sm:text-base text-gray-600 hover:text-gray-900 mb-3 sm:mb-4 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Payment links</span>
-            </button>
-            
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Create link</h1>
-              <div className="relative w-full sm:w-auto">
-                <select className="w-full sm:w-auto px-4 py-2 sm:py-1 text-base bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-20">
-                  <option>Codev</option>
-                </select>
-                <div className="absolute right-10 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                  <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center text-xs font-semibold text-green-700">CO</div>
-                </div>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-          </div>
-
-          {/* Type, Currency, Amount Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 sm:mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-              <div className="relative">
-                <select 
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-4 py-2 sm:py-1 text-base bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10"
-                >
-                  <option value="Fixed">Fixed Amount</option>
-                  <option value="Variable">Variable Amount</option>
-                  <option value="Subscription">Subscription</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-              <div className="relative">
-                <select 
-                  value={formData.currency}
-                  onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                  className="w-full px-4 py-2 sm:py-1 text-base bg-white border border-gray-200 text-gray-900 rounded appearance-none focus:outline-none focus:border-green-500 pr-10"
-                >
-                  <option value="XAF">XAF (Central African CFA Franc)</option>
-                  <option value="USD">USD (US Dollar)</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
-              <input
-                type="text"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                placeholder={formData.type === 'Variable' ? 'Leave empty for variable' : 'Enter amount'}
-                className="w-full px-4 py-2 sm:py-1 text-base bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
-              />
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-            <input
-              type="text"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Enter payment description"
-              className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
-            />
-          </div>
-
-          {/* Expiry Date */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Expiry date (optional)</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={formData.expiryDate}
-                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                placeholder="DD-MM-YYYY"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowCalendar(!showCalendar);
-                }}
-                className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500 pr-10 cursor-pointer"
-                readOnly
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowCalendar(!showCalendar);
-                }}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <Calendar className="w-4 h-4" />
-              </button>
-              {showCalendar && (
-                <div 
-                  className="absolute top-full left-0 mt-2 bg-white border border-gray-200 shadow-lg z-50 rounded-lg p-4"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="grid grid-cols-7 gap-1 mb-2">
-                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Su</div>
-                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Mo</div>
-                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Tu</div>
-                    <div className="text-xs font-semibold text-gray-600 text-center py-1">We</div>
-                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Th</div>
-                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Fr</div>
-                    <div className="text-xs font-semibold text-gray-600 text-center py-1">Sa</div>
-                  </div>
-                  {(() => {
-                    const today = new Date();
-                    const currentMonth = today.getMonth();
-                    const currentYear = today.getFullYear();
-                    const firstDay = new Date(currentYear, currentMonth, 1);
-                    const lastDay = new Date(currentYear, currentMonth + 1, 0);
-                    const daysInMonth = lastDay.getDate();
-                    const startingDayOfWeek = firstDay.getDay();
-                    const days = [];
-                    
-                    // Add empty cells for days before the first day of the month
-                    for (let i = 0; i < startingDayOfWeek; i++) {
-                      days.push(null);
-                    }
-                    
-                    // Add all days of the month
-                    for (let day = 1; day <= daysInMonth; day++) {
-                      days.push(day);
-                    }
-                    
-                    return (
-                      <div className="grid grid-cols-7 gap-1">
-                        {days.map((day, index) => {
-                          if (day === null) {
-                            return <div key={index} className="w-8 h-8"></div>;
-                          }
-                          const date = new Date(currentYear, currentMonth, day);
-                          const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
-                          return (
-                            <button
-                              key={index}
-                              type="button"
-                              onClick={() => handleDateSelect(date)}
-                              disabled={isPast}
-                              className={`w-8 h-8 text-sm rounded hover:bg-green-100 transition-colors ${
-                                isPast
-                                  ? 'text-gray-300 cursor-not-allowed'
-                                  : 'text-gray-900 hover:text-green-700'
-                              }`}
-                            >
-                              {day}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Redirect URL */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Redirect URL (optional)</label>
-            <input
-              type="text"
-              value={formData.redirectUrl}
-              onChange={(e) => setFormData({ ...formData, redirectUrl: e.target.value })}
-              placeholder="https://yourwebsite.com/success"
-              className="w-full px-4 py-1 bg-white border border-gray-200 text-gray-900 rounded focus:outline-none focus:border-green-500"
-            />
-          </div>
-
-          {/* Save URL Checkbox */}
-          <div className="mb-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={savXAFl}
-                onChange={(e) => setSavXAFl(e.target.checked)}
-                className="w-4 h-4 text-green-500 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
-              />
-              <span className="text-sm text-gray-700">Save URL for all future links</span>
-            </label>
-          </div>
-
-          {/* Extra Options */}
-          <div className="mb-6 border border-gray-200 rounded">
-            <button
-              onClick={() => setShowExtraOptions(!showExtraOptions)}
-              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
-            >
-              <span className="text-sm font-medium text-gray-900">Extra options</span>
-              {showExtraOptions ? (
-                <ChevronUp className="w-4 h-4 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-              )}
-            </button>
-            
-            {showExtraOptions && (
-              <div className="p-4 border-t border-gray-200">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={reusable}
-                    onChange={(e) => setReusable(e.target.checked)}
-                    className="w-4 h-4 text-green-500 border-gray-300 rounded focus:ring-green-500 focus:ring-2 mt-0.5"
-                  />
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <RotateCcw className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-900">Reusable</span>
-                    </div>
-                    <p className="text-sm text-gray-600">Create a reusable payment link that can be paid multiple times</p>
-                  </div>
-                </label>
-              </div>
-            )}
-          </div>
-
-          {/* Payment Methods */}
-          <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Payment methods</label>
-            <div className="relative">
-              <div className="border border-gray-200 rounded p-3 bg-white min-h-[48px] flex items-center gap-2 flex-wrap">
-                {paymentMethods.length > 0 ? (
-                  paymentMethods.map((method, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded text-sm text-gray-900"
-                    >
-                      <span>{method}</span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPaymentMethods(paymentMethods.filter((_, i) => i !== index));
-                        }}
-                        className="hover:text-red-600 transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <span className="text-sm text-gray-400">No payment methods selected</span>
-                )}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowPaymentMethodsDropdown(!showPaymentMethodsDropdown);
-                  }}
-                  className="ml-auto flex items-center gap-2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-              </div>
-              {showPaymentMethodsDropdown && (
-                <div 
-                  className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 shadow-lg z-50 rounded-lg overflow-hidden"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {availablePaymentMethods
-                    .filter(method => !paymentMethods.includes(method))
-                    .map((method) => (
-                      <button
-                        key={method}
-                        type="button"
-                        onClick={() => {
-                          setPaymentMethods([...paymentMethods, method]);
-                          setShowPaymentMethodsDropdown(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
-                      >
-                        {method}
-                      </button>
-                    ))}
-                  {availablePaymentMethods.filter(method => !paymentMethods.includes(method)).length === 0 && (
-                    <div className="px-4 py-2 text-sm text-gray-500">All payment methods are selected</div>
-                  )}
-                </div>
-              )}
-            </div>
-            <p className="mt-2 text-xs text-gray-500">By default, all methods are offered in your checkout.</p>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-              <button
-                onClick={() => setError(null)}
-                className="text-red-400 hover:text-red-600 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          {/* Success Message */}
-          {createdLink && (
-            <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-start gap-3 mb-3">
-                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-green-900 mb-1">Payment link created successfully!</h3>
-                  <p className="text-sm text-green-700">Your payment link has been generated.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 bg-white border border-green-200 rounded p-3">
-                <input
-                  type="text"
-                  value={createdLink}
-                  readOnly
-                  className="flex-1 text-sm text-gray-900 bg-transparent focus:outline-none"
-                />
-                <button
-                  onClick={() => copyToClipboard(createdLink)}
-                  className="px-3 py-1.5 bg-green-500 text-white text-sm font-medium rounded hover:bg-green-600 transition-colors flex items-center gap-2"
-                >
-                  <Copy className="w-4 h-4" />
-                  Copy
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={handleCreateLink}
-              disabled={isCreating}
-              className="px-6 py-1 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isCreating ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create link'
-              )}
-            </button>
-            <button 
-              onClick={() => {
-                setShowCreateLink(false);
-                setError(null);
-                setCreatedLink(null);
-                // Reset form when canceling
-                setFormData({
-                  type: 'Fixed',
-                  currency: 'XAF',
-                  amount: '',
-                  description: '',
-                  expiryDate: '',
-                  redirectUrl: '',
-                });
-                setPaymentMethods(['MTN Mobile Money', 'Orange Money']);
-                setReusable(false);
-                setSavXAFl(false);
-              }}
-              disabled={isCreating}
-              className="px-6 py-1 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <>
+      {/* Main Content */}
           {/* Payments Tab Content */}
           {activeTab === 'payments' && (() => {
             // Filter payments from API data
@@ -883,7 +661,7 @@ export default function PaymentsPage() {
             if (loading.payments) {
               return (
                 <div className="flex items-center justify-center py-20">
-                  <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+                  <Spinner className="w-8 h-8 animate-spin text-green-600" />
                 </div>
               );
             }
@@ -995,7 +773,7 @@ export default function PaymentsPage() {
                 ) : (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="w-24 h-24 mb-6 flex items-center justify-center">
-                <Search className="w-24 h-24 text-gray-300" />
+                <MagnifyingGlass className="w-24 h-24 text-gray-300" />
               </div>
                     <h2 className="text-2xl font-semibold text-gray-900 mb-3">No payments found</h2>
                     <p className="text-gray-600 mb-6 text-center max-w-md">
@@ -1012,7 +790,7 @@ export default function PaymentsPage() {
             if (loading.refunds) {
               return (
                 <div className="flex items-center justify-center py-20">
-                  <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+                  <Spinner className="w-8 h-8 animate-spin text-green-600" />
                 </div>
               );
             }
@@ -1143,7 +921,7 @@ export default function PaymentsPage() {
             if (loading.chargebacks) {
               return (
                 <div className="flex items-center justify-center py-20">
-                  <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+                  <Spinner className="w-8 h-8 animate-spin text-green-600" />
                 </div>
               );
             }
@@ -1220,7 +998,7 @@ export default function PaymentsPage() {
                               ? 'bg-green-100 text-green-700'
                               : 'bg-gray-100 text-gray-700'
                           }`}>
-                            {chargeback.status === 'open' && <AlertCircle className="w-3 h-3" />}
+                            {chargeback.status === 'open' && <WarningCircle className="w-3 h-3" />}
                             {chargeback.status}
                           </span>
                         </div>
@@ -1248,7 +1026,7 @@ export default function PaymentsPage() {
                               ? 'bg-green-100 text-green-700'
                               : 'bg-gray-100 text-gray-700'
                           }`}>
-                            {chargeback.status === 'open' && <AlertCircle className="w-3 h-3" />}
+                            {chargeback.status === 'open' && <WarningCircle className="w-3 h-3" />}
                             {chargeback.status}
                           </span>
                         </div>
@@ -1271,7 +1049,7 @@ export default function PaymentsPage() {
               {/* Chargeback Info Banner */}
                 <div className="mt-4 sm:mt-6 bg-yellow-50 border border-yellow-200 p-3 sm:p-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <WarningCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-1">About chargebacks</h4>
                     <p className="text-sm text-gray-700">
@@ -1285,12 +1063,494 @@ export default function PaymentsPage() {
             );
           })()}
 
+          {/* Make Payment Tab Content - Right Slide Modal */}
+          {activeTab === 'make-payment' && (
+            <div className="fixed inset-0 z-50 flex items-center justify-end">
+              {/* Backdrop */}
+              <div 
+                className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out"
+                onClick={() => setActiveTab('payments')}
+              />
+              {/* Modal Content */}
+              <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <CreditCard className="w-6 h-6" />
+                    Make Payment
+                  </h2>
+                  <button
+                    onClick={() => setActiveTab('payments')}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Close modal"
+                  >
+                    <X className="w-6 h-6 text-gray-500" />
+                  </button>
+                </div>
+                <div className="p-4 sm:p-6 lg:p-8">
+                  <div className="max-w-2xl mx-auto">
+                <div className="mb-6">
+                  <p className="text-gray-600">Initiate a payment transaction</p>
+                </div>
+
+                {makePaymentError && (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded flex items-center gap-2">
+                    <WarningCircle className="w-5 h-5 flex-shrink-0" />
+                    <span>{makePaymentError}</span>
+                  </div>
+                )}
+
+                {makePaymentResult && (
+                  <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                      <span className="font-semibold">Payment Initiated Successfully!</span>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <div><strong>Transaction ID:</strong> {makePaymentResult.transaction_id}</div>
+                      <div><strong>Status:</strong> {makePaymentResult.status}</div>
+                      <div><strong>Amount:</strong> {formatCurrency(makePaymentResult.amount, makePaymentResult.currency)}</div>
+                    </div>
+                  </div>
+                )}
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleMakePayment();
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Amount <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={makePaymentForm.amount}
+                      onChange={(e) => setMakePaymentForm({ ...makePaymentForm, amount: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Currency <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={makePaymentForm.currency}
+                      onChange={(e) => setMakePaymentForm({ ...makePaymentForm, currency: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      required
+                    >
+                      <option value="XAF">XAF</option>
+                      <option value="USD">USD</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={makePaymentForm.phoneNumber}
+                      onChange={(e) => setMakePaymentForm({ ...makePaymentForm, phoneNumber: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      placeholder="+237 6XX XXX XXX"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Mobile Money Username <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={makePaymentForm.username}
+                      onChange={(e) => setMakePaymentForm({ ...makePaymentForm, username: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      placeholder="e.g., johnsmith, user123, myaccount"
+                      minLength={4}
+                      maxLength={15}
+                      required
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Enter your mobile money account username (4-15 characters, letters and numbers only, lowercase, no spaces).
+                      This is the username you registered with {makePaymentForm.provider === 'MTN_CAM' ? 'MTN Mobile Money' : 'Orange Money'}.
+                    </p>
+                    <p className="mt-1 text-xs text-blue-600">
+                      <strong>Examples:</strong> johnsmith (9), user123 (7), myaccount (9), payuser01 (9)
+                    </p>
+                    <p className="mt-1 text-xs text-red-500">
+                      <strong>Note:</strong> Username will be converted to lowercase. Spaces and special characters will be automatically removed.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Payment Provider <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={makePaymentForm.provider}
+                      onChange={(e) => setMakePaymentForm({ ...makePaymentForm, provider: e.target.value as 'MTN_CAM' | 'ORANGE_CAM' })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      required
+                    >
+                      <option value="MTN_CAM">MTN Mobile Money</option>
+                      <option value="ORANGE_CAM">Orange Money</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Payment Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={makePaymentForm.type}
+                      onChange={(e) => setMakePaymentForm({ ...makePaymentForm, type: e.target.value as any })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      required
+                    >
+                      <option value="DEPOSIT">Deposit</option>
+                      <option value="COLLECTION">Collection</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea
+                      value={makePaymentForm.description}
+                      onChange={(e) => setMakePaymentForm({ ...makePaymentForm, description: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      placeholder="Optional payment description"
+                      rows={3}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={makePaymentLoading}
+                    className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                  >
+                    {makePaymentLoading ? (
+                      <>
+                        <Spinner className="w-5 h-5 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-5 h-5" />
+                        Make Payment
+                      </>
+                    )}
+                  </button>
+                </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Payment Status Tab Content - Right Slide Modal */}
+          {activeTab === 'payment-status' && (
+            <div className="fixed inset-0 z-50 flex items-center justify-end">
+              {/* Backdrop */}
+              <div 
+                className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out"
+                onClick={() => setActiveTab('payments')}
+              />
+              {/* Modal Content */}
+              <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <CheckCircle className="w-6 h-6" />
+                    Payment Status
+                  </h2>
+                  <button
+                    onClick={() => setActiveTab('payments')}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Close modal"
+                  >
+                    <X className="w-6 h-6 text-gray-500" />
+                  </button>
+                </div>
+                <div className="p-4 sm:p-6 lg:p-8">
+                  <div className="max-w-2xl mx-auto">
+                <div className="mb-6">
+                  <p className="text-gray-600">Check the status of a payment transaction</p>
+                </div>
+
+                {statusError && (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded flex items-center gap-2">
+                    <WarningCircle className="w-5 h-5 flex-shrink-0" />
+                    <span>{statusError}</span>
+                  </div>
+                )}
+
+                {statusResult && (
+                  <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="font-semibold text-green-900">Payment Status</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-gray-600">Transaction ID:</span>
+                          <p className="font-mono text-gray-900">{statusResult.transaction_id}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Status:</span>
+                          <p className={`font-semibold ${
+                            statusResult.status === 'paid' || statusResult.status === 'success'
+                              ? 'text-green-600'
+                              : statusResult.status === 'pending'
+                              ? 'text-yellow-600'
+                              : 'text-red-600'
+                          }`}>
+                            {statusResult.status}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Amount:</span>
+                          <p className="font-semibold text-gray-900">{formatCurrency(statusResult.amount, statusResult.currency)}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Currency:</span>
+                          <p className="text-gray-900">{statusResult.currency}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleGetPaymentStatus();
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Transaction ID <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={statusTransactionId}
+                      onChange={(e) => setStatusTransactionId(e.target.value)}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      placeholder="Enter transaction ID"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={statusLoading}
+                    className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                  >
+                    {statusLoading ? (
+                      <>
+                        <Spinner className="w-5 h-5 animate-spin" />
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5" />
+                        Check Status
+                      </>
+                    )}
+                  </button>
+                </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Verify Account Tab Content - Right Slide Modal */}
+          {activeTab === 'verify-account' && (
+            <div className="fixed inset-0 z-50 flex items-center justify-end">
+              {/* Backdrop */}
+              <div 
+                className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out"
+                onClick={() => setActiveTab('payments')}
+              />
+              {/* Modal Content */}
+              <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <UserCheck className="w-6 h-6" />
+                    Verify Account Holder
+                  </h2>
+                  <button
+                    onClick={() => setActiveTab('payments')}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Close modal"
+                  >
+                    <X className="w-6 h-6 text-gray-500" />
+                  </button>
+                </div>
+                <div className="p-4 sm:p-6 lg:p-8">
+                  <div className="max-w-2xl mx-auto">
+                <div className="mb-6">
+                  <p className="text-gray-600">Verify account holder status and get basic information</p>
+                </div>
+
+                <div className="mb-6 flex gap-2 border-b border-gray-200">
+                  <button
+                    onClick={() => {
+                      setVerifyType('active');
+                      setVerifyResult(null);
+                      setVerifyError(null);
+                    }}
+                    className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                      verifyType === 'active'
+                        ? 'border-green-500 text-green-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Verify Active Status
+                  </button>
+                  <button
+                    onClick={() => {
+                      setVerifyType('basic-info');
+                      setVerifyResult(null);
+                      setVerifyError(null);
+                    }}
+                    className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                      verifyType === 'basic-info'
+                        ? 'border-green-500 text-green-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Get Basic Info
+                  </button>
+                </div>
+
+                {verifyError && (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded flex items-center gap-2">
+                    <WarningCircle className="w-5 h-5 flex-shrink-0" />
+                    <span>{verifyError}</span>
+                  </div>
+                )}
+
+                {verifyResult && (
+                  <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="font-semibold text-green-900">
+                        {verifyResult.type === 'active' ? 'Account Status' : 'Account Information'}
+                      </span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      {verifyResult.type === 'active' ? (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-gray-600">Phone Number:</span>
+                            <p className="font-mono text-gray-900">{verifyResult.phoneNumber}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Status:</span>
+                            <p className={`font-semibold ${
+                              verifyResult.isActive ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {verifyResult.isActive ? 'Active' : 'Inactive'}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-gray-600">Name:</span>
+                            <p className="font-semibold text-gray-900">{verifyResult.name || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Phone Number:</span>
+                            <p className="font-mono text-gray-900">{verifyResult.phoneNumber}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (verifyType === 'active') {
+                      handleVerifyAccountActive();
+                    } else {
+                      handleVerifyAccountBasicInfo();
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={verifyForm.phoneNumber}
+                      onChange={(e) => setVerifyForm({ ...verifyForm, phoneNumber: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      placeholder="+237 6XX XXX XXX"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Payment Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={verifyForm.type}
+                      onChange={(e) => setVerifyForm({ ...verifyForm, type: e.target.value as any })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      required
+                    >
+                      <option value="DEPOSIT">Deposit</option>
+                      <option value="COLLECTION">Collection</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={verifyLoading}
+                    className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                  >
+                    {verifyLoading ? (
+                      <>
+                        <Spinner className="w-5 h-5 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      <>
+                        <UserCheck className="w-5 h-5" />
+                        {verifyType === 'active' ? 'Verify Active Status' : 'Get Basic Info'}
+                      </>
+                    )}
+                  </button>
+                </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Orders Tab Content */}
           {activeTab === 'orders' && (() => {
             if (loading.orders) {
               return (
                 <div className="flex items-center justify-center py-20">
-                  <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+                  <Spinner className="w-8 h-8 animate-spin text-green-600" />
                 </div>
               );
             }
@@ -1299,8 +1559,8 @@ export default function PaymentsPage() {
             const filteredOrders = orders.filter(order => {
               const matchesSearch = !searchQuery || 
                 order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                order.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                order.customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (order.customer?.name && order.customer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (order.customer?.email && order.customer.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 order.amount.toString().includes(searchQuery);
               const matchesStatus = !selectedStatus || order.status === selectedStatus.toLowerCase();
               return matchesSearch && matchesStatus;
@@ -1436,8 +1696,6 @@ export default function PaymentsPage() {
               </div>
             );
           })()}
-        </>
-      )}
 
       {/* Payment Detail Modal */}
       {selectedItem && (

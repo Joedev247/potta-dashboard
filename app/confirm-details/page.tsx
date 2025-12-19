@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronDown } from 'lucide-react';
+import { ArrowLeft, CaretDown } from '@phosphor-icons/react';
 import { useOrganization } from '@/contexts/OrganizationContext';
 
 export default function ConfirmDetailsPage() {
@@ -147,7 +147,7 @@ export default function ConfirmDetailsPage() {
               <span className={formData.legalForm ? 'text-gray-900' : 'text-gray-400'}>
                 {formData.legalForm || 'Please select the legal form'}
               </span>
-              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showLegalFormDropdown ? 'rotate-180' : ''}`} />
+              <CaretDown className={`w-5 h-5 text-gray-400 transition-transform ${showLegalFormDropdown ? 'rotate-180' : ''}`} />
             </button>
             {showLegalFormDropdown && (
               <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 max-h-60 overflow-y-auto">
@@ -215,7 +215,7 @@ export default function ConfirmDetailsPage() {
                 <span className={formData.region ? 'text-gray-900' : 'text-gray-400'}>
                   {formData.region || 'Select region'}
                 </span>
-                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showRegionDropdown ? 'rotate-180' : ''}`} />
+                <CaretDown className={`w-5 h-5 text-gray-400 transition-transform ${showRegionDropdown ? 'rotate-180' : ''}`} />
               </button>
               {showRegionDropdown && (
                 <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 max-h-60 overflow-y-auto">

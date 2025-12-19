@@ -1,16 +1,212 @@
-'use client';
+"use client";
 
-import { Users, FileText, TrendingUp, Building, Sparkles, ArrowRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Users, FileText, TrendUp, Building, Sparkle, ArrowRight } from '@phosphor-icons/react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import OnboardingSummary from '@/components/OnboardingSummary';
+import { onboardingService } from '@/lib/api/onboarding';
+import { balanceService } from '@/lib/api/balance';
+import { ordersService } from '@/lib/api/orders';
 
 export default function GetStartedPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { organization } = useOrganization();
+  const [onboardingLoading, setOnboardingLoading] = useState(true);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [progressData, setProgressData] = useState<any>(null);
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState(0);
+  const [paymentsToday, setPaymentsToday] = useState(0);
   
   const userName = user?.firstName 
     ? `${user.firstName.toUpperCase()}${user.lastName ? ' ' + user.lastName.toUpperCase() : ''}` 
     : user?.username?.toUpperCase() || 'USER';
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      try {
+        const res = await onboardingService.getProgress();
+        console.log('Onboarding progress response:', res);
+        
+        if (!mounted) return;
+        
+        if (res && res.success && res.data) {
+          console.log('Onboarding data:', res.data);
+          setProgressData(res.data);
+          // If backend says onboarding is complete, use it. If backend says incomplete,
+          // allow a client-side completed state (saved in localStorage) to override so
+          // users immediately see the completed UI after finishing onboarding.
+          if (res.data.isComplete) {
+            setOnboardingComplete(true);
+          } else {
+            const stored = typeof window !== 'undefined' ? localStorage.getItem('onboardingProgress') : null;
+            if (stored) {
+              try {
+                const parsed = JSON.parse(stored);
+                if (parsed && parsed.isComplete) {
+                  console.debug('onboarding: overriding API with localStorage completed state', parsed);
+                  setProgressData(parsed);
+                  setOnboardingComplete(true);
+                } else {
+                  setOnboardingComplete(false);
+                }
+              } catch (e) {
+                setOnboardingComplete(false);
+              }
+            } else {
+              setOnboardingComplete(false);
+            }
+          }
+        } else {
+          // Fallback: check localStorage for onboarding completion flag
+            const stored = typeof window !== 'undefined' ? localStorage.getItem('onboardingProgress') : null;
+            if (stored) {
+              try {
+                const parsed = JSON.parse(stored);
+                setProgressData(parsed);
+                setOnboardingComplete(Boolean(parsed.isComplete));
+                console.debug('onboarding: loaded from localStorage fallback', parsed);
+              } catch (e) {
+                setProgressData(null);
+                setOnboardingComplete(false);
+              }
+            } else {
+              setProgressData(null);
+              setOnboardingComplete(false);
+            }
+        }
+      } catch (err) {
+        console.error('Failed to fetch onboarding progress:', err);
+        // Fallback to localStorage
+          const stored = typeof window !== 'undefined' ? localStorage.getItem('onboardingProgress') : null;
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              setProgressData(parsed);
+              setOnboardingComplete(Boolean(parsed.isComplete));
+              console.debug('onboarding: loaded from localStorage after error', parsed);
+            } catch (e) {
+              setProgressData(null);
+              setOnboardingComplete(false);
+            }
+          } else {
+            setProgressData(null);
+            setOnboardingComplete(false);
+          }
+      } finally {
+        if (mounted) setOnboardingLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, []);
+
+  // Fetch balance and transactions data when onboarding is complete
+  useEffect(() => {
+    if (!onboardingComplete) return;
+
+    let mounted = true;
+
+    async function fetchLiveData() {
+      try {
+        // Fetch balance
+        try {
+          const balanceRes = await balanceService.getBalance();
+          if (mounted && balanceRes && balanceRes.data) {
+            setBalance(balanceRes.data.available || 0);
+          }
+        } catch (e) {
+          console.warn('Failed to fetch balance:', e);
+        }
+
+        // Fetch total transactions
+        try {
+          const ordersRes = await ordersService.listOrders();
+          if (mounted && ordersRes && ordersRes.data && Array.isArray(ordersRes.data.orders)) {
+            setTransactions(ordersRes.data.orders.length || 0);
+            // Count payments processed today (rough estimate)
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            const todayPayments = ordersRes.data.orders.filter((order: any) => {
+              return order.createdAt && order.createdAt.startsWith(todayStr);
+            }).length;
+            setPaymentsToday(todayPayments);
+          }
+        } catch (e) {
+          console.warn('Failed to fetch transactions:', e);
+        }
+      } catch (err) {
+        console.error('Failed to fetch live data:', err);
+      }
+    }
+
+    fetchLiveData();
+    return () => { mounted = false; };
+  }, [onboardingComplete]);
+
+  // While we are loading onboarding state, avoid showing the old Get Started UI to prevent flicker
+  if (onboardingLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="animate-pulse">
+          <div className="h-6 w-56 bg-gray-200  mb-2" />
+          <div className="h-4 w-40 bg-gray-200 " />
+        </div>
+      </div>
+    );
+  }
+
+  // If onboarding completed, show the improved summary UI instead of the original Get Started page
+  if (onboardingComplete) {
+    return (
+      <div className="p-6 sm:p-8 lg:p-10 min-h-screen bg-gradient-to-br from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">Welcome back, {userName}!</h1>
+            <p className="text-sm text-gray-600 mt-1">Your organization has completed onboarding — here is the summary.</p>
+          </div>
+          <OnboardingSummary
+            completedSteps={
+              // Transform API response: if steps array exists, extract completed step keys
+              // API returns steps like [{step_name: 'STAKEHOLDER_INFO', completed: true}, ...]
+              Array.isArray(progressData?.steps) 
+                ? progressData.steps
+                    .filter((s: any) => s.completed)
+                    .map((s: any) => {
+                      // Map API step_name to component keys
+                      const stepNameMap: Record<string, string> = {
+                        'STAKEHOLDER_INFO': 'stakeholder',
+                        'BUSINESS_ACTIVITY': 'business',
+                        'PAYMENT_METHODS': 'methods',
+                        'ID_DOCUMENT': 'id',
+                        'ORGANIZATION': 'organization',
+                      };
+                      return stepNameMap[s.step_name] || s.step_name?.toLowerCase();
+                    })
+                    .filter(Boolean)
+                : Array.isArray(progressData?.completedSteps) 
+                  ? progressData.completedSteps 
+                  : []
+            }
+            currentStep={progressData?.currentStep}
+            isComplete={Boolean(progressData?.isComplete)}
+            progressPercentage={progressData?.progress ?? progressData?.progressPercentage ?? 100}
+            orgName={organization?.name || progressData?.organizationName || 'Your Organization'}
+            stats={{
+              balance: balance,
+              paymentsToday: paymentsToday,
+              transactions: transactions,
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Welcome Section */}
@@ -91,7 +287,7 @@ export default function GetStartedPage() {
           <div>
             <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                <TrendUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Onboarding Progress</h3>
             </div>
@@ -134,7 +330,7 @@ export default function GetStartedPage() {
           <div className="group flex items-center justify-between p-3 bg-white border-2 border-gray-200 hover:border-green-400 transition-all duration-300">
             <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-green-50 transition-all">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 group-hover:text-green-700 transition-colors" />
+                <TrendUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 group-hover:text-green-700 transition-colors" />
               </div>
               <span className="text-sm sm:text-base text-gray-900 font-semibold truncate">Payment Methods</span>
             </div>

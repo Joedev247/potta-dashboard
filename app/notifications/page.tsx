@@ -4,13 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   Bell, 
   CheckCircle, 
-  AlertCircle, 
+  WarningCircle, 
   Info, 
   X,
-  Filter,
-  Search,
-  Loader2
-} from 'lucide-react';
+  Funnel,
+  MagnifyingGlass,
+  Spinner
+} from '@phosphor-icons/react';
 import Link from 'next/link';
 import { notificationsService } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils/format';
@@ -108,9 +108,9 @@ export default function NotificationsPage() {
       case 'success':
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case 'warning':
-        return <AlertCircle className="w-5 h-5 text-yellow-600" />;
+        return <WarningCircle className="w-5 h-5 text-yellow-600" />;
       case 'error':
-        return <AlertCircle className="w-5 h-5 text-red-600" />;
+        return <WarningCircle className="w-5 h-5 text-red-600" />;
       default:
         return <Info className="w-5 h-5 text-blue-600" />;
     }
@@ -187,7 +187,7 @@ export default function NotificationsPage() {
         {/* Filters and Search */}
         <div className="mb-6 flex gap-4 items-center">
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <MagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search notifications..."
@@ -207,7 +207,7 @@ export default function NotificationsPage() {
             >
               All
             </button>
-            <button
+              <button
               onClick={() => setFilter('unread')}
               className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
                 filter === 'unread'
@@ -215,7 +215,7 @@ export default function NotificationsPage() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <Filter className="w-4 h-4" />
+              <Funnel className="w-4 h-4" />
               Unread
               {unreadCount > 0 && (
                 <span className="px-2 py-0.5 bg-white text-green-600 text-xs font-semibold rounded-full">
@@ -230,7 +230,7 @@ export default function NotificationsPage() {
         <div className="bg-white border-2 border-gray-200">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+              <Spinner className="w-8 h-8 animate-spin text-green-600" />
             </div>
           ) : filteredNotifications.length === 0 ? (
             <div className="p-12 text-center">

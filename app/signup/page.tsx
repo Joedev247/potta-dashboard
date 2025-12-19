@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Mail, Eye, EyeOff } from 'lucide-react';
+import { User, Envelope, Eye, EyeSlash } from '@phosphor-icons/react';
 import Link from 'next/link';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signup, sendOTP } = useAuth();
+  const { signup, resendVerificationEmail } = useAuth();
   const [formData, setFormData] = useState({
     username: 'john_doe',
     firstName: 'John',
@@ -43,9 +43,17 @@ export default function SignupPage() {
       });
 
       if (success) {
-        // Send OTP
-        await sendOTP(formData.email);
-        router.push('/verify-email');
+        // Ask backend to send verification email that includes our callback URL
+        const callback = '/onboarding';
+        try {
+          await resendVerificationEmail(formData.email, callback);
+        } catch (e) {
+          // If sending the email fails, still redirect to the verify page so user can retry
+          console.error('Failed to send verification email:', e);
+        }
+
+        // Redirect to verify-email page (shows verifying / waiting UI)
+        router.push(`/verify-email?callbackURL=${encodeURIComponent(callback)}`);
       } else {
         setError('An account with this email or username already exists');
       }
@@ -140,7 +148,7 @@ export default function SignupPage() {
                   required
                   className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
                 />
-                <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
+                <Envelope className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
               </div>
             </div>
 
@@ -164,7 +172,7 @@ export default function SignupPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green-500 transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeSlash className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Upload, X, Check } from 'lucide-react';
+import { FileText, Upload, X, Check } from '@phosphor-icons/react';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { onboardingService } from '@/lib/api';
 
 interface IDDocumentProps {
   onNext: () => void;
@@ -9,10 +11,13 @@ interface IDDocumentProps {
 }
 
 export default function IDDocument({ onNext, onPrevious }: IDDocumentProps) {
+  const { organization } = useOrganization();
   const [documentType, setDocumentType] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [backFile, setBackFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -52,16 +57,86 @@ export default function IDDocument({ onNext, onPrevious }: IDDocumentProps) {
     setBackFile(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (documentType === 'National ID') {
-      if (frontFile && backFile) {
-        onNext();
+    
+    if (!isFormValid()) {
+      setError('Please select a document type and upload the required files.');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+
+    try {
+      // Organization is REQUIRED for onboarding according to backend API
+      const organizationId = (organization as any)?.id || localStorage.getItem('currentOrganizationId');
+      
+      if (!organizationId) {
+        setError('Organization is required for onboarding. Please create an organization first.');
+        setLoading(false);
+        return;
       }
-    } else {
-      if (uploadedFile) {
-        onNext();
+
+      // Map document type to API format
+      const documentTypeMap: Record<string, string> = {
+        'Passport': 'PASSPORT',
+        'Driver\'s License': 'ID_CARD',
+        'National ID': 'ID_CARD',
+      };
+
+      const apiDocumentType = documentTypeMap[documentType] || 'OTHER';
+      
+      // For National ID, we need to upload both files
+      // For now, upload the front file (or single file for passport/license)
+      const fileToUpload = documentType === 'National ID' ? frontFile : uploadedFile;
+      
+      if (!fileToUpload) {
+        setError('Please upload a document.');
+        setLoading(false);
+        return;
       }
+
+      const formData = new FormData();
+      formData.append('file', fileToUpload);
+      formData.append('documentType', apiDocumentType);
+
+      // If National ID, also upload back file
+      if (documentType === 'National ID' && backFile) {
+        // For now, upload front file. Back file can be uploaded separately if needed
+        // or we can create a second upload
+      }
+
+      const response = await onboardingService.uploadDocument(formData, organizationId);
+      
+      if (response.success) {
+        // If National ID and back file exists, upload it too
+        if (documentType === 'National ID' && backFile) {
+          const backFormData = new FormData();
+          backFormData.append('file', backFile);
+          backFormData.append('documentType', 'ID_CARD');
+          await onboardingService.uploadDocument(backFormData, organizationId);
+        }
+        
+        onNext();
+      } else {
+        // Check if error is about missing organization
+        const errorMessage = response.error?.message || 'Failed to upload document. Please try again.';
+        if (errorMessage.includes('Organization is required') || errorMessage.includes('organization')) {
+          setError('Organization is required for onboarding. Please go back and create an organization first.');
+        } else {
+          setError(errorMessage);
+        }
+      }
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to upload document. Please try again.';
+      if (errorMessage.includes('Organization is required') || errorMessage.includes('organization')) {
+        setError('Organization is required for onboarding. Please go back and create an organization first.');
+      } else {
+        setError(errorMessage);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -268,20 +343,27 @@ export default function IDDocument({ onNext, onPrevious }: IDDocumentProps) {
           </p>
         </div>
 
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+            {error}
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={onPrevious}
-            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            disabled={loading}
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             Previous
           </button>
           <button
             type="submit"
-            disabled={!isFormValid()}
+            disabled={!isFormValid() || loading}
             className="w-full sm:w-auto px-4 py-2.5 sm:py-1 text-base bg-green-500 text-white font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Continue
+            {loading ? 'Uploading...' : 'Continue'}
           </button>
         </div>
       </form>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, UserPlus, Mail, User, CheckCircle2, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, UserPlus, Envelope, User, CheckCircle, X, Spinner } from '@phosphor-icons/react';
 import { useOrganization } from '@/contexts/OrganizationContext';
 
 interface TeamMember {
@@ -52,8 +52,13 @@ export default function AddTeamMemberPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
 
+      // Use crypto.randomUUID if available, otherwise use a timestamp-based ID
+      const memberId = typeof crypto !== 'undefined' && crypto.randomUUID 
+        ? crypto.randomUUID() 
+        : `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
       const newMember: TeamMember = {
-        id: `member_${Date.now()}`,
+        id: memberId,
         email,
         role,
         status: 'pending',
@@ -113,7 +118,7 @@ export default function AddTeamMemberPage() {
             
             {success && (
               <div className="mb-4 bg-green-50 border border-green-200 p-4 flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm text-green-800 font-medium">Invitation sent!</p>
                   <p className="text-xs text-green-700 mt-1">An email invitation has been sent to the team member.</p>
@@ -142,7 +147,7 @@ export default function AddTeamMemberPage() {
                   Email Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Envelope className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="email"
                     value={email}
@@ -181,7 +186,7 @@ export default function AddTeamMemberPage() {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Spinner className="w-4 h-4 animate-spin" />
                     Sending...
                   </>
                 ) : (
@@ -197,7 +202,7 @@ export default function AddTeamMemberPage() {
 
         {/* Team Members List */}
         <div className="lg:col-span-2">
-          <div className="bg-white border-2 border-gray-200">
+          <div className="bg-white border-2 py-6 border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-bold text-gray-900">
                 Team Members ({teamMembers.length})

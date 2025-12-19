@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
-import TestModeBanner from '@/components/TestModeBanner';
 import ProtectedRoute from './ProtectedRoute';
 import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
 
@@ -21,7 +20,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           <main className="pt-16 min-h-screen">
             {children}
           </main>
-          <TestModeBanner />
         </div>
       </div>
     </ProtectedRoute>
@@ -31,6 +29,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isPublicRoute = publicRoutes.includes(pathname);
+  const isAdminRoute = pathname?.startsWith('/admin');
+
+  // Don't wrap admin routes with user dashboard layout
+  if (isAdminRoute) {
+    return <>{children}</>;
+  }
 
   if (isPublicRoute) {
     return <>{children}</>;

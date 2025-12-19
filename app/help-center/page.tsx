@@ -2,17 +2,17 @@
 
 import { useState, useMemo } from 'react';
 import { 
-  HelpCircle, 
-  Search, 
+  Question, 
+  MagnifyingGlass, 
   BookOpen, 
-  MessageSquare, 
+  ChatCircle, 
   FileText, 
-  Video, 
-  ChevronRight,
-  ChevronDown,
-  ExternalLink,
+  Play, 
+  CaretRight,
+  CaretDown,
+  ArrowSquareOut,
   X
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import Link from 'next/link';
 
 interface Article {
@@ -48,7 +48,7 @@ export default function HelpCenterPage() {
     },
     {
       title: 'Account Management',
-      icon: MessageSquare,
+      icon: ChatCircle,
       articles: [
         'Updating your profile',
         'Managing team members',
@@ -58,7 +58,7 @@ export default function HelpCenterPage() {
     },
     {
       title: 'Video Tutorials',
-      icon: Video,
+      icon: Play,
       articles: [
         'Platform overview',
         'Payment setup walkthrough',
@@ -356,7 +356,7 @@ For detailed API documentation, check out the API reference in Browse > API Keys
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-              <HelpCircle className="w-6 h-6 text-white" />
+              <Question className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-4xl font-bold text-gray-900">Help Center</h1>
           </div>
@@ -365,7 +365,7 @@ For detailed API documentation, check out the API reference in Browse > API Keys
         {/* Search Bar */}
         <div className="mb-8">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <MagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search for help articles..."
@@ -407,9 +407,9 @@ For detailed API documentation, check out the API reference in Browse > API Keys
                     >
                       <span className="font-medium text-gray-900 pr-4">{article.question}</span>
                       {isExpanded ? (
-                        <ChevronDown className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <CaretDown className="w-5 h-5 text-green-600 flex-shrink-0" />
                       ) : (
-                        <ChevronRight className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <CaretRight className="w-5 h-5 text-green-600 flex-shrink-0" />
                       )}
                     </button>
                     {isExpanded && (
@@ -473,7 +473,7 @@ For detailed API documentation, check out the API reference in Browse > API Keys
         {/* Contact Support */}
         <div className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-100 p-8">
           <div className="flex items-center gap-3 mb-4">
-            <MessageSquare className="w-6 h-6 text-green-600" />
+            <ChatCircle className="w-6 h-6 text-green-600" />
             <h3 className="text-xl font-bold text-gray-900">Still need help?</h3>
           </div>
           <p className="text-gray-600 mb-4">
@@ -484,7 +484,7 @@ For detailed API documentation, check out the API reference in Browse > API Keys
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all"
           >
             Contact Support
-            <ExternalLink className="w-4 h-4" />
+            <ArrowSquareOut className="w-4 h-4" />
           </Link>
         </div>
       </div>

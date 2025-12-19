@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Eye, EyeOff, Copy, Info, RefreshCw, Plus, Trash2, ExternalLink, Search, Filter, Calendar, CheckCircle2, XCircle, Clock, Globe, X, Edit, AlertCircle, Loader2 } from 'lucide-react';
+import { Eye, EyeSlash, Copy, Info, ArrowClockwise, Plus, Trash, ArrowSquareOut, MagnifyingGlass, Funnel, Calendar, CheckCircle, XCircle, Clock, Globe, X, PencilSimple, WarningCircle, Spinner } from '@phosphor-icons/react';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { browseService } from '@/lib/api';
+import { browseService, applicationsService, type Application } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/lib/utils/format';
 
 export default function BrowsePage() {
@@ -56,14 +56,23 @@ export default function BrowsePage() {
   
   // Your Apps states
   const [showCreateApp, setShowCreateApp] = useState(false);
-  const [editingApp, setEditingApp] = useState<any>(null);
-  const [apps, setApps] = useState<any[]>([]);
+  const [editingApp, setEditingApp] = useState<Application | null>(null);
+  const [apps, setApps] = useState<Application[]>([]);
   const [appsLoading, setAppsLoading] = useState(false);
-  const [appFormData, setAppFormData] = useState({ name: '', description: '', redirectUri: '' });
+  const [appFormData, setAppFormData] = useState({ 
+    name: '', 
+    description: '', 
+    environment: 'DEVELOPMENT' as 'DEVELOPMENT' | 'STAGING' | 'PRODUCTION',
+    webhookUrl: '',
+    defaultCurrency: ''
+  });
   const [appLoading, setAppLoading] = useState(false);
   const [appSuccess, setAppSuccess] = useState('');
   const [appError, setAppError] = useState('');
   const [showDeleteAppConfirm, setShowDeleteAppConfirm] = useState<string | null>(null);
+  const [showApiSecret, setShowApiSecret] = useState<string | null>(null);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState<string | null>(null);
+  const [apiSecretStore, setApiSecretStore] = useState<Record<string, string>>({});
 
   const tabs = [
     { id: 'api-keys', label: 'API keys' },
@@ -174,16 +183,17 @@ export default function BrowsePage() {
   const fetchApps = useCallback(async () => {
     setAppsLoading(true);
     try {
-      const response = await browseService.getApps();
+      const params = organization?.id ? { organization_id: organization.id } : undefined;
+      const response = await applicationsService.listApplications(params);
       if (response.success && response.data) {
-        setApps(response.data.apps || []);
+        setApps(response.data.applications || []);
       }
     } catch (error) {
       console.error('Error fetching apps:', error);
     } finally {
       setAppsLoading(false);
     }
-  }, []);
+  }, [organization]);
 
   // Fetch data on mount and tab change
   useEffect(() => {
@@ -387,34 +397,63 @@ export default function BrowsePage() {
     setAppError('');
     setAppSuccess('');
     
-    if (!appFormData.name.trim() || !appFormData.redirectUri.trim()) {
-      setAppError('Name and redirect URI are required.');
+    if (!appFormData.name.trim()) {
+      setAppError('Name is required.');
       setAppLoading(false);
       return;
     }
 
     try {
+      const appData = {
+        name: appFormData.name,
+        description: appFormData.description || undefined,
+        environment: appFormData.environment,
+        organization_id: organization?.id,
+        config: {
+          webhook_url: appFormData.webhookUrl || undefined,
+          default_currency: appFormData.defaultCurrency || undefined,
+        },
+      };
+
       const response = editingApp
-        ? await browseService.updateApp(editingApp.id, {
-            name: appFormData.name,
-            description: appFormData.description || undefined,
-            redirectUri: appFormData.redirectUri,
-          })
-        : await browseService.createApp({
-            name: appFormData.name,
-            description: appFormData.description || undefined,
-            redirectUri: appFormData.redirectUri,
-          });
+        ? await applicationsService.updateApplication(
+            editingApp.id,
+            {
+              name: appFormData.name,
+              description: appFormData.description || undefined,
+              environment: appFormData.environment,
+              config: {
+                webhook_url: appFormData.webhookUrl || undefined,
+                default_currency: appFormData.defaultCurrency || undefined,
+              },
+            },
+            organization?.id
+          )
+        : await applicationsService.createApplication(appData);
       
-      if (response.success) {
+      if (response.success && response.data) {
+        const app = response.data;
         setAppSuccess(editingApp ? 'App updated successfully!' : 'App created successfully!');
+        
+        // If new app and has api_secret, store it and show it
+        if (!editingApp && app.api_secret) {
+          setApiSecretStore(prev => ({ ...prev, [app.id]: app.api_secret! }));
+          setShowApiSecret(app.id);
+        }
+        
         await fetchApps();
-        setAppFormData({ name: '', description: '', redirectUri: '' });
+        setAppFormData({ 
+          name: '', 
+          description: '', 
+          environment: 'DEVELOPMENT',
+          webhookUrl: '',
+          defaultCurrency: ''
+        });
         setTimeout(() => {
           setShowCreateApp(false);
           setAppSuccess('');
           setEditingApp(null);
-        }, 2000);
+        }, editingApp ? 2000 : 5000); // Longer timeout for new apps to show secret
       } else {
         setAppError(response.error?.message || 'Failed to save app. Please try again.');
       }
@@ -426,8 +465,6 @@ export default function BrowsePage() {
     }
   };
 
-  // handleUpdateApp is now handled in handleCreateApp (combined logic)
-
   const handleDeleteApp = async (appId: string) => {
     setShowDeleteAppConfirm(appId);
   };
@@ -437,19 +474,60 @@ export default function BrowsePage() {
     const appId = showDeleteAppConfirm;
     setShowDeleteAppConfirm(null);
     try {
-      const response = await browseService.deleteApp(appId);
+      const response = await applicationsService.deleteApplication(appId, organization?.id);
       if (response.success) {
         await fetchApps();
+      } else {
+        setAppError(response.error?.message || 'Failed to delete app.');
       }
     } catch (error) {
       console.error('Failed to delete app:', error);
+      setAppError('Failed to delete app. Please try again.');
     }
   };
 
-  const handleEditApp = (app: any) => {
+  const handleEditApp = (app: Application) => {
     setEditingApp(app);
-    setAppFormData({ name: app.name, description: app.description, redirectUri: app.redirectUri });
+    setAppFormData({ 
+      name: app.name, 
+      description: app.description || '', 
+      environment: app.environment,
+      webhookUrl: app.config?.webhook_url || '',
+      defaultCurrency: app.config?.default_currency || ''
+    });
     setShowCreateApp(true);
+  };
+
+  const handleRegenerateCredentials = async (appId: string) => {
+    setShowRegenerateConfirm(appId);
+  };
+
+  const confirmRegenerateCredentials = async () => {
+    if (!showRegenerateConfirm) return;
+    const appId = showRegenerateConfirm;
+    setShowRegenerateConfirm(null);
+    setAppLoading(true);
+    setAppError('');
+    try {
+      const response = await applicationsService.regenerateCredentials(appId, organization?.id);
+      if (response.success && response.data) {
+        const app = response.data;
+        if (app.api_secret) {
+          setApiSecretStore(prev => ({ ...prev, [app.id]: app.api_secret! }));
+          setShowApiSecret(app.id);
+        }
+        setAppSuccess('API credentials regenerated successfully!');
+        await fetchApps();
+        setTimeout(() => setAppSuccess(''), 5000);
+      } else {
+        setAppError(response.error?.message || 'Failed to regenerate credentials.');
+      }
+    } catch (error) {
+      console.error('Failed to regenerate credentials:', error);
+      setAppError('Failed to regenerate credentials. Please try again.');
+    } finally {
+      setAppLoading(false);
+    }
   };
 
   // Close dropdowns on outside click
@@ -511,7 +589,7 @@ export default function BrowsePage() {
       {activeTab === 'api-keys' && (
         apiKeysLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+            <Spinner className="w-8 h-8 animate-spin text-green-600" />
           </div>
         ) : (
         <>
@@ -552,7 +630,7 @@ export default function BrowsePage() {
                       onClick={() => setShowLiveKey(!showLiveKey)}
                       className="p-2 text-gray-600 hover:text-gray-900 transition-colors flex-shrink-0"
                     >
-                      {showLiveKey ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+                      {showLiveKey ? <EyeSlash className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
                     </button>
                     <button
                       onClick={() => handleCopy(apiKeys.liveApiKey, 'live')}
@@ -565,7 +643,7 @@ export default function BrowsePage() {
                       onClick={() => setShowResetConfirm('live')}
                       className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-white border border-gray-200 text-red-600 font-medium hover:bg-red-50 transition-colors flex items-center gap-1 sm:gap-2"
                     >
-                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <ArrowClockwise className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span className="hidden sm:inline">Reset</span>
                     </button>
                   </div>
@@ -594,7 +672,7 @@ export default function BrowsePage() {
                       onClick={() => setShowResetConfirm('test')}
                       className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-white border border-gray-200 text-red-600 font-medium hover:bg-red-50 transition-colors flex items-center gap-1 sm:gap-2"
                     >
-                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <ArrowClockwise className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span className="hidden sm:inline">Reset</span>
                     </button>
                   </div>
@@ -628,7 +706,7 @@ export default function BrowsePage() {
       {/* Reset API Key Confirmation Modal */}
       {showResetConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full">
+          <div className="bg-white  p-4 sm:p-6 max-w-md w-full">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Reset API Key</h3>
             <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               Are you sure you want to reset your {showResetConfirm === 'live' ? 'live' : 'test'} API key? This action cannot be undone and will invalidate the current key.
@@ -751,7 +829,7 @@ export default function BrowsePage() {
       {/* Create Token Modal */}
       {showCreateToken && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white  p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Create Access Token</h3>
               <button
@@ -824,7 +902,7 @@ export default function BrowsePage() {
               >
                 {tokenLoading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <ArrowClockwise className="w-4 h-4 animate-spin" />
                     Creating...
                   </>
                 ) : (
@@ -839,7 +917,7 @@ export default function BrowsePage() {
       {/* View Token Modal */}
       {selectedToken && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white  p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Token Details</h3>
               <button
@@ -1003,7 +1081,7 @@ export default function BrowsePage() {
       {/* Webhook Modal */}
       {showWebhookModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white  p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
                 {editingWebhook ? 'Edit Webhook' : 'Add Webhook'}
@@ -1088,7 +1166,7 @@ export default function BrowsePage() {
               >
                 {webhookLoading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <ArrowClockwise className="w-4 h-4 animate-spin" />
                     {editingWebhook ? 'Updating...' : 'Creating...'}
                   </>
                 ) : (
@@ -1275,7 +1353,7 @@ export default function BrowsePage() {
       {/* View Log Modal */}
       {selectedLog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white  p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">API Log Details</h3>
               <button
@@ -1359,7 +1437,13 @@ export default function BrowsePage() {
               onClick={() => {
                 setShowCreateApp(true);
                 setEditingApp(null);
-                setAppFormData({ name: '', description: '', redirectUri: '' });
+                setAppFormData({ 
+                  name: '', 
+                  description: '', 
+                  environment: 'DEVELOPMENT',
+                  webhookUrl: '',
+                  defaultCurrency: ''
+                });
                 setAppError('');
                 setAppSuccess('');
               }}
@@ -1372,45 +1456,100 @@ export default function BrowsePage() {
 
           {/* Apps List */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {apps.map((app) => (
-              <div key={app.id} className="bg-white border border-gray-200  p-4 sm:p-6 hover:border-green-300 transition-colors">
-                <div className="flex items-start justify-between mb-3 sm:mb-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">{app.name}</h3>
-                    <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">{app.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 mb-2 sm:mb-3">
-                      <span>Created: {app.created}</span>
+            {appsLoading ? (
+              <div className="col-span-2 flex items-center justify-center py-12">
+                <Spinner className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
+            ) : apps.length === 0 ? (
+              <div className="col-span-2 text-center py-12">
+                <p className="text-gray-600">No applications found. Create your first application to get started.</p>
+              </div>
+            ) : (
+              apps.map((app) => (
+                <div key={app.id} className="bg-white border border-gray-200  p-4 sm:p-6 hover:border-green-300 transition-colors">
+                  <div className="flex items-start justify-between mb-3 sm:mb-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">{app.name}</h3>
+                      {app.description && (
+                        <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">{app.description}</p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-gray-500 mb-2 sm:mb-3">
+                        <span>Created: {formatDate(app.created_at)}</span>
+                        {app.last_used_at && (
+                          <span>Last used: {formatDate(app.last_used_at)}</span>
+                        )}
+                      </div>
+                      <div className="space-y-2 mb-2 sm:mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-700">API Key:</span>
+                          <span className="text-xs text-gray-600 font-mono truncate">{app.api_key}</span>
+                          <button
+                            onClick={() => handleCopy(app.api_key, `api-key-${app.id}`)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
+                        {app.config?.webhook_url && (
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 font-mono truncate">{app.config.webhook_url}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                      <Globe className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                      <span className="text-xs text-gray-600 font-mono truncate">{app.redirectUri}</span>
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded ${
+                        app.status === 'ACTIVE' 
+                          ? 'bg-green-100 text-green-700' 
+                          : app.status === 'SUSPENDED'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {app.status}
+                      </span>
+                      <span className={`px-2 py-1 text-xs font-medium rounded ${
+                        app.environment === 'PRODUCTION' 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : app.environment === 'STAGING'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {app.environment}
+                      </span>
                     </div>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${
-                    app.status === 'active' 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {app.status}
-                  </span>
+                  {app.total_payments !== undefined && (
+                    <div className="mb-3 text-xs text-gray-600">
+                      <span>Payments: {app.total_payments} | </span>
+                      <span>Volume: {app.total_volume ? `${app.total_volume.toLocaleString()}` : '0'}</span>
+                    </div>
+                  )}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-3 sm:pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => handleEditApp(app)}
+                      className="flex-1 px-3 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleRegenerateCredentials(app.id)}
+                      className="flex-1 px-3 py-2 bg-white border border-yellow-200 text-yellow-600 text-sm font-medium hover:bg-yellow-50 transition-colors rounded flex items-center justify-center gap-2"
+                    >
+                      <ArrowClockwise className="w-4 h-4" />
+                      Regenerate
+                    </button>
+                    <button
+                      onClick={() => handleDeleteApp(app.id)}
+                      className="flex-1 px-3 py-2 bg-white border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors rounded flex items-center justify-center gap-2"
+                    >
+                      <Trash className="w-4 h-4" />
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-3 sm:pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => handleEditApp(app)}
-                    className="flex-1 px-3 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteApp(app.id)}
-                    className="flex-1 px-3 py-2 bg-white border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors rounded flex items-center justify-center gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       )}
@@ -1418,7 +1557,7 @@ export default function BrowsePage() {
       {/* Create/Edit App Modal */}
       {showCreateApp && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white  p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
                 {editingApp ? 'Edit App' : 'Create App'}
@@ -1450,13 +1589,14 @@ export default function BrowsePage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">App Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">App Name *</label>
                 <input
                   type="text"
                   value={appFormData.name}
                   onChange={(e) => setAppFormData({ ...appFormData, name: e.target.value })}
                   placeholder="Enter app name"
                   className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  required
                 />
               </div>
               <div>
@@ -1470,39 +1610,47 @@ export default function BrowsePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Redirect URI</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Environment</label>
+                <select
+                  value={appFormData.environment}
+                  onChange={(e) => setAppFormData({ ...appFormData, environment: e.target.value as 'DEVELOPMENT' | 'STAGING' | 'PRODUCTION' })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-green-500"
+                >
+                  <option value="DEVELOPMENT">Development</option>
+                  <option value="STAGING">Staging</option>
+                  <option value="PRODUCTION">Production</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Webhook URL</label>
                 <input
                   type="url"
-                  value={appFormData.redirectUri}
-                  onChange={(e) => setAppFormData({ ...appFormData, redirectUri: e.target.value })}
-                  placeholder="https://app.example.com/callback"
+                  value={appFormData.webhookUrl}
+                  onChange={(e) => setAppFormData({ ...appFormData, webhookUrl: e.target.value })}
+                  placeholder="https://app.example.com/webhooks"
+                  className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Default Currency</label>
+                <input
+                  type="text"
+                  value={appFormData.defaultCurrency}
+                  onChange={(e) => setAppFormData({ ...appFormData, defaultCurrency: e.target.value })}
+                  placeholder="XAF"
                   className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-green-500"
                 />
               </div>
               {editingApp && (
                 <div className="bg-gray-50 border border-gray-200 rounded p-4 space-y-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded font-mono text-sm text-gray-900">
-                        {editingApp.clientId}
+                        {editingApp.api_key}
                       </div>
                       <button
-                        onClick={() => handleCopy(editingApp.clientId, 'client-id')}
-                        className="p-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Client Secret</label>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded font-mono text-sm text-gray-900">
-                        {editingApp.clientSecret}
-                      </div>
-                      <button
-                        onClick={() => handleCopy(editingApp.clientSecret, 'client-secret')}
+                        onClick={() => handleCopy(editingApp.api_key, 'api-key')}
                         className="p-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
                       >
                         <Copy className="w-4 h-4" />
@@ -1518,7 +1666,13 @@ export default function BrowsePage() {
                 onClick={() => {
                   setShowCreateApp(false);
                   setEditingApp(null);
-                  setAppFormData({ name: '', description: '', redirectUri: '' });
+                  setAppFormData({ 
+                    name: '', 
+                    description: '', 
+                    environment: 'DEVELOPMENT',
+                    webhookUrl: '',
+                    defaultCurrency: ''
+                  });
                   setAppError('');
                   setAppSuccess('');
                 }}
@@ -1528,12 +1682,12 @@ export default function BrowsePage() {
               </button>
               <button
                 onClick={handleCreateApp}
-                disabled={appLoading}
+                disabled={appLoading || !appFormData.name.trim()}
                 className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {appLoading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <ArrowClockwise className="w-4 h-4 animate-spin" />
                     {editingApp ? 'Updating...' : 'Creating...'}
                   </>
                 ) : (
@@ -1548,10 +1702,10 @@ export default function BrowsePage() {
       {/* Revoke Token Confirmation Modal */}
       {showRevokeTokenConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full shadow-xl">
+          <div className="bg-white  p-4 sm:p-6 max-w-md w-full shadow-xl">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+                <WarningCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-900">Revoke Token</h3>
             </div>
@@ -1579,10 +1733,10 @@ export default function BrowsePage() {
       {/* Delete Webhook Confirmation Modal */}
       {showDeleteWebhookConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full shadow-xl">
+          <div className="bg-white  p-4 sm:p-6 max-w-md w-full shadow-xl">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+                <WarningCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-900">Delete Webhook</h3>
             </div>
@@ -1610,15 +1764,15 @@ export default function BrowsePage() {
       {/* Delete App Confirmation Modal */}
       {showDeleteAppConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full shadow-xl">
+          <div className="bg-white  p-4 sm:p-6 max-w-md w-full shadow-xl">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+                <WarningCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-900">Delete App</h3>
             </div>
             <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
-              Are you sure you want to delete this app? This action cannot be undone.
+              Are you sure you want to delete this app? This will invalidate all API credentials. This action cannot be undone.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
               <button
@@ -1637,6 +1791,122 @@ export default function BrowsePage() {
           </div>
         </div>
       )}
+
+      {/* Regenerate Credentials Confirmation Modal */}
+      {showRegenerateConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white  p-4 sm:p-6 max-w-md w-full shadow-xl">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <WarningCircle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
+              </div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Regenerate API Credentials</h3>
+            </div>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
+              Are you sure you want to regenerate the API credentials? The old API key and secret will be invalidated immediately. Make sure to update your integrations with the new credentials.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
+              <button
+                onClick={() => setShowRegenerateConfirm(null)}
+                className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRegenerateCredentials}
+                disabled={appLoading}
+                className="w-full sm:w-auto px-4 py-2 bg-yellow-600 text-white text-sm font-medium hover:bg-yellow-700 transition-colors rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {appLoading ? 'Regenerating...' : 'Regenerate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* API Secret Modal */}
+      {showApiSecret && (() => {
+        const app = apps.find(a => a.id === showApiSecret);
+        const secret = apiSecretStore[showApiSecret];
+        if (!app) return null;
+        
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white  p-4 sm:p-6 max-w-md w-full shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">API Secret</h3>
+                <button
+                  onClick={() => {
+                    setShowApiSecret(null);
+                    // Clear secret after viewing
+                    setApiSecretStore(prev => {
+                      const next = { ...prev };
+                      delete next[showApiSecret];
+                      return next;
+                    });
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="mb-4">
+                <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Important:</strong> This is the only time you'll see this secret. Make sure to copy it now and store it securely.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded font-mono text-sm text-gray-900">
+                      {app.api_key}
+                    </div>
+                    <button
+                      onClick={() => handleCopy(app.api_key, 'api-key-secret')}
+                      className="p-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                {secret && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">API Secret</label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded font-mono text-sm text-gray-900">
+                        {secret}
+                      </div>
+                      <button
+                        onClick={() => handleCopy(secret, 'api-secret')}
+                        className="p-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowApiSecret(null);
+                    // Clear secret after viewing
+                    setApiSecretStore(prev => {
+                      const next = { ...prev };
+                      delete next[showApiSecret];
+                      return next;
+                    });
+                  }}
+                  className="px-4 py-2 bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors rounded"
+                >
+                  I've copied the secret
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

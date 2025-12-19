@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Building2, CheckCircle2, X, Loader2, MapPin, FileText } from 'lucide-react';
+import { ArrowLeft, Building, CheckCircle, X, Spinner, MapPin, FileText } from '@phosphor-icons/react';
 import { useOrganization } from '@/contexts/OrganizationContext';
 
 export default function CreateOrganizationPage() {
@@ -78,7 +78,7 @@ export default function CreateOrganizationPage() {
         </button>
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
-            <Building2 className="w-6 h-6 text-white" />
+            <Building className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Create New Organization</h1>
@@ -91,7 +91,7 @@ export default function CreateOrganizationPage() {
         <div className="bg-white border-2 border-gray-200 p-8">
           {success && (
             <div className="mb-6 bg-green-50 border border-green-200 p-4 flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm text-green-800 font-medium">Organization created successfully!</p>
                 <p className="text-xs text-green-700 mt-1">Redirecting to dashboard...</p>
@@ -121,7 +121,7 @@ export default function CreateOrganizationPage() {
                 Organization Name <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
                   name="name"
@@ -261,12 +261,12 @@ export default function CreateOrganizationPage() {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Spinner className="w-4 h-4 animate-spin" />
                     Creating...
                   </>
                 ) : success ? (
                   <>
-                    <CheckCircle2 className="w-4 h-4" />
+                    <CheckCircle className="w-4 h-4" />
                     Created!
                   </>
                 ) : (

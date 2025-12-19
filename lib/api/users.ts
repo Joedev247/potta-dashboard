@@ -1,9 +1,9 @@
 /**
- * Users & Profile API Service
- * MOCK MODE: Using localStorage for user data (no backend required)
+ * Users & Profile API Service (real backend)
+ * Customer Self-Service API Endpoints
  */
 
-import { ApiResponse } from './client';
+import { ApiResponse, PaginationResponse, apiClient } from './client';
 
 export interface UserProfile {
   id: string;
@@ -12,20 +12,24 @@ export interface UserProfile {
   firstName?: string;
   lastName?: string;
   phone?: string | null;
+  image?: string;
   isVerified: boolean;
   role: string;
+  bio?: string;
 }
 
 export interface AccountSettings {
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-  marketingEmails: boolean;
+  twoFactorEnabled?: boolean;
+  emailNotifications?: boolean;
+  smsNotifications?: boolean;
 }
 
 export interface UpdateProfileData {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  username?: string;
+  bio?: string;
 }
 
 export interface ChangePasswordData {
@@ -34,248 +38,238 @@ export interface ChangePasswordData {
   confirmPassword: string;
 }
 
-const MOCK_SETTINGS_KEY = 'mock_user_settings';
-
-// Helper to get user from localStorage
-function getCurrentUser(): UserProfile | null {
-  if (typeof window === 'undefined') return null;
-  
-  const userStr = localStorage.getItem('user');
-  if (!userStr) return null;
-  
-  try {
-    const user = JSON.parse(userStr);
-    return {
-      ...user,
-      role: user.role || 'user',
-      phone: user.phone || null,
-    };
-  } catch {
-    return null;
-  }
+export interface CustomerTransaction {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  type: string;
+  description?: string;
+  createdAt: string;
+  updatedAt?: string;
+  metadata?: Record<string, any>;
 }
 
-// Helper to get settings from localStorage
-function getSettings(): AccountSettings {
-  if (typeof window === 'undefined') {
-    return {
-      emailNotifications: true,
-      pushNotifications: true,
-      marketingEmails: false,
-    };
-  }
-  
-  const stored = localStorage.getItem(MOCK_SETTINGS_KEY);
-  if (!stored) {
-    const defaultSettings: AccountSettings = {
-      emailNotifications: true,
-      pushNotifications: true,
-      marketingEmails: false,
-    };
-    localStorage.setItem(MOCK_SETTINGS_KEY, JSON.stringify(defaultSettings));
-    return defaultSettings;
-  }
-  
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return {
-      emailNotifications: true,
-      pushNotifications: true,
-      marketingEmails: false,
-    };
-  }
+export interface TransactionsListResponse {
+  transactions: CustomerTransaction[];
+  pagination: PaginationResponse;
 }
 
 class UsersService {
   async getProfile(): Promise<ApiResponse<UserProfile>> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    if (typeof window === 'undefined') {
-      return {
-        success: false,
-        error: { code: 'SERVER_ERROR', message: 'Not available on server' },
-      };
+    // Try both Swagger path and legacy path
+    try {
+      const primary = await apiClient.get<UserProfile>('/users/customer/profile');
+      if (primary.success) return primary;
+    } catch (e) {
+      // ignore
     }
-    
-    const user = getCurrentUser();
-    
-    if (!user) {
-      return {
-        success: false,
-        error: { code: 'UNAUTHORIZED', message: 'User not authenticated' },
-      };
-    }
-    
-    return {
-      success: true,
-      data: user,
-    };
+    return apiClient.get<UserProfile>('/customer/profile');
   }
 
   async updateProfile(data: UpdateProfileData): Promise<ApiResponse<UserProfile>> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    if (typeof window === 'undefined') {
-      return {
-        success: false,
-        error: { code: 'SERVER_ERROR', message: 'Not available on server' },
-      };
+    try {
+      const primary = await apiClient.put<UserProfile>('/users/customer/profile', data);
+      if (primary.success) return primary;
+    } catch (e) {
+      // ignore
     }
-    
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      return {
-        success: false,
-        error: { code: 'UNAUTHORIZED', message: 'User not authenticated' },
-      };
-    }
-    
-    const updatedUser: UserProfile = {
-      ...currentUser,
-      ...data,
-    };
-    
-    // Update in localStorage
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    
-    // Also update in mock users storage
-    const MOCK_USERS_KEY = 'mock_users';
-    const stored = localStorage.getItem(MOCK_USERS_KEY);
-    if (stored) {
-      try {
-        const users = JSON.parse(stored);
-        const email = currentUser.email.toLowerCase();
-        if (users[email]) {
-          users[email].user = updatedUser;
-          localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(users));
-        }
-      } catch {
-        // Ignore errors
-      }
-    }
-    
-    return {
-      success: true,
-      data: updatedUser,
-    };
+    return apiClient.put<UserProfile>('/customer/profile', data);
   }
 
-  async changePassword(data: ChangePasswordData): Promise<ApiResponse<void>> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    if (typeof window === 'undefined') {
-      return {
-        success: false,
-        error: { code: 'SERVER_ERROR', message: 'Not available on server' },
-      };
-    }
-    
-    if (data.newPassword !== data.confirmPassword) {
-      return {
-        success: false,
-        error: { code: 'PASSWORD_MISMATCH', message: 'Passwords do not match' },
-      };
-    }
-    
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      return {
-        success: false,
-        error: { code: 'UNAUTHORIZED', message: 'User not authenticated' },
-      };
-    }
-    
-    // Update password in mock users storage
-    const MOCK_USERS_KEY = 'mock_users';
-    const stored = localStorage.getItem(MOCK_USERS_KEY);
-    if (stored) {
-      try {
-        const users = JSON.parse(stored);
-        const email = currentUser.email.toLowerCase();
-        if (users[email] && users[email].password === data.currentPassword) {
-          users[email].password = data.newPassword;
-          localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(users));
-          return { success: true };
-        } else {
-          return {
-            success: false,
-            error: { code: 'INVALID_PASSWORD', message: 'Current password is incorrect' },
-          };
-        }
-      } catch {
-        return {
-          success: false,
-          error: { code: 'UPDATE_ERROR', message: 'Error updating password' },
-        };
-      }
-    }
-    
+  async changePassword(_data: ChangePasswordData): Promise<ApiResponse<void>> {
     return {
       success: false,
-      error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+      error: { code: 'NOT_IMPLEMENTED', message: 'Change password is not available in this client' },
     };
   }
 
   async toggle2FA(enabled: boolean): Promise<ApiResponse<void>> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    if (typeof window === 'undefined') {
-      return { success: true };
+    try {
+      const primary = await apiClient.put<void>('/users/customer/settings', { twoFactorEnabled: enabled });
+      if (primary.success) return primary;
+    } catch (e) {
+      // ignore
     }
-    
-    console.log(`[MOCK] 2FA ${enabled ? 'enabled' : 'disabled'}`);
-    
-    return { success: true };
+    return apiClient.put<void>('/customer/settings', { twoFactorEnabled: enabled });
   }
 
   async getSettings(): Promise<ApiResponse<AccountSettings>> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 200));
+    try {
+      const primary = await apiClient.get<AccountSettings>('/users/customer/settings');
+      if (primary.success) return primary;
+    } catch (e) {
+      // ignore
+    }
+    return apiClient.get<AccountSettings>('/customer/settings');
+  }
+
+  async updateSettings(data: AccountSettings): Promise<ApiResponse<AccountSettings>> {
+    try {
+      const primary = await apiClient.put<AccountSettings>('/users/customer/settings', data);
+      if (primary.success) return primary;
+    } catch (e) {
+      // ignore
+    }
+    return apiClient.put<AccountSettings>('/customer/settings', data);
+  }
+
+  /**
+   * Get customer transaction history
+   * GET /api/users/customer/transactions
+   */
+  async getTransactions(params?: { 
+    page?: number; 
+    limit?: number; 
+    type?: string; 
+    startDate?: string; 
+    endDate?: string;
+  }): Promise<ApiResponse<TransactionsListResponse>> {
+    try {
+      const primary = await apiClient.get<any>('/users/customer/transactions', params);
+      if (primary.success && primary.data) {
+        // Handle response structure
+        const data = primary.data.data || primary.data;
+        const transactions = Array.isArray(data.transactions) ? data.transactions : (Array.isArray(data) ? data : []);
+        const pagination = data.pagination || {
+          page: params?.page || 1,
+          limit: params?.limit || 10,
+          total: transactions.length,
+          totalPages: Math.ceil(transactions.length / (params?.limit || 10)),
+        };
+
+        return {
+          success: true,
+          data: {
+            transactions: transactions.map((txn: any) => ({
+              id: txn.id || '',
+              amount: txn.amount ?? 0,
+              currency: txn.currency || 'XAF',
+              status: txn.status || 'PENDING',
+              type: txn.type || 'payment',
+              description: txn.description,
+              createdAt: txn.createdAt || txn.created_at || new Date().toISOString(),
+              updatedAt: txn.updatedAt || txn.updated_at,
+              metadata: txn.metadata,
+            })),
+            pagination: {
+              page: pagination.page || params?.page || 1,
+              limit: pagination.limit || params?.limit || 10,
+              total: pagination.total || transactions.length,
+              totalPages: pagination.totalPages || Math.ceil((pagination.total || transactions.length) / (pagination.limit || params?.limit || 10)),
+              hasNext: pagination.hasNext ?? (pagination.page || params?.page || 1) < (pagination.totalPages || Math.ceil((pagination.total || transactions.length) / (pagination.limit || params?.limit || 10))),
+              hasPrev: pagination.hasPrev ?? (pagination.page || params?.page || 1) > 1,
+            },
+          },
+        };
+      }
+    } catch (e) {
+      // Fallback to legacy path
+    }
     
-    if (typeof window === 'undefined') {
+    // Fallback to legacy endpoint
+    const fallback = await apiClient.get<any>('/customer/transactions', params);
+    if (fallback.success && fallback.data) {
+      const data = fallback.data.data || fallback.data;
+      const transactions = Array.isArray(data.transactions) ? data.transactions : (Array.isArray(data) ? data : []);
+      const pagination = data.pagination || {
+        page: params?.page || 1,
+        limit: params?.limit || 10,
+        total: transactions.length,
+        totalPages: Math.ceil(transactions.length / (params?.limit || 10)),
+      };
+
       return {
         success: true,
         data: {
-          emailNotifications: true,
-          pushNotifications: true,
-          marketingEmails: false,
+          transactions: transactions.map((txn: any) => ({
+            id: txn.id || '',
+            amount: txn.amount ?? 0,
+            currency: txn.currency || 'XAF',
+            status: txn.status || 'PENDING',
+            type: txn.type || 'payment',
+            description: txn.description,
+            createdAt: txn.createdAt || txn.created_at || new Date().toISOString(),
+            updatedAt: txn.updatedAt || txn.updated_at,
+            metadata: txn.metadata,
+          })),
+          pagination: {
+            page: pagination.page || params?.page || 1,
+            limit: pagination.limit || params?.limit || 10,
+            total: pagination.total || transactions.length,
+            totalPages: pagination.totalPages || Math.ceil((pagination.total || transactions.length) / (pagination.limit || params?.limit || 10)),
+            hasNext: pagination.hasNext ?? (pagination.page || params?.page || 1) < (pagination.totalPages || Math.ceil((pagination.total || transactions.length) / (pagination.limit || params?.limit || 10))),
+            hasPrev: pagination.hasPrev ?? (pagination.page || params?.page || 1) > 1,
+          },
         },
       };
     }
     
-    const settings = getSettings();
-    
-    return {
-      success: true,
-      data: settings,
-    };
+    return fallback as ApiResponse<TransactionsListResponse>;
   }
 
-  async updateSettings(data: AccountSettings): Promise<ApiResponse<AccountSettings>> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
+  /**
+   * Get a specific transaction by ID
+   * GET /api/users/customer/transactions/{id}
+   */
+  async getTransaction(transactionId: string): Promise<ApiResponse<CustomerTransaction>> {
+    try {
+      const primary = await apiClient.get<any>(`/users/customer/transactions/${transactionId}`);
+      if (primary.success && primary.data) {
+        const data = primary.data.data || primary.data;
+        return {
+          success: true,
+          data: {
+            id: data.id || transactionId,
+            amount: data.amount ?? 0,
+            currency: data.currency || 'XAF',
+            status: data.status || 'PENDING',
+            type: data.type || 'payment',
+            description: data.description,
+            createdAt: data.createdAt || data.created_at || new Date().toISOString(),
+            updatedAt: data.updatedAt || data.updated_at,
+            metadata: data.metadata,
+          },
+        };
+      }
+    } catch (e) {
+      // Fallback to legacy path
+    }
     
-    if (typeof window === 'undefined') {
+    // Fallback to legacy endpoint
+    const fallback = await apiClient.get<any>(`/customer/transactions/${transactionId}`);
+    if (fallback.success && fallback.data) {
+      const data = fallback.data.data || fallback.data;
       return {
-        success: false,
-        error: { code: 'SERVER_ERROR', message: 'Not available on server' },
+        success: true,
+        data: {
+          id: data.id || transactionId,
+          amount: data.amount ?? 0,
+          currency: data.currency || 'XAF',
+          status: data.status || 'PENDING',
+          type: data.type || 'payment',
+          description: data.description,
+          createdAt: data.createdAt || data.created_at || new Date().toISOString(),
+          updatedAt: data.updatedAt || data.updated_at,
+          metadata: data.metadata,
+        },
       };
     }
     
-    localStorage.setItem(MOCK_SETTINGS_KEY, JSON.stringify(data));
-    
-    return {
-      success: true,
-      data,
-    };
+    return fallback as ApiResponse<CustomerTransaction>;
+  }
+
+  // Generate API credentials (Swagger path)
+  async generateCredentials(): Promise<ApiResponse<any>> {
+    try {
+      const primary = await apiClient.put<any>('/users/customer/genarate-credentials', {});
+      if (primary.success) return primary;
+    } catch (e) {
+      // ignore
+    }
+    return apiClient.put<any>('/customer/genarate-credentials', {});
   }
 }
 
 export const usersService = new UsersService();
-
 

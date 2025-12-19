@@ -3,20 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { 
-  Settings as SettingsIcon, 
+  Gear as SettingsIcon, 
   User, 
   Shield, 
   Bell, 
-  Building2, 
-  Mail,
+  Building, 
+  Envelope,
   Lock,
   Eye,
-  EyeOff,
-  Save,
+  EyeSlash,
+  FloppyDisk,
   Check
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { authService, usersService } from '@/lib/api';
 
 export default function SettingsPage() {
   const searchParams = useSearchParams();
@@ -34,6 +35,15 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  // 2FA states
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [twoFactorAction, setTwoFactorAction] = useState<'enable' | 'disable' | null>(null);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [twoFactorEmail, setTwoFactorEmail] = useState('');
+  const [disablePassword, setDisablePassword] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
@@ -56,7 +66,7 @@ export default function SettingsPage() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'organization', label: 'Organization', icon: Building2 },
+    { id: 'organization', label: 'Organization', icon: Building },
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -87,19 +97,51 @@ export default function SettingsPage() {
     }
   }, [searchParams]);
 
-  // Load notification settings on mount
+  // Load profile and settings on mount
   useEffect(() => {
-    const savedSettings = localStorage.getItem('notificationSettings');
-    if (savedSettings) {
+    const loadProfileAndSettings = async () => {
       try {
-        const settings = JSON.parse(savedSettings);
-        setEmailNotifications(settings.emailNotifications ?? true);
-        setPushNotifications(settings.pushNotifications ?? true);
-        setMarketingEmails(settings.marketingEmails ?? false);
+        // Load profile
+        const profileResponse = await usersService.getProfile();
+        if (profileResponse.success && profileResponse.data) {
+          const profile = profileResponse.data;
+          setFormData(prev => ({
+            ...prev,
+            firstName: profile.firstName || '',
+            lastName: profile.lastName || '',
+            email: profile.email || '',
+            phone: profile.phone || '',
+          }));
+          
+          // Update user in context
+          if (updateUser) {
+            updateUser({
+              id: profile.id,
+              email: profile.email,
+              username: profile.username,
+              firstName: profile.firstName,
+              lastName: profile.lastName,
+              isVerified: profile.isVerified,
+              role: profile.role,
+            });
+          }
+        }
+
+        // Load settings
+        const settingsResponse = await usersService.getSettings();
+        if (settingsResponse.success && settingsResponse.data) {
+          const settings = settingsResponse.data;
+          setTwoFactorAuth(settings.twoFactorEnabled || false);
+          setEmailNotifications(settings.emailNotifications ?? true);
+          setPushNotifications(settings.smsNotifications ?? true);
+        }
       } catch (error) {
-        console.error('Error loading notification settings:', error);
+        console.error('Error loading profile and settings:', error);
       }
-    }
+    };
+    
+    loadProfileAndSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSaveProfile = async () => {
@@ -114,27 +156,39 @@ export default function SettingsPage() {
     }
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await usersService.updateProfile({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone || undefined,
+        username: formData.email, // Use email as username if needed
+      });
       
-      // Update user in context
-      if (updateUser && user) {
-        updateUser({
-          ...user,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-        });
+      if (response.success && response.data) {
+        const updatedProfile = response.data;
+        
+        // Update user in context
+        if (updateUser && user) {
+          updateUser({
+            ...user,
+            firstName: updatedProfile.firstName,
+            lastName: updatedProfile.lastName,
+            email: updatedProfile.email,
+            phone: updatedProfile.phone,
+          });
+        }
+        
+        // Update localStorage
+        const updatedUser = { ...user, ...updatedProfile };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        setSuccess('Profile updated successfully!');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(response.error?.message || 'Failed to update profile. Please try again.');
       }
-      
-      // Update localStorage
-      const updatedUser = { ...user, firstName: formData.firstName, lastName: formData.lastName, email: formData.email };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      
-      setSuccess('Profile updated successfully!');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError('Failed to update profile. Please try again.');
+    } catch (err: any) {
+      console.error('Profile update error:', err);
+      setError(err?.message || 'Failed to update profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -183,20 +237,21 @@ export default function SettingsPage() {
     setSuccess('');
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Save to localStorage
-      localStorage.setItem('notificationSettings', JSON.stringify({
+      const response = await usersService.updateSettings({
         emailNotifications,
-        pushNotifications,
-        marketingEmails,
-      }));
+        smsNotifications: pushNotifications,
+        twoFactorEnabled: twoFactorAuth, // Keep 2FA status
+      });
       
-      setSuccess('Notification preferences saved successfully!');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError('Failed to save preferences. Please try again.');
+      if (response.success) {
+        setSuccess('Notification preferences saved successfully!');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(response.error?.message || 'Failed to save preferences. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('Notification settings update error:', err);
+      setError(err?.message || 'Failed to save preferences. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -233,6 +288,107 @@ export default function SettingsPage() {
       setError('Failed to update organization. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEnable2FA = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    
+    try {
+      const response = await authService.enable2FA();
+      if (response.success && response.data) {
+        setTwoFactorEmail(response.data.email);
+        setTwoFactorAction('enable');
+        setShow2FAModal(true);
+        setOtpCode('');
+        setOtpError('');
+      } else {
+        setError(response.error?.message || 'Failed to enable 2FA. Please try again.');
+      }
+    } catch (err) {
+      setError('Failed to enable 2FA. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify2FAOTP = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      setOtpError('Please enter a valid 6-digit code');
+      return;
+    }
+
+    setOtpLoading(true);
+    setOtpError('');
+    
+    try {
+      const response = await authService.verify2FA(otpCode, false);
+      if (response.success && response.data) {
+        if ('enabled' in response.data && response.data.enabled) {
+          // 2FA enabled successfully
+          setTwoFactorAuth(true);
+          setShow2FAModal(false);
+          setOtpCode('');
+          setSuccess('Two-factor authentication enabled successfully!');
+          setTimeout(() => setSuccess(''), 3000);
+          
+          // Update settings
+          await usersService.updateSettings({ twoFactorEnabled: true });
+        } else {
+          setOtpError('Invalid verification code. Please try again.');
+        }
+      } else {
+        setOtpError(response.error?.message || 'Invalid verification code. Please try again.');
+      }
+    } catch (err) {
+      setOtpError('Failed to verify code. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    if (!disablePassword) {
+      setOtpError('Password is required to disable 2FA');
+      return;
+    }
+
+    setOtpLoading(true);
+    setOtpError('');
+    
+    try {
+      const response = await authService.disable2FA(disablePassword);
+      if (response.success) {
+        setTwoFactorAuth(false);
+        setShow2FAModal(false);
+        setDisablePassword('');
+        setSuccess('Two-factor authentication disabled successfully!');
+        setTimeout(() => setSuccess(''), 3000);
+        
+        // Update settings
+        await usersService.updateSettings({ twoFactorEnabled: false });
+      } else {
+        setOtpError(response.error?.message || 'Failed to disable 2FA. Please check your password.');
+      }
+    } catch (err) {
+      setOtpError('Failed to disable 2FA. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleResend2FAOTP = async () => {
+    if (!user?.email) return;
+    
+    try {
+      await authService.resend2FAOTP(user.email);
+      setOtpError('');
+      setSuccess('Verification code sent to your email');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setOtpError('Failed to resend code. Please try again.');
     }
   };
 
@@ -382,7 +538,7 @@ export default function SettingsPage() {
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
+                    <FloppyDisk className="w-4 h-4" />
                     Save Changes
                   </>
                 )}
@@ -474,10 +630,25 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900">Two-Factor Authentication</div>
-                  <div className="text-sm text-gray-600">Add an extra layer of security</div>
+                  <div className="text-sm text-gray-600">
+                    {twoFactorAuth ? 'Enabled - Extra security layer active' : 'Add an extra layer of security'}
+                  </div>
                 </div>
               </div>
-              <ToggleSwitch enabled={twoFactorAuth} onChange={() => setTwoFactorAuth(!twoFactorAuth)} />
+              <ToggleSwitch 
+                enabled={twoFactorAuth} 
+                onChange={() => {
+                  if (twoFactorAuth) {
+                    // Disable 2FA
+                    setTwoFactorAction('disable');
+                    setShow2FAModal(true);
+                    setDisablePassword('');
+                  } else {
+                    // Enable 2FA
+                    handleEnable2FA();
+                  }
+                }} 
+              />
             </div>
 
             {error && (
@@ -508,7 +679,7 @@ export default function SettingsPage() {
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
+                      <FloppyDisk className="w-4 h-4" />
                     Update Password
                   </>
                 )}
@@ -530,7 +701,7 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100">
                 <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-green-600" />
+                  <Envelope className="w-5 h-5 text-green-600" />
                   <div>
                     <div className="font-semibold text-gray-900">Email Notifications</div>
                     <div className="text-sm text-gray-600">Receive notifications via email</div>
@@ -552,7 +723,7 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100">
                 <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-green-600" />
+                      <Envelope className="w-5 h-5 text-green-600" />
                   <div>
                     <div className="font-semibold text-gray-900">Marketing Emails</div>
                     <div className="text-sm text-gray-600">Receive marketing and promotional emails</div>
@@ -590,7 +761,7 @@ export default function SettingsPage() {
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
+                      <FloppyDisk className="w-4 h-4" />
                     Save Preferences
                   </>
                 )}
@@ -603,8 +774,8 @@ export default function SettingsPage() {
         {activeTab === 'organization' && (
           <div className="bg-white border-2 border-gray-200 p-8 space-y-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-green-600" />
+                <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
+                <Building className="w-5 h-5 text-green-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Organization Settings</h2>
             </div>
@@ -709,7 +880,7 @@ export default function SettingsPage() {
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
+                      <FloppyDisk className="w-4 h-4" />
                     Save Changes
                   </>
                 )}
@@ -719,6 +890,119 @@ export default function SettingsPage() {
         )}
         </div>
       </div>
+
+      {/* 2FA Modal */}
+      {show2FAModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white  max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              {twoFactorAction === 'enable' ? 'Enable Two-Factor Authentication' : 'Disable Two-Factor Authentication'}
+            </h3>
+            
+            {twoFactorAction === 'enable' ? (
+              <>
+                <p className="text-gray-600 mb-4">
+                  A verification code has been sent to <span className="font-medium">{twoFactorEmail || user?.email}</span>.
+                  Please enter the code below to enable 2FA.
+                </p>
+                <div className="mb-4">
+                  <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">
+                    Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    id="otp"
+                    value={otpCode}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setOtpCode(value);
+                      setOtpError('');
+                    }}
+                    maxLength={6}
+                    placeholder="000000"
+                    className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500 text-center text-xl tracking-widest"
+                  />
+                </div>
+                {otpError && (
+                  <div className="mb-4 text-red-600 text-sm">{otpError}</div>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShow2FAModal(false);
+                      setOtpCode('');
+                      setOtpError('');
+                      setTwoFactorAction(null);
+                    }}
+                    className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleVerify2FAOTP}
+                    disabled={otpLoading || otpCode.length !== 6}
+                    className="flex-1 px-4 py-2 bg-green-500 text-white font-medium hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {otpLoading ? 'Verifying...' : 'Verify'}
+                  </button>
+                </div>
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={handleResend2FAOTP}
+                    className="text-sm text-green-600 hover:text-green-700 font-medium"
+                  >
+                    Resend code
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-600 mb-4">
+                  To disable two-factor authentication, please enter your password to confirm.
+                </p>
+                <div className="mb-4">
+                  <label htmlFor="disable-password" className="block text-sm font-medium text-gray-700 mb-2">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    id="disable-password"
+                    value={disablePassword}
+                    onChange={(e) => {
+                      setDisablePassword(e.target.value);
+                      setOtpError('');
+                    }}
+                    className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-green-500"
+                  />
+                </div>
+                {otpError && (
+                  <div className="mb-4 text-red-600 text-sm">{otpError}</div>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShow2FAModal(false);
+                      setDisablePassword('');
+                      setOtpError('');
+                      setTwoFactorAction(null);
+                    }}
+                    className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDisable2FA}
+                    disabled={otpLoading || !disablePassword}
+                    className="flex-1 px-4 py-2 bg-red-500 text-white font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {otpLoading ? 'Disabling...' : 'Disable 2FA'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

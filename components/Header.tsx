@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, User, Search, HelpCircle, Settings, LogOut, Download, MessageSquare, ExternalLink, Menu } from 'lucide-react';
+import { Bell, User, MagnifyingGlass, Question, Gear, SignOut, Download, ChatCircle, ArrowSquareOut, List } from '@phosphor-icons/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSidebar } from '@/contexts/SidebarContext';
 import Link from 'next/link';
@@ -45,7 +45,7 @@ export default function Header() {
         onClick={toggleSidebar}
         className="lg:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
       >
-        <Menu className="w-5 h-5" />
+        <List className="w-5 h-5" />
       </button>
 
       {/* Right side - Search, Help (for invoicing), Notifications, User */}
@@ -54,7 +54,7 @@ export default function Header() {
         
         {pathname === '/invoicing' && (
           <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
-            <HelpCircle className="w-5 h-5" />
+            <Question className="w-5 h-5" />
           </button>
         )}
         
@@ -149,12 +149,12 @@ export default function Header() {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
                   onClick={() => setShowUserMenu(false)}
                 >
-                  <Settings className="w-4 h-4" />
+                  <Gear className="w-4 h-4" />
                   <span className="text-sm font-medium">Settings</span>
                 </Link>
                 <button className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <ExternalLink className="w-4 h-4" />
+                    <ArrowSquareOut className="w-4 h-4" />
                     <span className="text-sm font-medium">Test mode</span>
                   </div>
                   <div
@@ -178,16 +178,16 @@ export default function Header() {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
                   onClick={() => setShowUserMenu(false)}
                 >
-                  <HelpCircle className="w-4 h-4" />
+                  <Question className="w-4 h-4" />
                   <span className="text-sm font-medium">Help Center</span>
-                  <ExternalLink className="w-3 h-3 ml-auto" />
+                  <ArrowSquareOut className="w-3 h-3 ml-auto" />
                 </Link>
                 <Link 
                   href="/support"
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
                   onClick={() => setShowUserMenu(false)}
                 >
-                  <MessageSquare className="w-4 h-4" />
+                  <ChatCircle className="w-4 h-4" />
                   <span className="text-sm font-medium">Get support</span>
                 </Link>
                 <Link 
@@ -195,7 +195,7 @@ export default function Header() {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
                   onClick={() => setShowUserMenu(false)}
                 >
-                  <MessageSquare className="w-4 h-4" />
+                  <ChatCircle className="w-4 h-4" />
                   <span className="text-sm font-medium">Give feedback</span>
                 </Link>
                 <Link 
@@ -210,7 +210,7 @@ export default function Header() {
                   onClick={logout}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-red-600 hover:bg-red-50 transition-colors"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <SignOut className="w-4 h-4" />
                   <span className="text-sm font-medium">Log out</span>
                 </button>
               </div>
