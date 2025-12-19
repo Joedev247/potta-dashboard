@@ -99,8 +99,8 @@ export default function AdminLogsPage() {
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 mt-20 mb-4 sm:mb-6">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <ClipboardText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">System Logs</h1>
@@ -138,7 +138,7 @@ export default function AdminLogsPage() {
           </div>
         ) : logs.length === 0 ? (
           <div className="p-12 text-center">
-            <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <ClipboardText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 font-medium">No logs found</p>
             <p className="text-sm text-gray-500 mt-1">Logs will appear here as requests are made</p>
           </div>

@@ -164,7 +164,7 @@ export default function AdminHeader() {
                 >
                   <Question className="w-4 h-4" />
                   <span className="text-sm font-medium">Help Center</span>
-                  <ExternalLink className="w-3 h-3 ml-auto" />
+                  <ArrowSquareOut className="w-3 h-3 ml-auto" />
                 </Link>
                 <Link 
                   href="/support"

@@ -570,7 +570,7 @@ export default function AdminPage() {
                         >
                           {user.status === 'ACTIVE' ? (
                             <>
-                              <PowerOff className="w-4 h-4" />
+                              <Power className="w-4 h-4" />
                               Disable
                             </>
                           ) : (
