@@ -99,9 +99,9 @@ export default function ApplicationsPage() {
         } else if (allAppsResponse.data.applications && Array.isArray(allAppsResponse.data.applications)) {
           // Backend returned { applications: [...] }
           allAppsRaw = allAppsResponse.data.applications;
-        } else if (allAppsResponse.data.data && Array.isArray(allAppsResponse.data.data)) {
+        } else if ((allAppsResponse.data as any)?.data && Array.isArray((allAppsResponse.data as any).data)) {
           // Backend returned nested { data: { applications: [...] } }
-          allAppsRaw = allAppsResponse.data.data;
+          allAppsRaw = (allAppsResponse.data as any).data;
         }
       } else if (allAppsResponse.error) {
         console.error('[Applications] Apps fetch failed:', allAppsResponse.error);
@@ -115,8 +115,8 @@ export default function ApplicationsPage() {
           orgAppsRaw = orgResponse.data;
         } else if (orgResponse.data.applications && Array.isArray(orgResponse.data.applications)) {
           orgAppsRaw = orgResponse.data.applications;
-        } else if (orgResponse.data.data && Array.isArray(orgResponse.data.data)) {
-          orgAppsRaw = orgResponse.data.data;
+        } else if ((orgResponse.data as any)?.data && Array.isArray((orgResponse.data as any).data)) {
+          orgAppsRaw = (orgResponse.data as any).data;
         }
       }
       
