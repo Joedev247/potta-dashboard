@@ -282,7 +282,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const createResponse = await applicationsService.createApplication({
                   name: 'Default Application',
                   description: 'Auto-created application for API access',
-                  environment: 'DEVELOPMENT',
+                  environment: 'SANDBOX',
                 });
 
                 if (createResponse.success && createResponse.data?.api_key) {
@@ -356,8 +356,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await usersService.updateProfile(userData);
       if (response.success && response.data) {
-        setUser(response.data);
-        localStorage.setItem('user', JSON.stringify(response.data));
+        const normalizedUser: User = {
+          ...response.data,
+          phone: response.data.phone || undefined,
+        };
+        setUser(normalizedUser);
+        localStorage.setItem('user', JSON.stringify(normalizedUser));
       }
     } catch (error) {
       console.error('Update user error:', error);
