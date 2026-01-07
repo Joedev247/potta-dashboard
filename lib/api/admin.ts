@@ -133,7 +133,7 @@ class AdminService {
             code: 'LOGS_FETCH_ERROR',
             message: 'Failed to fetch logs',
           },
-          data: { logs: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } },
+          data: { logs: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false } },
         };
       }
 
@@ -177,7 +177,7 @@ class AdminService {
           code: 'LOGS_FETCH_ERROR',
           message: error?.message || 'Failed to fetch logs',
         },
-        data: { logs: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } },
+        data: { logs: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false } },
       };
     }
   }
