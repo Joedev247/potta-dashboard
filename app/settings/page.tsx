@@ -173,7 +173,7 @@ export default function SettingsPage() {
             firstName: updatedProfile.firstName,
             lastName: updatedProfile.lastName,
             email: updatedProfile.email,
-            phone: updatedProfile.phone,
+            phone: updatedProfile.phone ?? undefined,
           });
         }
         
