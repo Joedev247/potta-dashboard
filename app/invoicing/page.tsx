@@ -171,9 +171,9 @@ export default function InvoicingPage() {
       const response = await invoicingService.getRecurringInvoices();
       if (response.success && response.data) {
         // Handle both array response and object with recurring property
-        const recurringData = Array.isArray(response.data) 
-          ? response.data 
-          : (response.data.recurring || []);
+        const recurringData = Array.isArray(response.data)
+          ? response.data
+          : ((response.data as any)?.recurring ?? []);
         setRecurringInvoices(recurringData);
       } else {
         setRecurringInvoices([]);
