@@ -138,7 +138,7 @@ export default function PaymentsPage() {
         if (response.data.pagination) {
           setPagination(response.data.pagination);
         }
-      } else if (response && response.error && response.error.status === 403) {
+      } else if (response && response.error && response.error.code === '403') {
         setPayments([]);
         setError('Access denied: you do not have permission to view payments. Please request admin access or use admin API credentials.');
       } else if (response && !response.success) {
