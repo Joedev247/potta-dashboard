@@ -897,7 +897,7 @@ export default function PaymentsPage() {
             const filteredRefunds = refunds.filter(refund => {
               const matchesSearch = !searchQuery || 
                 refund.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                refund.paymentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (refund.paymentId ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                 refund.amount.toString().includes(searchQuery);
               const matchesStatus = !selectedStatus || refund.status === selectedStatus.toLowerCase();
               return matchesSearch && matchesStatus;
