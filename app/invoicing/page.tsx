@@ -922,9 +922,9 @@ export default function InvoicingPage() {
                     <div className="mb-6 text-right">
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">{organization.name}</h3>
                 <div className="space-y-1 text-sm text-gray-600">
-                        {organization.email && <p>{organization.email}</p>}
-                        {organization.phone && <p>{organization.phone}</p>}
-                        {organization.website && <p>{organization.website}</p>}
+                        {(organization as any)?.email && <p>{(organization as any).email}</p>}
+                        {(organization as any)?.phone && <p>{(organization as any).phone}</p>}
+                        {(organization as any)?.website && <p>{(organization as any).website}</p>}
                 </div>
               </div>
                   )}

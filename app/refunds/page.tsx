@@ -114,9 +114,9 @@ export default function RefundsPage() {
     const query = searchQuery.toLowerCase();
     return (
       refund.id.toLowerCase().includes(query) ||
-      refund.payment_id.toLowerCase().includes(query) ||
-      refund.reason.toLowerCase().includes(query) ||
-      refund.amount.toString().includes(query)
+      (refund.payment_id ?? '').toLowerCase().includes(query) ||
+      (refund.reason ?? '').toLowerCase().includes(query) ||
+      (refund.amount && refund.amount.toString().includes(query))
     );
   });
 
@@ -324,7 +324,7 @@ export default function RefundsPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900">Refund #{refund.id.slice(0, 8)}</div>
-                        <div className="text-xs text-gray-600 mt-1">Payment: {refund.payment_id.slice(0, 8)}</div>
+                        <div className="text-xs text-gray-600 mt-1">Payment: {(refund.payment_id ?? '').slice(0, 8)}</div>
                       </div>
                       <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(refund.status)}`}>
                         {refund.status}
@@ -352,7 +352,7 @@ export default function RefundsPage() {
                   {/* Desktop Table Layout */}
                   <div className="hidden lg:grid grid-cols-5 gap-4 items-center">
                     <div className="text-sm font-medium text-gray-900">#{refund.id.slice(0, 12)}</div>
-                    <div className="text-sm text-gray-600">{refund.payment_id.slice(0, 12)}</div>
+                    <div className="text-sm text-gray-600">{(refund.payment_id ?? '').slice(0, 12)}</div>
                     <div className="text-sm font-semibold text-gray-900">
                       {formatCurrency(refund.amount, refund.currency || 'XAF')}
                     </div>
