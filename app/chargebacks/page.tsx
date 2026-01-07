@@ -120,7 +120,7 @@ export default function ChargebacksPage() {
     const query = searchQuery.toLowerCase();
     return (
       chargeback.id.toLowerCase().includes(query) ||
-      chargeback.payment_id.toLowerCase().includes(query) ||
+      (chargeback.payment_id ?? '').toLowerCase().includes(query) ||
       chargeback.reason.toLowerCase().includes(query) ||
       (chargeback.amount && chargeback.amount.toString().includes(query))
     );
@@ -355,7 +355,7 @@ export default function ChargebacksPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900">Chargeback #{chargeback.id.slice(0, 8)}</div>
-                        <div className="text-xs text-gray-600 mt-1">Payment: {chargeback.payment_id.slice(0, 8)}</div>
+                        <div className="text-xs text-gray-600 mt-1">Payment: {(chargeback.payment_id ?? '').slice(0, 8)}</div>
                       </div>
                       <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(chargeback.status)}`}>
                         {chargeback.status}
@@ -399,7 +399,7 @@ export default function ChargebacksPage() {
                   {/* Desktop Table Layout */}
                   <div className="hidden lg:grid grid-cols-5 gap-4 items-center">
                     <div className="text-sm font-medium text-gray-900">#{chargeback.id.slice(0, 12)}</div>
-                    <div className="text-sm text-gray-600">{chargeback.payment_id.slice(0, 12)}</div>
+                    <div className="text-sm text-gray-600">{(chargeback.payment_id ?? '').slice(0, 12)}</div>
                     <div className="text-sm font-semibold text-gray-900">
                       {chargeback.amount ? formatCurrency(chargeback.amount, chargeback.currency || 'XAF') : 'N/A'}
                     </div>
