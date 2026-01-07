@@ -15,6 +15,7 @@ export * from './statistics';
 export * from './onboarding';
 export * from './bank-accounts';
 export * from './applications';
+export * from './payment-links';
 
 // Explicitly export services and canonical types for modules that may export overlapping names
 export { paymentsService } from './payments';
@@ -37,6 +38,9 @@ export type { Refund, RefundsListResponse } from './refunds';
 
 export { chargebacksService } from './chargebacks';
 export type { Chargeback, ChargebacksListResponse } from './chargebacks';
+
+export { paymentLinksService } from './payment-links';
+export type { PaymentLink, PaymentLinksListResponse } from './payment-links';
 
 export { adminService } from './admin';
 export type { User as AdminUserType, LogEntry, LogsResponse, Organization as AdminOrganization, RegisterUserData, ChangeUserStatusData } from './admin';

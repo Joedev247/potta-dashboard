@@ -5,14 +5,14 @@ const { URL } = require('url');
 function readEnvBaseUrl() {
   try {
     const envPath = path.resolve(__dirname, '..', '.env');
-    if (!fs.existsSync(envPath)) return 'http://localhost:3005';
+    if (!fs.existsSync(envPath)) return 'https://payments.dev.instanvi.com';
     const txt = fs.readFileSync(envPath, 'utf8');
     const m = txt.match(/^NEXT_PUBLIC_API_BASE_URL=(.+)$/m);
     if (m) return m[1].trim();
   } catch (e) {
     // ignore
   }
-  return 'http://localhost:3005';
+  return 'https://payments.dev.instanvi.com';
 }
 
 const BASE = readEnvBaseUrl();

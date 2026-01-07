@@ -238,71 +238,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signup = async (data: SignupData): Promise<boolean> => {
-    try {
-      const response = await authService.signup(data);
-      
-      if (response.success && response.data) {
-        const newUser = response.data.user;
-        const token = response.data.token;
-        
-        if (token) {
+    const response = await authService.signup(data);
+
+    if (response.success && response.data) {
+      const newUser = response.data.user;
+      const token = response.data.token;
+
+      if (token) {
           localStorage.setItem('accessToken', token);
         }
 
         if (newUser) {
           setUser(newUser);
-          setIsAuthenticated(true);
-          localStorage.setItem('user', JSON.stringify(newUser));
-          localStorage.setItem('isAuthenticated', 'true');
-          
-          // Try to create application for API key if possible
-          // This may fail if user needs to verify email first, but that's okay
+          // Only mark authenticated if we actually received a token
           if (token) {
-            try {
-              const { applicationsService } = await import('@/lib/api');
-              const existingApiKey = localStorage.getItem('userApiKey');
-              
-              if (!existingApiKey) {
-                const appsResponse = await applicationsService.listApplications();
-                const applications = appsResponse.data?.applications;
-                
-                if (appsResponse.success && applications && applications.length > 0) {
-                  const app = applications[0];
-                  if (app.api_key) {
-                    localStorage.setItem('userApiKey', app.api_key);
-                    console.log('[AuthContext] API key retrieved from existing application (signup)');
-                  }
-                } else {
-                  const createResponse = await applicationsService.createApplication({
-                    name: 'Default Application',
-                    description: 'Auto-created application for API access',
-                    environment: 'DEVELOPMENT',
-                  });
-                  
-                  if (createResponse.success && createResponse.data?.api_key) {
-                    localStorage.setItem('userApiKey', createResponse.data.api_key);
-                    console.log('[AuthContext] Default application created with API key (signup)');
-                  }
+            setIsAuthenticated(true);
+            localStorage.setItem('isAuthenticated', 'true');
+          } else {
+            setIsAuthenticated(false);
+            localStorage.removeItem('isAuthenticated');
+          }
+          localStorage.setItem('user', JSON.stringify(newUser));
+
+        // Try to create application for API key if possible
+        // This may fail if user needs to verify email first, but that's okay
+        if (token) {
+          try {
+            const { applicationsService } = await import('@/lib/api');
+            const existingApiKey = localStorage.getItem('userApiKey');
+
+            if (!existingApiKey) {
+              const appsResponse = await applicationsService.listApplications();
+              const applications = appsResponse.data?.applications;
+
+              if (appsResponse.success && applications && applications.length > 0) {
+                const app = applications[0];
+                if (app.api_key) {
+                  localStorage.setItem('userApiKey', app.api_key);
+                  console.log('[AuthContext] API key retrieved from existing application (signup)');
+                }
+              } else {
+                const createResponse = await applicationsService.createApplication({
+                  name: 'Default Application',
+                  description: 'Auto-created application for API access',
+                  environment: 'DEVELOPMENT',
+                });
+
+                if (createResponse.success && createResponse.data?.api_key) {
+                  localStorage.setItem('userApiKey', createResponse.data.api_key);
+                  console.log('[AuthContext] Default application created with API key (signup)');
                 }
               }
-            } catch (appError) {
-              // Expected to fail if email verification is required first
-              console.log('[AuthContext] Could not create application during signup (may need email verification first)');
             }
+          } catch (appError) {
+            // Expected to fail if email verification is required first
+            console.log('[AuthContext] Could not create application during signup (may need email verification first)');
           }
-          
-          // Note: Organization creation is now required before onboarding
-          // Users must explicitly create an organization during the onboarding flow
-          // This matches the backend API requirement that onboarding requires an organizationId
-          
-          return true;
         }
+
+        return true;
       }
-      return false;
-    } catch (error) {
-      console.error('Signup error:', error);
-      return false;
     }
+
+    // If we reach here signup failed - surface API error to caller for better UX
+    const errMsg = response.error?.message || 'Signup failed';
+    console.error('Signup failed:', { endpoint: '/auth/sign-up', error: response.error });
+    throw new Error(errMsg);
   };
 
   const resendVerificationEmail = async (email: string, callbackURL?: string): Promise<void> => {

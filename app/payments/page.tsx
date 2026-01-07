@@ -1,8 +1,9 @@
 'use client';
 
-import { MagnifyingGlass, Plus, ArrowSquareOut, ArrowLeft, CaretDown, Calendar, X, ArrowCounterClockwise, CaretUp, ArrowRight, WarningCircle, Package, ArrowClockwise, Eye, CheckCircle, Copy, Spinner, CreditCard, UserCheck, Phone } from '@phosphor-icons/react';
+import { MagnifyingGlass, Plus, ArrowSquareOut, ArrowLeft, CaretDown, Calendar, X, ArrowCounterClockwise, CaretUp, ArrowRight, WarningCircle, Package, ArrowClockwise, Eye, CheckCircle, Copy, Spinner, CreditCard, UserCheck, Phone, Link as LinkIcon } from '@phosphor-icons/react';
+import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
-import { paymentsService, type Payment, type Refund, type Chargeback, type Order } from '@/lib/api';
+import { paymentsService, applicationsService, type Payment, type Refund, type Chargeback, type Order } from '@/lib/api';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 
 export default function PaymentsPage() {
@@ -65,10 +66,16 @@ export default function PaymentsPage() {
     type: 'DEPOSIT' as 'DEPOSIT' | 'COLLECTION',
     provider: 'MTN_CAM' as 'MTN_CAM' | 'ORANGE_CAM',
     description: '',
+    // Optional: payment link slug to redeem (public redeem endpoint)
+    slug: '',
   });
   const [makePaymentLoading, setMakePaymentLoading] = useState(false);
   const [makePaymentResult, setMakePaymentResult] = useState<any>(null);
   const [makePaymentError, setMakePaymentError] = useState<string | null>(null);
+  // Applications (for selecting which application to use when making a payment)
+  const [applications, setApplications] = useState<{ id: string; name: string; api_key: string }[]>([]);
+  const [applicationsLoading, setApplicationsLoading] = useState(false);
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   
   // Payment Status states
   const [statusTransactionId, setStatusTransactionId] = useState('');
@@ -89,6 +96,7 @@ export default function PaymentsPage() {
   // Fetch data functions
   const fetchPayments = useCallback(async () => {
     setLoading(prev => ({ ...prev, payments: true }));
+    setError(null);
     try {
       const params: any = {
         page: pagination.page,
@@ -130,9 +138,15 @@ export default function PaymentsPage() {
         if (response.data.pagination) {
           setPagination(response.data.pagination);
         }
+      } else if (response && response.error && response.error.status === 403) {
+        setPayments([]);
+        setError('Access denied: you do not have permission to view payments. Please request admin access or use admin API credentials.');
+      } else if (response && !response.success) {
+        setError(response.error?.message || 'Failed to fetch payments.');
       }
     } catch (error) {
       console.error('Error fetching payments:', error);
+      setError((error as any)?.message || 'Failed to fetch payments.');
     } finally {
       setLoading(prev => ({ ...prev, payments: false }));
     }
@@ -205,6 +219,29 @@ export default function PaymentsPage() {
     }
   }, [activeTab, fetchPayments, fetchRefunds, fetchChargebacks, fetchOrders]);
 
+  // Fetch applications when the make-payment tab is opened
+  const fetchApplications = useCallback(async () => {
+    setApplicationsLoading(true);
+    try {
+      const resp = await applicationsService.listApplications({ limit: 50 });
+      if (resp.success && resp.data) {
+        const apps = resp.data.applications || [];
+        setApplications(apps.map(a => ({ id: a.id, name: a.name, api_key: a.api_key })));
+        if (apps.length === 1) setSelectedApplicationId(apps[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load applications:', err);
+    } finally {
+      setApplicationsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'make-payment') {
+      fetchApplications();
+    }
+  }, [activeTab, fetchApplications]);
+
   // Handle make payment
   const handleMakePayment = async () => {
     setMakePaymentLoading(true);
@@ -212,8 +249,20 @@ export default function PaymentsPage() {
     setMakePaymentResult(null);
 
     // Validation
-    if (!makePaymentForm.amount || !makePaymentForm.phoneNumber || !makePaymentForm.provider || !makePaymentForm.username) {
-      setMakePaymentError('Amount, phone number, username, and payment provider are required');
+    if (!makePaymentForm.amount && !makePaymentForm.slug) {
+      setMakePaymentError('Amount is required unless redeeming an existing payment link (provide slug).');
+      setMakePaymentLoading(false);
+      return;
+    }
+
+    if (!makePaymentForm.phoneNumber) {
+      setMakePaymentError('Phone number is required');
+      setMakePaymentLoading(false);
+      return;
+    }
+
+    if (!makePaymentForm.provider) {
+      setMakePaymentError('Payment provider is required');
       setMakePaymentLoading(false);
       return;
     }
@@ -242,29 +291,61 @@ export default function PaymentsPage() {
     }
 
     try {
-      const response = await paymentsService.makePayment({
-        amount: parseFloat(makePaymentForm.amount),
-        currency: makePaymentForm.currency,
-        phoneNumber: makePaymentForm.phoneNumber,
-        username: cleanedUsername, // Use cleaned username (alphanumeric only, no spaces)
-        type: makePaymentForm.type,
-        provider: makePaymentForm.provider,
-        description: makePaymentForm.description || undefined,
-      });
-
-      if (response.success && response.data) {
-        setMakePaymentResult(response.data);
-        setMakePaymentForm({
-          amount: '',
-          currency: 'XAF',
-          phoneNumber: '',
-          username: '',
-          type: 'DEPOSIT',
-          provider: 'MTN_CAM',
-          description: '',
+      // include optional applicationId from selected app
+      // If a slug is provided, use the public redeem endpoint
+      if (makePaymentForm.slug && makePaymentForm.slug.trim()) {
+        const slug = makePaymentForm.slug.trim();
+        const redeemResp = await paymentsService.redeemPaymentLink(slug, {
+          phone_number: makePaymentForm.phoneNumber.replace(/\D/g, ''),
+          provider: makePaymentForm.provider,
         });
-      } else {
-        setMakePaymentError(response.error?.message || 'Failed to make payment. Please try again.');
+
+        if (redeemResp.success && redeemResp.data) {
+          setMakePaymentResult(redeemResp.data);
+          setMakePaymentForm({ ...makePaymentForm, amount: '', phoneNumber: '', username: '', slug: '' });
+        } else {
+          const code = redeemResp.error?.code || '';
+          if (String(code).includes('HTTP_404') || String(code).includes('404')) {
+            setMakePaymentError('Payment link not found (404). Please verify the slug.');
+          } else if (String(code).includes('HTTP_410') || String(code).includes('410') || (redeemResp.error?.message && redeemResp.error.message.toLowerCase().includes('gone'))) {
+            setMakePaymentError('Payment link is no longer available (paid, expired, or cancelled).');
+          } else if (redeemResp.error?.code === 'BAD_REQUEST' || String(redeemResp.error?.code).includes('400')) {
+            setMakePaymentError(redeemResp.error?.message || 'Invalid request to redeem payment link.');
+          } else {
+            setMakePaymentError(redeemResp.error?.message || 'Failed to redeem payment link.');
+          }
+        }
+        } else {
+        // Get the selected app's API key if available
+        const selectedApp = applications.find(a => a.id === selectedApplicationId);
+        const appApiKey = selectedApp?.api_key || undefined;
+        
+        const response = await paymentsService.makePayment({
+          amount: parseFloat(makePaymentForm.amount),
+          currency: makePaymentForm.currency,
+          phoneNumber: makePaymentForm.phoneNumber,
+          applicationId: selectedApplicationId || undefined,
+          appApiKey: appApiKey,
+          type: makePaymentForm.type,
+          provider: makePaymentForm.provider,
+          description: makePaymentForm.description || undefined,
+        });
+
+        if (response.success && response.data) {
+          setMakePaymentResult(response.data);
+          setMakePaymentForm({
+            amount: '',
+            currency: 'XAF',
+            phoneNumber: '',
+            username: '',
+            type: 'DEPOSIT',
+            provider: 'MTN_CAM',
+            description: '',
+            slug: '',
+          });
+        } else {
+          setMakePaymentError(response.error?.message || 'Failed to make payment. Please try again.');
+        }
       }
     } catch (error: any) {
       console.error('Make payment error:', error);
@@ -522,11 +603,20 @@ export default function PaymentsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="mb-6 sm:mb-8">
-        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Payments</h1>
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Payments</h1>
+
+          <div className="flex items-center gap-2">
+            <Link href="/payment-links" className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm text-sm text-gray-700">
+              <LinkIcon className="w-4 h-4 text-green-600" />
+              Payment Links
+            </Link>
+          </div>
         </div>
         
         {/* Tabs */}
@@ -669,6 +759,14 @@ export default function PaymentsPage() {
             return (
               <>
                 {/* Payments Stats */}
+                {error && (
+                  <div className="mb-4 p-3 border border-red-200 bg-red-50 text-red-700 rounded">
+                    <div className="flex items-center gap-2">
+                      <WarningCircle className="w-5 h-5" />
+                      <div className="text-sm">{error}</div>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
                   <div className="bg-white border border-gray-200 p-3 sm:p-4">
                     <div className="text-xs sm:text-sm text-gray-600 mb-1">Total Payments</div>
@@ -1122,6 +1220,23 @@ export default function PaymentsPage() {
                 >
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Application (optional)
+                    </label>
+                    <select
+                      value={selectedApplicationId || ''}
+                      onChange={(e) => setSelectedApplicationId(e.target.value || null)}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                    >
+                      <option value="">Use default application (env) — or select one</option>
+                      {applicationsLoading && <option disabled>Loading applications...</option>}
+                      {applications.map((app) => (
+                        <option key={app.id} value={app.id}>{app.name} — {app.id}</option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500">If you select an application, its `application_id` will be sent with the payment request. Otherwise the app id from environment will be used.</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Amount <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1189,6 +1304,20 @@ export default function PaymentsPage() {
                     <p className="mt-1 text-xs text-red-500">
                       <strong>Note:</strong> Username will be converted to lowercase. Spaces and special characters will be automatically removed.
                     </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Payment Link Slug (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={makePaymentForm.slug}
+                      onChange={(e) => setMakePaymentForm({ ...makePaymentForm, slug: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      placeholder="e.g., pay_abc123xyz"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">If you already have a payment link slug, provide it to redeem the link directly (public endpoint).</p>
                   </div>
 
                   <div>

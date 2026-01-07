@@ -134,14 +134,20 @@ class PaymentsService {
    */
   async makePayment(data: {
     amount: number;
-    currency: string;
+    // currency is no longer required by the backend schema
+    currency?: string;
     phoneNumber: string;
-    username: string;
+    // username/user_name removed from required schema
+    username?: string;
+    // optional application id to include in the request body
+    applicationId?: string;
+    // optional api key from the selected application (will be used in x-api-key header)
+    appApiKey?: string;
     type: 'DEPOSIT' | 'COLLECTION';
     provider: 'MTN_CAM' | 'ORANGE_CAM';
     description?: string;
     metadata?: Record<string, any>;
-  }): Promise<ApiResponse<{ transaction_id: string; status: string; amount: number; currency: string }>> {
+  }): Promise<ApiResponse<{ transaction_id: string; status: string; amount: number; currency?: string }>> {
     try {
       // Transform data to match backend API format (snake_case)
       // Backend expects phone_number as a number, not a string
@@ -158,101 +164,22 @@ class PaymentsService {
         };
       }
 
-      // Validate and clean username (4-15 characters, alphanumeric only, lowercase, no spaces)
-      // Remove all spaces, special characters, and Unicode characters, keep only ASCII alphanumeric, convert to lowercase
-      // Use a more strict regex that only allows a-z, A-Z, and 0-9
-      const cleanedUsername = data.username
-        .trim()
-        .replace(/\s+/g, '') // Remove all whitespace
-        .replace(/[^a-zA-Z0-9]/g, '') // Remove all non-alphanumeric characters
-        .toLowerCase()
-        .normalize('NFD') // Normalize to decompose Unicode characters
-        .replace(/[\u0300-\u036f]/g, ''); // Remove diacritics
-      
-      // Additional validation: ensure it's pure ASCII alphanumeric after cleaning
-      if (!/^[a-z0-9]+$/.test(cleanedUsername)) {
-        return {
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Username must contain only lowercase letters and numbers (a-z, 0-9). No spaces, special characters, or Unicode characters allowed.',
-          },
-        };
-      }
-      
-      // Validate length after cleaning (4-15 characters)
-      if (!cleanedUsername || cleanedUsername.length < 4 || cleanedUsername.length > 15) {
-        return {
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: `Username must be between 4 and 15 characters long after cleaning. Original: "${data.username}" (${data.username.length} chars), Cleaned: "${cleanedUsername}" (${cleanedUsername.length} chars)`,
-          },
-        };
-      }
-      
-      console.log('[Payment] Username validation:', {
-        original: data.username,
-        originalLength: data.username.length,
-        cleaned: cleanedUsername,
-        cleanedLength: cleanedUsername.length,
-        isValid: cleanedUsername.length >= 4 && cleanedUsername.length <= 15,
-      });
-
       // Generate transaction_id - backend REQUIRES it (cannot be empty)
       const transactionId = typeof crypto !== 'undefined' && crypto.randomUUID 
         ? crypto.randomUUID() 
         : `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
       // Build request data - use snake_case for all fields to match backend expectations
-      // Ensure username is a clean string (explicitly convert to string to avoid any encoding issues)
-      const finalUsername = String(cleanedUsername).trim();
-      
-      // Calculate byte length (backend might be checking bytes, not characters)
-      // Use TextEncoder for browser compatibility
-      let usernameByteLength = finalUsername.length;
-      try {
-        if (typeof TextEncoder !== 'undefined') {
-          usernameByteLength = new TextEncoder().encode(finalUsername).length;
-        } else if (typeof Buffer !== 'undefined') {
-          usernameByteLength = Buffer.byteLength(finalUsername, 'utf8');
-        }
-      } catch (e) {
-        // Fallback to character length if encoding fails
-        console.warn('[Payment] Could not calculate byte length, using character length');
-      }
-      
-      const usernameCharLength = finalUsername.length;
-      
-      // Log detailed username info for debugging
-      console.log('[Payment] Username details:', {
-        value: finalUsername,
-        charLength: usernameCharLength,
-        byteLength: usernameByteLength,
-        isValidCharLength: usernameCharLength >= 4 && usernameCharLength <= 15,
-        isValidByteLength: usernameByteLength >= 4 && usernameByteLength <= 15,
-        encoded: encodeURIComponent(finalUsername),
-      });
-      
-      // Double-check: backend might be validating byte length instead of character length
-      // If byte length is different from char length, it could cause validation issues
-      if (usernameByteLength < 4 || usernameByteLength > 15) {
-        console.warn('[Payment] WARNING: Username byte length is outside 4-15 range:', {
-          charLength: usernameCharLength,
-          byteLength: usernameByteLength,
-          username: finalUsername,
-        });
-      }
-      
       const requestData: any = {
-        amount: data.amount,
-        currency: data.currency,
-        phone_number: phoneNumberNum, // Backend expects snake_case and number type
-        user_name: finalUsername, // Backend expects snake_case: user_name (not username) - ensure it's a clean string
         type: data.type,
+        amount: data.amount,
+        phone_number: phoneNumberNum, // Backend expects snake_case and number type
         provider: data.provider, // MTN_CAM or ORANGE_CAM
         transaction_id: transactionId, // Backend REQUIRES this field (cannot be empty)
       };
+
+      // Include optional application_id if provided via param or environment
+      const appId = data.applicationId || process.env.NEXT_PUBLIC_APPLICATION_ID;
+      if (appId) requestData.application_id = appId;
       
       // Only include optional fields if they have values
       if (data.description) {
@@ -263,13 +190,62 @@ class PaymentsService {
       }
       
       console.log('[Payment] Request data:', JSON.stringify(requestData, null, 2));
-      console.log('[Payment] Request data (user_name details):', {
-        user_name: requestData.user_name,
-        type: typeof requestData.user_name,
-        charLength: requestData.user_name?.length,
-        byteLength: usernameByteLength,
-        jsonStringified: JSON.stringify(requestData.user_name),
-      });
+
+      // If a specific app's API key is provided, use it in a custom request
+      if (data.appApiKey) {
+        try {
+          const base = process.env.NEXT_PUBLIC_PAYMENTS_API_BASE_URL || 'https://payments.dev.instanvi.com/api';
+          const url = `${base.replace(/\/$/, '')}/paiments/make-payment`;
+          
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'x-api-key': data.appApiKey,
+          };
+          
+          console.log('[Payment] Using custom API key from selected application');
+          
+          const res = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(requestData),
+          });
+          
+          const responseBody = (res.headers.get('content-type') || '').includes('application/json') 
+            ? await res.json() 
+            : await res.text();
+          
+          if (res.ok && responseBody) {
+            const raw = responseBody.data || responseBody;
+            return {
+              success: true,
+              data: {
+                transaction_id: raw.transaction_id || raw.transactionId || raw.id || '',
+                status: raw.status || 'pending',
+                amount: raw.amount ?? data.amount,
+                currency: raw.currency || data.currency,
+              },
+            };
+          }
+          
+          return {
+            success: false,
+            error: {
+              code: `HTTP_${res.status}`,
+              message: (responseBody && responseBody.message) || `Request failed with status ${res.status}`,
+              details: responseBody,
+            },
+          };
+        } catch (error: any) {
+          console.error('[Payment] Error with custom API key request:', error);
+          return {
+            success: false,
+            error: {
+              code: 'PAYMENT_ERROR',
+              message: error?.message || 'Failed to make payment with selected application',
+            },
+          };
+        }
+      }
 
       // Prefer new swagger path /paiments/make-payment (note: backend uses "paiments" in Swagger)
       const response = await apiClient.post<any>('/paiments/make-payment', requestData);
@@ -694,18 +670,134 @@ class PaymentsService {
   }
 
   async createPaymentLink(data: CreatePaymentLinkData): Promise<ApiResponse<PaymentLink>> {
-    const linkId = `link_${Date.now()}`;
-    const link: PaymentLink = {
-      paymentLinkId: linkId,
-      url: typeof window !== 'undefined' ? `${window.location.origin}/pay/${linkId}` : linkId,
-      amount: data.amount,
-      currency: data.currency,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const base = process.env.NEXT_PUBLIC_PAYMENTS_API_BASE_URL || 'https://payments.dev.instanvi.com/api';
+      const url = `${base.replace(/\/$/, '')}/payment-links/create`;
 
-    // Backend does not expose payment link creation in current docs; return client-side link.
-    return { success: true, data: link };
+      // Attempt to read API key from environment or localStorage
+      let apiKey: string | null = process.env.NEXT_PUBLIC_API_KEY || null;
+      if (!apiKey && typeof window !== 'undefined') {
+        apiKey = localStorage.getItem('userApiKey');
+      }
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (apiKey) headers['x-api-key'] = apiKey;
+
+      const payload: any = {
+        amount: data.amount,
+        currency: data.currency,
+        description: data.description,
+        expires_at: data.expiryDate || undefined,
+        max_uses: data.reusable ? 100 : 1,
+        metadata: {},
+        provider: undefined,
+        type: 'COLLECTION',
+      };
+
+      // Remove undefined keys
+      Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+
+      const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+      const body = (res.headers.get('content-type') || '').includes('application/json') ? await res.json() : await res.text();
+
+      if (res.ok && body) {
+        if (body && typeof body === 'object' && 'status_code' in body && 'data' in body) {
+          const ok = body.status_code >= 200 && body.status_code < 300;
+          return {
+            success: ok,
+            data: body.data as any,
+            message: body.message,
+            error: ok ? undefined : { code: String(body.status), message: body.message, details: body.data },
+          };
+        }
+
+        // Try to normalize common shapes
+        const dataField = body.data || body;
+        return { success: true, data: dataField as any };
+      }
+
+      return { success: false, error: { code: `HTTP_${res.status}`, message: (body && body.message) || `Request failed with status ${res.status}`, details: body } };
+    } catch (error: any) {
+      console.error('Error creating payment link:', error);
+      return { success: false, error: { code: 'NETWORK_ERROR', message: error?.message || 'Network error' } };
+    }
+  }
+
+  /**
+   * Get payment link details (public)
+   * GET https://payments.dev.instanvi.com/api/payment-links/:slug
+   */
+  async getPaymentLinkBySlug(slug: string): Promise<ApiResponse<any>> {
+    try {
+      const base = process.env.NEXT_PUBLIC_PAYMENTS_API_BASE_URL || 'https://payments.dev.instanvi.com/api';
+      const url = `${base.replace(/\/$/, '')}/payment-links/${encodeURIComponent(slug)}`;
+
+      const res = await fetch(url, { method: 'GET' });
+      const data = await (res.headers.get('content-type') || '').includes('application/json') ? await res.json() : await res.text();
+
+      if (res.ok && data) {
+        // Normalize documented backend shape: { status_code, status, message, data }
+        if (data && typeof data === 'object' && 'status_code' in data && 'data' in data) {
+          const ok = res.ok && (data.status_code >= 200 && data.status_code < 300);
+          return {
+            success: ok,
+            data: data.data,
+            message: data.message,
+            error: ok ? undefined : { code: String(data.status), message: data.message, details: data.data },
+          };
+        }
+
+        return { success: true, data } as ApiResponse<any>;
+      }
+
+      return {
+        success: false,
+        error: { code: `HTTP_${res.status}`, message: (data && data.message) || `Request failed with status ${res.status}`, details: data },
+      };
+    } catch (error: any) {
+      console.error('Error fetching payment link by slug:', error);
+      return { success: false, error: { code: 'NETWORK_ERROR', message: error?.message || 'Network error' } };
+    }
+  }
+
+  /**
+   * Redeem a payment link (public)
+   * POST https://payments.dev.instanvi.com/api/payment-links/:slug/redeem
+   */
+  async redeemPaymentLink(slug: string, body: { phone_number: string | number; provider: string }): Promise<ApiResponse<any>> {
+    try {
+      const base = process.env.NEXT_PUBLIC_PAYMENTS_API_BASE_URL || 'https://payments.dev.instanvi.com/api';
+      const url = `${base.replace(/\/$/, '')}/payment-links/${encodeURIComponent(slug)}/redeem`;
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await (res.headers.get('content-type') || '').includes('application/json') ? await res.json() : await res.text();
+
+      if (res.ok && data) {
+        if (data && typeof data === 'object' && 'status_code' in data && 'data' in data) {
+          const ok = res.ok && (data.status_code >= 200 && data.status_code < 300);
+          return {
+            success: ok,
+            data: data.data,
+            message: data.message,
+            error: ok ? undefined : { code: String(data.status), message: data.message, details: data.data },
+          };
+        }
+        return { success: true, data } as ApiResponse<any>;
+      }
+
+      return {
+        success: false,
+        error: { code: `HTTP_${res.status}`, message: (data && data.message) || `Request failed with status ${res.status}`, details: data },
+      };
+    } catch (error: any) {
+      console.error('Error redeeming payment link:', error);
+      return { success: false, error: { code: 'NETWORK_ERROR', message: error?.message || 'Network error' } };
+    }
   }
 }
 

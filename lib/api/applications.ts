@@ -76,14 +76,27 @@ class ApplicationsService {
       dataKeys: Object.keys(data),
     });
     
-    // Send organization_id in the body (backend now supports this)
+    // Workaround: send organization_id as a query parameter when present.
+    // Some backend versions ignore organization_id in the body when a session `token` header
+    // is present. Sending it in the query ensures the server attributes the app to the
+    // organization instead of the personal user.
+    const hasOrg = !!data.organization_id;
+    const params = hasOrg ? { organization_id: data.organization_id } : undefined;
+
+    // Remove organization_id from body to avoid duplicate/conflicting signals
+    const bodyToSend = { ...data } as any;
+    if (hasOrg) {
+      delete bodyToSend.organization_id;
+    }
+
     console.log('[ApplicationsService] Sending request with:', {
       endpoint: '/applications',
-      bodyData: data,
-      note: data.organization_id ? 'Creating organization app' : 'Creating personal app',
+      params,
+      bodyKeys: Object.keys(bodyToSend),
+      note: hasOrg ? 'Creating organization app (org_id in query)' : 'Creating personal app',
     });
-    
-    return apiClient.post<Application>('/applications', data);
+
+    return apiClient.post<Application>('/applications', bodyToSend, params);
   }
 
   /**

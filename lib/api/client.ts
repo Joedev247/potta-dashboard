@@ -2,11 +2,11 @@
  * API Client Configuration
  * Centralized API service for Instanvi Payment Platform
  *
- * Development now targets the backend running at http://localhost:3005.
+ * Development now targets the backend running at https://payments.dev.instanvi.com.
  * When a production endpoint is available, set NEXT_PUBLIC_API_BASE_URL.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3005';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://payments.dev.instanvi.com';
 const API_VERSION = '/api';
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
 
@@ -108,8 +108,8 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const token = await this.getAuthToken();
     
-    // Debug: Log token status for troubleshooting
-    if (!token && typeof window !== 'undefined') {
+    // Debug: Log token status for troubleshooting (skip logging for public auth endpoints)
+    if (!token && typeof window !== 'undefined' && !endpoint.includes('/auth')) {
       const storedToken = localStorage.getItem('accessToken');
       console.warn(`[API Client] No token found for ${endpoint}. localStorage has token: ${!!storedToken}, length: ${storedToken?.length || 0}`);
     }
@@ -140,7 +140,7 @@ class ApiClient {
     const isReportsEndpoint = endpoint.includes('/reports');
     
     // Customer self-service endpoints use `token` header
-    const isUserCustomerEndpoint = endpoint.includes('/users/customer') || endpoint.includes('/auth/');
+    const isUserCustomerEndpoint = endpoint.includes('/users/customer');
     
     // For endpoints that require x-api-key (payments, etc.)
     // NOTE: Organizations do NOT need x-api-key per Swagger docs - only Bearer base64(api_user:api_password)
@@ -274,7 +274,9 @@ class ApiClient {
       headers['token'] = token;
       console.log(`[API Client] Using token header for ${endpoint}`);
     } else {
-      console.warn(`[API Client] No authentication available for ${endpoint}`);
+      if (!isAuthEndpoint) {
+        console.warn(`[API Client] No authentication available for ${endpoint}`);
+      }
     }
 
     const url = `${this.baseURL}${endpoint}`;
@@ -285,6 +287,28 @@ class ApiClient {
         hasAuthorization: !!headers['Authorization'],
         authPreview: headers['Authorization'] ? headers['Authorization'].substring(0, 50) + '...' : 'none',
       });
+    }
+    // Debug: Log what headers are being sent for reports endpoints (more verbose)
+    if (isReportsEndpoint) {
+      console.log(`[API Client] Final headers for ${endpoint} (reports):`, {
+        hasAuthorization: !!headers['Authorization'],
+        hasTokenHeader: !!headers['token'],
+        hasApiKey: !!headers['x-api-key'],
+        authPreview: headers['Authorization'] ? (headers['Authorization'].length > 30 ? headers['Authorization'].substring(0, 10) + '...' + headers['Authorization'].slice(-10) : headers['Authorization']) : 'none',
+        tokenPreview: headers['token'] ? (String(headers['token']).length > 12 ? String(headers['token']).substring(0,8) + '...' : String(headers['token'])) : 'none',
+        apiKeyPreview: headers['x-api-key'] ? (String(headers['x-api-key']).length > 12 ? String(headers['x-api-key']).substring(0,8) + '...' : String(headers['x-api-key'])) : 'none',
+      });
+      // Also log the raw (masked) header values to help diagnosing server-side auth checks
+      try {
+        const masked = {
+          Authorization: headers['Authorization'] ? `${String(headers['Authorization']).substring(0, 15)}...${String(headers['Authorization']).slice(-5)}` : 'none',
+          token: headers['token'] ? `${String(headers['token']).substring(0, 8)}...` : 'none',
+          'x-api-key': headers['x-api-key'] ? `${String(headers['x-api-key']).substring(0, 8)}...` : 'none',
+        };
+        console.log('[API Client] Reports headers (masked):', masked);
+      } catch (e) {
+        // ignore
+      }
     }
     
     // Store needsApiKey for use in error handling
@@ -483,6 +507,39 @@ class ApiClient {
               wwwAuthenticate: response.headers.get('www-authenticate'),
             },
           });
+
+          // Retry once using session token in Authorization header if available
+          try {
+            const token = await this.getAuthToken();
+            const alreadyAuthIsToken = headers['Authorization'] && headers['Authorization'] === `Bearer ${token}`;
+            if (token && !alreadyAuthIsToken) {
+              console.log('[API Client] Attempting retry for reports endpoint using session token in Authorization header');
+              const retryHeaders = { ...headers, Authorization: `Bearer ${token}`, 'x-retry-auth': '1' } as Record<string,string>;
+              const retryResponse = await fetch(url, { ...options, headers: retryHeaders });
+              const retryContentType = retryResponse.headers.get('content-type');
+              let retryData: any = null;
+              if (retryContentType && retryContentType.includes('application/json')) {
+                retryData = await retryResponse.json();
+              } else {
+                retryData = await retryResponse.text();
+              }
+              console.log('[API Client] Retry response status:', retryResponse.status);
+              if (retryResponse.ok) {
+                // Success on retry - normalize response
+                return {
+                  success: true,
+                  data: (retryData && (retryData.data ?? retryData)) as T,
+                  message: retryData?.message,
+                };
+              } else {
+                console.error('[API Client] Retry also failed:', { status: retryResponse.status, data: retryData });
+                // continue to return original 403 below with details about retry
+                data = data || retryData;
+              }
+            }
+          } catch (retryErr) {
+            console.warn('[API Client] Retry with session token failed:', retryErr);
+          }
           
           if (!token) {
             return {

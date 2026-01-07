@@ -1844,14 +1844,14 @@ export default function InvoicingPage() {
                   disabled={actionLoading}
                   className="px-4 py-2 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center gap-2"
                 >
-                  {actionLoading ? (
+                      {actionLoading ? (
                     <>
                       <Spinner className="w-4 h-4 animate-spin" />
                       Sending...
                     </>
                   ) : (
                     <>
-                      <Send className="w-4 h-4" />
+                      <PaperPlaneTilt className="w-4 h-4" />
                       Send Invoice
                     </>
                   )}

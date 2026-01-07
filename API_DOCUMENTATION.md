@@ -1,6 +1,6 @@
 # Payment Service API Documentation
 
-**Base URL:** `http://localhost:3005/api` (Development)  
+**Base URL:** `https://payments.dev.instanvi.com/api` (Development)  
 **API Version:** 1.0  
 **Documentation Date:** December 2025
 

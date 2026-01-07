@@ -256,8 +256,8 @@ export default function OnboardingPage() {
                         ? 'bg-green-100 border-green-500 text-green-600'
                         : 'bg-white border-gray-300 text-gray-400'
                     }`}>
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-4 h-4 sm:w-6 sm:h-6" />
+                        {isCompleted ? (
+                        <CheckCircle className="w-4 h-4 sm:w-6 sm:h-6" />
                       ) : (
                         <span className="font-semibold text-xs sm:text-sm">{index + 1}</span>
                       )}

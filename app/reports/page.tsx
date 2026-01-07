@@ -1471,20 +1471,20 @@ export default function ReportsPage() {
 
                     {/* Calendar Navigation */}
                     <div className="flex items-center justify-between mb-2">
-                      <button
+                        <button
                         onClick={() => navigateMonth('prev')}
                         className="p-0.5 hover:bg-gray-100 rounded transition-colors"
                       >
-                        <ChevronLeft className="w-3 h-3 text-gray-600" />
+                        <CaretLeft className="w-3 h-3 text-gray-600" />
                       </button>
                       <div className="text-xs font-medium text-gray-900">
                         {monthNames[calendarMonth - 1]} {calendarYear}
                       </div>
-                      <button
+                        <button
                         onClick={() => navigateMonth('next')}
                         className="p-0.5 hover:bg-gray-100 rounded transition-colors"
                       >
-                        <ChevronRight className="w-3 h-3 text-gray-600" />
+                        <CaretRight className="w-3 h-3 text-gray-600" />
                       </button>
                     </div>
 

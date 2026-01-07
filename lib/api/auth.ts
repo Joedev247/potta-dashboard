@@ -1,6 +1,6 @@
 /**
  * Authentication API Service (real backend)
- * Targets dev backend at http://localhost:3005/api
+ * Targets dev backend at https://payments.dev.instanvi.com/api
  */
 
 import { ApiResponse, apiClient } from './client';
@@ -69,40 +69,35 @@ class AuthService {
 
     if (response.success && response.data) {
       // Ensure role is preserved from signup data if backend doesn't return it
-      const user = response.data.user;
-      const token = response.data.token;
-      
-      // Validate token length
-      if (!token || token.length < 10) {
-        console.error('[AuthService] Invalid token received from signup:', {
-          tokenLength: token?.length,
-          tokenPreview: token ? token.substring(0, 10) + '...' : 'null',
-          userRole: user?.role,
+      const user = (response.data as any).user;
+      const token = (response.data as any).token;
+
+      // If backend returned a valid token, persist full session
+      if (token && typeof token === 'string' && token.length >= 10) {
+        if (data.role && (!user.role || user.role !== data.role)) {
+          user.role = data.role;
+          console.log('[AuthService] Preserving role from signup data:', data.role);
+        }
+
+        console.log('[AuthService] Signup successful with token:', {
+          tokenLength: token.length,
+          userRole: user.role,
           requestedRole: (data as any).role,
         });
-        // Don't persist invalid token
-        return {
-          success: false,
-          error: {
-            code: 'INVALID_TOKEN',
-            message: 'Invalid authentication token received from server. Please try again or contact support.',
-          },
-        };
+
+        this.persistSession(token, user);
+      } else {
+        // No token returned - this is a valid case when the backend requires email verification
+        // Persist the user object locally so the UI can show next steps (verification) but don't mark authenticated
+        console.info('[AuthService] Signup succeeded but no token returned. Email verification may be required. Persisting user only.');
+        if (typeof window !== 'undefined' && user) {
+          try {
+            localStorage.setItem('user', JSON.stringify(user));
+          } catch (e) {
+            // ignore
+          }
+        }
       }
-      
-      if (data.role && (!user.role || user.role !== data.role)) {
-        // Backend might not return the role, so we preserve it from the request
-        user.role = data.role;
-        console.log('[AuthService] Preserving role from signup data:', data.role);
-      }
-      
-      console.log('[AuthService] Signup successful:', {
-        tokenLength: token.length,
-        userRole: user.role,
-        requestedRole: (data as any).role,
-      });
-      
-      this.persistSession(token, user);
     }
 
     return response;

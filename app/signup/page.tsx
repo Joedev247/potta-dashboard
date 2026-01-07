@@ -10,11 +10,11 @@ export default function SignupPage() {
   const router = useRouter();
   const { signup, resendVerificationEmail } = useAuth();
   const [formData, setFormData] = useState({
-    username: 'john_doe',
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'test@mollie-test.com',
-    password: '••••••••',
+    username: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -34,7 +34,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const success = await signup({
+      await signup({
         username: formData.username,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -42,7 +42,8 @@ export default function SignupPage() {
         password: formData.password,
       });
 
-      if (success) {
+      // If signup resolves, proceed
+      if (true) {
         // Ask backend to send verification email that includes our callback URL
         const callback = '/onboarding';
         try {
@@ -54,11 +55,14 @@ export default function SignupPage() {
 
         // Redirect to verify-email page (shows verifying / waiting UI)
         router.push(`/verify-email?callbackURL=${encodeURIComponent(callback)}`);
-      } else {
-        setError('An account with this email or username already exists');
       }
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
+    } catch (err: any) {
+      const msg = err?.message || 'Something went wrong. Please try again.';
+      if (msg.toLowerCase().includes('already exists') || msg.toLowerCase().includes('user exists')) {
+        setError('An account with this email or username already exists');
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }

@@ -286,6 +286,7 @@ export default function CustomerTransactionsPage() {
                   const typeInfo = getTypeIcon(transaction.type);
                   const StatusIcon = statusInfo.icon;
                   const TypeIcon = typeInfo.icon;
+                  const TypeIconComp: any = TypeIcon;
                   const isCredit = transaction.type.toLowerCase() === 'payment' || transaction.type.toLowerCase() === 'deposit';
 
                   return (
@@ -296,8 +297,8 @@ export default function CustomerTransactionsPage() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4 flex-1">
-                          <div className={`w-12 h-12 ${statusInfo.bg} rounded-full flex items-center justify-center`}>
-                            <TypeIcon className={`w-6 h-6 ${typeInfo.color}`} />
+                            <div className={`w-12 h-12 ${statusInfo.bg} rounded-full flex items-center justify-center`}>
+                            <TypeIconComp className={`w-6 h-6 ${typeInfo.color}`} />
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">

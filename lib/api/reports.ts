@@ -210,7 +210,7 @@ class ReportsService {
    */
   private async exportReportFile(endpoint: string, params: Record<string, any>): Promise<ApiResponse<Blob>> {
     try {
-      const base = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3005';
+      const base = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://payments.dev.instanvi.com';
       const apiVersion = '/api';
       const urlParams = new URLSearchParams();
       

@@ -52,6 +52,42 @@ export default function ApplicationsPage() {
     webhookUrl: '',
     defaultCurrency: '',
   });
+  // Keep a local list of application IDs that were created for the current organization
+  // This is a frontend fallback when the backend incorrectly marks org apps as PERSONAL.
+  const [forcedOrgAppIds, setForcedOrgAppIds] = useState<string[]>([]);
+
+  // Helpers to persist forced org app ids per-organization in localStorage
+  const forcedStorageKey = (orgId: string) => `forcedOrgAppIds:${orgId}`;
+  const loadForcedIds = (orgId: string | undefined) => {
+    if (!orgId || typeof window === 'undefined') return [] as string[];
+    try {
+      const raw = localStorage.getItem(forcedStorageKey(orgId));
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as string[];
+    } catch (e) {
+      console.warn('[Applications] Failed to load forcedOrgAppIds from localStorage', e);
+    }
+    return [] as string[];
+  };
+  const saveForcedIds = (orgId: string | undefined, ids: string[]) => {
+    if (!orgId || typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(forcedStorageKey(orgId), JSON.stringify(ids));
+    } catch (e) {
+      console.warn('[Applications] Failed to save forcedOrgAppIds to localStorage', e);
+    }
+  };
+
+  // Load persisted forced ids when organization changes
+  useEffect(() => {
+    if (!organization?.id) {
+      setForcedOrgAppIds([]);
+      return;
+    }
+    const ids = loadForcedIds(organization.id);
+    setForcedOrgAppIds(ids);
+  }, [organization?.id]);
 
   // Fetch applications
   const fetchApplications = useCallback(async () => {
@@ -224,27 +260,36 @@ export default function ApplicationsPage() {
         return false;
       });
       
-      // Filter organization apps: type === 'ORGANIZATION'
-      // Also check if type is missing - in that case, apps from org query are organization apps
+      // Determine organization apps
+      // Primary: type === 'ORGANIZATION'
+      // Secondary: legacy ownership fields (owner_organization_id or organization_id) matching current org
       const allOrgApps = allApps.filter((app: Application) => {
-        if (!organization?.id) {
-          return false;
-        }
-        
+        if (!organization?.id) return false;
+
+        const orgId = organization.id;
         const normalizedType = normalizeType(app.type);
-        
-        // Primary check: use type field if available
+
+        // If this app was recently created by this frontend for the current org,
+        // force it into the org list (workaround for backend mislabeling)
+        const forcedSet = new Set(forcedOrgAppIds);
+        if (forcedSet.has(app.id)) {
+          console.log(`[Applications] App ${app.name} (${app.id}): forced into ORG apps (frontend override)`);
+          return true;
+        }
+
         if (normalizedType === 'ORGANIZATION') {
           console.log(`[Applications] App ${app.name} (${app.id}): type=${app.type} (normalized: ${normalizedType}), isOrganization=true (from type field)`);
           return true;
         }
-        
-        // Fallback: if type is missing or invalid, cannot determine - skip it
-        if (!normalizedType) {
-          console.log(`[Applications] App ${app.name} (${app.id}): type=${app.type} (invalid/missing), cannot determine organization app without type field`);
-          return false; // Skip if type is missing (cannot determine if it's an org app)
+
+        // Check legacy ownership fields that may indicate org ownership
+        const ownerOrgId = (app as any).owner_organization_id || (app as any).organization_id || (app as any).ownerOrganizationId;
+        if (ownerOrgId && String(ownerOrgId) === String(orgId)) {
+          console.log(`[Applications] App ${app.name} (${app.id}): owner_organization_id matches current org (${orgId}), treating as ORG app`);
+          return true;
         }
-        
+
+        // Not an org app
         console.log(`[Applications] App ${app.name} (${app.id}): type=${app.type} (normalized: ${normalizedType}), isOrganization=false`);
         return false;
       });
@@ -296,8 +341,45 @@ export default function ApplicationsPage() {
         organizationAppIds: allOrgApps.map(a => ({ id: a.id, name: a.name, type: a.type })),
       });
 
-      setUserApps(allUserApps);
-      setOrgApps(allOrgApps);
+      // Reconcile forced IDs: if backend now correctly marks an app as ORG,
+      // remove it from the forced list and persist the change.
+      if (organization?.id && forcedOrgAppIds && forcedOrgAppIds.length > 0) {
+        const stillNeeded = forcedOrgAppIds.filter(id => {
+          // keep id if backend has NOT marked it as organization
+          const app = allApps.find(a => a.id === id);
+          if (!app) return true; // keep until we see it in backend
+          const normalizedType = normalizeType(app.type);
+          return normalizedType !== 'ORGANIZATION';
+        });
+        if (JSON.stringify(stillNeeded) !== JSON.stringify(forcedOrgAppIds)) {
+          setForcedOrgAppIds(stillNeeded);
+          saveForcedIds(organization.id, stillNeeded);
+        }
+      }
+
+      // Merge with existing state to avoid brief disappearance when backend results are inconsistent
+      setOrgApps(prev => {
+        const map = new Map<string, Application>();
+        // keep previous org apps first so UI remains stable
+        prev.forEach(a => map.set(a.id, a));
+        allOrgApps.forEach(a => map.set(a.id, a));
+        return Array.from(map.values());
+      });
+
+      setUserApps(prev => {
+        // Exclude any apps that are in orgApps set to avoid duplicates
+        const orgIds = new Set(allOrgApps.map(a => a.id));
+        const merged = new Map<string, Application>();
+        // keep previous user apps
+        prev.forEach(a => {
+          if (!orgIds.has(a.id)) merged.set(a.id, a);
+        });
+        // add newly computed user apps (exclude org apps)
+        allUserApps.forEach(a => {
+          if (!orgIds.has(a.id)) merged.set(a.id, a);
+        });
+        return Array.from(merged.values());
+      });
     } catch (error: any) {
       console.error('[Applications] Error fetching applications:', error);
       const errorMessage = error?.message || error?.toString() || 'Failed to load applications. Please try again.';
@@ -305,7 +387,8 @@ export default function ApplicationsPage() {
     } finally {
       setAppsLoading(false);
     }
-  }, [organization]);
+  }, [organization, forcedOrgAppIds]);
+  
 
   useEffect(() => {
     fetchApplications();
@@ -421,6 +504,34 @@ export default function ApplicationsPage() {
         }
         
         await fetchApplications();
+        // Ensure newly created app appears in UI even if backend list endpoint
+        // doesn't immediately return organization-owned apps (eventual consistency
+        // or backend filtering bugs). Insert created app into the correct list.
+        try {
+          const createdApp = response.data as Application;
+          if (createdApp) {
+            if (createdApp.type === 'ORGANIZATION' || appFormData.organization_id) {
+              setOrgApps(prev => {
+                if (prev.find(a => a.id === createdApp.id)) return prev;
+                return [createdApp, ...prev];
+              });
+              // Remember this app id as org-owned (frontend fallback) and persist
+              setForcedOrgAppIds(prev => {
+                if (prev.includes(createdApp.id)) return prev;
+                const next = [createdApp.id, ...prev];
+                saveForcedIds(organization?.id, next);
+                return next;
+              });
+            } else {
+              setUserApps(prev => {
+                if (prev.find(a => a.id === createdApp.id)) return prev;
+                return [createdApp, ...prev];
+              });
+            }
+          }
+        } catch (e) {
+          // non-fatal
+        }
         resetForm();
         setTimeout(() => {
           setShowCreateModal(false);

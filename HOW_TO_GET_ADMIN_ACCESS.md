@@ -92,7 +92,7 @@ You need an existing admin account OR use a backend endpoint that bypasses admin
 
 ### Step 2: Register New Admin User
 ```bash
-curl -X POST http://localhost:3005/api/admin/register \
+curl -X POST https://payments.dev.instanvi.com/api/admin/register \
   -H "Content-Type: application/json" \
   -H "token: <existing_admin_token>" \
   -d '{

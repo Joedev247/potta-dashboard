@@ -2,7 +2,7 @@
 
 **Version:** 1.0  
 **Last Updated:** December 2025  
-**Base URL:** `http://localhost:3005/api` (Development) | `https://api.yourdomain.com/api` (Production)
+**Base URL:** `https://payments.dev.instanvi.com/api` (Development) | `https://api.yourdomain.com/api` (Production)
 
 ---
 
@@ -104,7 +104,7 @@ fetch('https://api.example.com/api/admin/logs?page=1', {
 
 ```typescript
 // api-client.ts
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://payments.dev.instanvi.com/api';
 
 class AdminApiClient {
   private baseURL: string;

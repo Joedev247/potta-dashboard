@@ -11,32 +11,94 @@ export default function StatisticsPage() {
   const [showPreviousPeriod, setShowPreviousPeriod] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [statistics, setStatistics] = useState<any>(null);
+  const [overview, setOverview] = useState<any>(null);
+  const [timeSeries, setTimeSeries] = useState<Array<any>>([]);
+  const [previousTimeSeries, setPreviousTimeSeries] = useState<Array<any>>([]);
   const [loading, setLoading] = useState(false);
   const selectorScrollRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<SVGSVGElement>(null);
 
   const periods = ['Days', 'Weeks', 'Months', 'Quarters', 'Years', 'Custom...'];
 
-  // Fetch statistics from API
+  // Fetch overview and timeseries from API
   const fetchStatistics = useCallback(async () => {
-    // Don't fetch if custom period is selected
-    if (activePeriod === 'custom...') {
-      return;
-    }
-    
+    if (activePeriod === 'custom...') return;
     setLoading(true);
     try {
-      const response = await statisticsService.getStatistics({
-        period: activePeriod as 'days' | 'weeks' | 'months' | 'quarters' | 'years',
-        value: selectedValue,
-        comparePrevious: showPreviousPeriod,
-      });
-      
-      if (response.success && response.data) {
-        setStatistics(response.data);
+      // Derive start/end from selectedValue for common period types (months, quarters, years)
+      const now = new Date();
+      let startDate = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 30); // default last 30 days
+      let endDate = now;
+
+      // Months like "November 2025"
+      if (activePeriod === 'months' || activePeriod === 'days' || activePeriod === 'weeks') {
+        const parts = selectedValue.split(' ');
+        if (parts.length === 2) {
+          const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+          const monthIndex = monthNames.indexOf(parts[0]);
+          const year = parseInt(parts[1], 10);
+          if (!isNaN(monthIndex) && !isNaN(year)) {
+            startDate = new Date(Date.UTC(year, monthIndex, 1, 0, 0, 0));
+            endDate = new Date(Date.UTC(year, monthIndex + 1, 0, 23, 59, 59));
+          }
+        }
+      } else if (activePeriod === 'quarters') {
+        const parts = selectedValue.split(' ');
+        if (parts.length === 2) {
+          const q = parseInt(parts[0].replace('Q',''), 10) - 1;
+          const y = parseInt(parts[1], 10);
+          if (!isNaN(q) && !isNaN(y)) {
+            startDate = new Date(Date.UTC(y, q * 3, 1, 0, 0, 0));
+            endDate = new Date(Date.UTC(y, q * 3 + 3, 0, 23, 59, 59));
+          }
+        }
+      } else if (activePeriod === 'years') {
+        const y = parseInt(selectedValue, 10);
+        if (!isNaN(y)) {
+          startDate = new Date(Date.UTC(y, 0, 1, 0, 0, 0));
+          endDate = new Date(Date.UTC(y, 11, 31, 23, 59, 59));
+        }
+      }
+
+      const startISO = startDate.toISOString();
+      const endISO = endDate.toISOString();
+
+      // Overview
+      const overviewResp = await statisticsService.getOverview({ startDate: startISO, endDate: endISO, tz: 'UTC' });
+      if (overviewResp.success && overviewResp.data) {
+        setOverview(overviewResp.data);
+      } else {
+        setOverview(null);
+      }
+
+      // Timeseries - request volume and count
+      const granularity = activePeriod === 'days' || activePeriod === 'weeks' ? 'day' : activePeriod === 'months' ? 'day' : activePeriod === 'quarters' ? 'month' : 'month';
+      const tsResp = await statisticsService.getTimeSeries({ startDate: startISO, endDate: endISO, granularity, metrics: ['total_volume','total_count'] });
+      if (tsResp.success && tsResp.data) {
+        setTimeSeries(Array.isArray(tsResp.data) ? tsResp.data : []);
+      } else {
+        setTimeSeries([]);
+      }
+
+      // Previous period (if requested)
+      if (showPreviousPeriod) {
+        // Compute previous range length
+        const prevStart = new Date(startDate.getTime() - (endDate.getTime() - startDate.getTime()) - 1000);
+        const prevEnd = new Date(startDate.getTime() - 1000);
+        const prevResp = await statisticsService.getTimeSeries({ startDate: prevStart.toISOString(), endDate: prevEnd.toISOString(), granularity, metrics: ['total_volume','total_count'] });
+        if (prevResp.success && prevResp.data) {
+          setPreviousTimeSeries(Array.isArray(prevResp.data) ? prevResp.data : []);
+        } else {
+          setPreviousTimeSeries([]);
+        }
+      } else {
+        setPreviousTimeSeries([]);
       }
     } catch (error) {
       console.error('Error fetching statistics:', error);
+      setOverview(null);
+      setTimeSeries([]);
+      setPreviousTimeSeries([]);
     } finally {
       setLoading(false);
     }
@@ -49,58 +111,63 @@ export default function StatisticsPage() {
     }
   }, [fetchStatistics]);
   
-  // Generate months from January to current month (November 2025)
+  // Generate months up to current month
   const generateMonths = () => {
-    const months = [];
-    const currentDate = new Date(2025, 10, 1); // November 2025
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+    const months: string[] = [];
+    const now = new Date();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                        'July', 'August', 'September', 'October', 'November', 'December'];
-    
-    for (let i = 0; i <= currentDate.getMonth(); i++) {
-      months.push(`${monthNames[i]} 2025`);
+    for (let year = now.getFullYear() - 2; year <= now.getFullYear(); year++) {
+      for (let m = 0; m < 12; m++) {
+        // stop if we've reached current month in current year
+        if (year === now.getFullYear() && m > now.getMonth()) break;
+        months.push(`${monthNames[m]} ${year}`);
+      }
     }
     return months;
   };
 
   const months = generateMonths();
   
-  // Generate weeks for current month
   const generateWeeks = (monthStr: string) => {
+    // Keep for UI only; actual data comes from API
     const [monthName, year] = monthStr.split(' ');
     const monthIndex = ['January', 'February', 'March', 'April', 'May', 'June',
                        'July', 'August', 'September', 'October', 'November', 'December'].indexOf(monthName);
-    const yearNum = parseInt(year);
+    const yearNum = parseInt(year, 10);
     const firstDay = new Date(yearNum, monthIndex, 1);
     const lastDay = new Date(yearNum, monthIndex + 1, 0);
-    const weeks = [];
-    
+    const weeks: any[] = [];
     let currentWeekStart = new Date(firstDay);
     while (currentWeekStart <= lastDay) {
       let weekEnd = new Date(currentWeekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
       if (weekEnd > lastDay) weekEnd = new Date(lastDay);
-      
-      weeks.push({
-        label: `Week ${weeks.length + 1}`,
-        start: new Date(currentWeekStart),
-        end: new Date(weekEnd),
-      });
-      
+      weeks.push({ label: `Week ${weeks.length + 1}`, start: new Date(currentWeekStart), end: new Date(weekEnd) });
       currentWeekStart.setDate(currentWeekStart.getDate() + 7);
     }
     return weeks;
   };
 
-  // Generate quarters
   const generateQuarters = () => {
-    return [
-      'Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025'
-    ];
+    const now = new Date();
+    const years = [now.getFullYear() - 2, now.getFullYear() -1, now.getFullYear()];
+    const quarters: string[] = [];
+    years.forEach(y => {
+      for (let q = 1; q <= 4; q++) {
+        if (y === now.getFullYear()) {
+          const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+          if (q > currentQuarter) break;
+        }
+        quarters.push(`Q${q} ${y}`);
+      }
+    });
+    return quarters;
   };
 
-  // Generate years
   const generateYears = () => {
-    return ['2023', '2024', '2025'];
+    const now = new Date();
+    return [ (now.getFullYear() - 2).toString(), (now.getFullYear() -1).toString(), now.getFullYear().toString()];
   };
 
   // Get available options based on period type
@@ -145,127 +212,7 @@ export default function StatisticsPage() {
     }
   };
 
-  // Generate data based on period type and selected value
-  const generateDataForPeriod = (period: string, value: string, isPrevious: boolean = false) => {
-    const data: Array<{ label: string; revenue: number; date: Date; index: number }> = [];
-    
-    if (period === 'days') {
-      // Daily data for selected month
-      const [monthName, year] = value.split(' ');
-      const monthIndex = ['January', 'February', 'March', 'April', 'May', 'June',
-                         'July', 'August', 'September', 'October', 'November', 'December'].indexOf(monthName);
-      const yearNum = parseInt(year);
-      const daysInMonth = new Date(yearNum, monthIndex + 1, 0).getDate();
-      const seed = isPrevious ? monthIndex - 1 : monthIndex;
-      
-      for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(yearNum, monthIndex, day);
-        const random = ((seed * 1000 + day * 37) % 1000) / 1000;
-        const baseRevenue = random * 50000 + 10000;
-        const revenue = Math.round(isPrevious ? baseRevenue * 0.9 : baseRevenue);
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const dayName = dayNames[date.getDay()];
-        const monthAbbr = monthName.substring(0, 3);
-        
-        data.push({
-          label: `${dayName} ${day.toString().padStart(2, '0')} ${monthAbbr}`,
-          revenue,
-          date,
-          index: day - 1,
-        });
-      }
-    } else if (period === 'weeks') {
-      // Weekly data for selected month
-      const weeks = generateWeeks(value);
-      const [monthName, year] = value.split(' ');
-      const monthIndex = ['January', 'February', 'March', 'April', 'May', 'June',
-                         'July', 'August', 'September', 'October', 'November', 'December'].indexOf(monthName);
-      const seed = isPrevious ? monthIndex - 1 : monthIndex;
-      
-      weeks.forEach((week, index) => {
-        const random = ((seed * 100 + index * 17) % 100) / 100;
-        const baseRevenue = random * 300000 + 70000; // Weekly revenue
-        const revenue = Math.round(isPrevious ? baseRevenue * 0.9 : baseRevenue);
-        data.push({
-          label: week.label,
-          revenue,
-          date: week.start,
-          index,
-        });
-      });
-    } else if (period === 'months') {
-      // Monthly data for all months
-      const [monthName, year] = value.split(' ');
-      const monthIndex = ['January', 'February', 'March', 'April', 'May', 'June',
-                         'July', 'August', 'September', 'October', 'November', 'December'].indexOf(monthName);
-      const yearNum = parseInt(year);
-      const seed = isPrevious ? monthIndex - 1 : monthIndex;
-      
-      const random = ((seed * 50 + 23) % 100) / 100;
-      const baseRevenue = random * 1500000 + 300000; // Monthly revenue
-      const revenue = Math.round(isPrevious ? baseRevenue * 0.9 : baseRevenue);
-      
-      data.push({
-        label: value,
-        revenue,
-        date: new Date(yearNum, monthIndex, 1),
-        index: 0,
-      });
-    } else if (period === 'quarters') {
-      // Quarterly data
-      const [quarter, year] = value.split(' ');
-      const quarterNum = parseInt(quarter.substring(1)) - 1;
-      const yearNum = parseInt(year);
-      
-      if (isNaN(quarterNum) || isNaN(yearNum)) {
-        return data;
-      }
-      
-      let seed = quarterNum;
-      if (isPrevious) {
-        if (quarterNum > 0) {
-          seed = quarterNum - 1;
-        } else {
-          // Previous quarter is Q4 of previous year
-          seed = 3;
-        }
-      }
-      
-      // Ensure seed is non-negative
-      seed = Math.max(0, seed);
-      const random = ((seed * 30 + 17) % 100) / 100;
-      const baseRevenue = random * 4500000 + 900000; // Quarterly revenue
-      const revenue = Math.round(isPrevious ? baseRevenue * 0.9 : baseRevenue);
-      
-      data.push({
-        label: value,
-        revenue: isNaN(revenue) ? 0 : revenue,
-        date: new Date(yearNum, quarterNum * 3, 1),
-        index: 0,
-      });
-    } else if (period === 'years') {
-      // Yearly data
-      const yearNum = parseInt(value);
-      
-      if (isNaN(yearNum)) {
-        return data;
-      }
-      
-      const seed = isPrevious ? yearNum - 1 : yearNum;
-      const random = ((Math.abs(seed) * 20 + 13) % 100) / 100;
-      const baseRevenue = random * 18000000 + 3600000; // Yearly revenue
-      const revenue = Math.round(isPrevious ? baseRevenue * 0.9 : baseRevenue);
-      
-      data.push({
-        label: value,
-        revenue: isNaN(revenue) ? 0 : revenue,
-        date: new Date(yearNum, 0, 1),
-        index: 0,
-      });
-    }
-    
-    return data;
-  };
+  // Data is now provided by API: see fetchStatistics -> setTimeSeries / setOverview
 
   // Get previous period value
   const getPreviousPeriodValue = (period: string, currentValue: string) => {
@@ -293,45 +240,25 @@ export default function StatisticsPage() {
   };
 
   const currentPeriodData = useMemo(() => {
-    // Use API data if available, otherwise fallback to generated data
-    if (statistics?.dataPoints && statistics.dataPoints.length > 0) {
-      return statistics.dataPoints.map((point: { label: string; revenue?: number; date: string | Date }, index: number) => ({
-        label: point.label,
-        revenue: point.revenue || 0,
-        date: new Date(point.date),
-        index,
-      }));
+    if (timeSeries && timeSeries.length > 0) {
+      return timeSeries.map((p: any, i: number) => ({ label: p.ts || p.label || p.date || `#${i}`, revenue: p.total_volume ?? p.revenue ?? 0, date: new Date(p.ts || p.date || Date.now()), index: i }));
     }
-    return generateDataForPeriod(activePeriod, selectedValue, false);
-  }, [statistics, activePeriod, selectedValue]);
+    return [];
+  }, [timeSeries]);
 
   const previousPeriodData = useMemo(() => {
     if (!showPreviousPeriod) return [];
-    // Use API previous period data if available
-    if (statistics?.previousPeriod) {
-      // Return empty array as previous period data structure may vary
-      return [];
+    if (previousTimeSeries && previousTimeSeries.length > 0) {
+      return previousTimeSeries.map((p: any, i: number) => ({ label: p.ts || p.label || p.date || `#${i}`, revenue: p.total_volume ?? p.revenue ?? 0, date: new Date(p.ts || p.date || Date.now()), index: i }));
     }
-    const previousValue = getPreviousPeriodValue(activePeriod, selectedValue);
-    return generateDataForPeriod(activePeriod, previousValue, true);
-  }, [statistics, activePeriod, selectedValue, showPreviousPeriod]);
+    return [];
+  }, [previousTimeSeries, showPreviousPeriod]);
 
   // Calculate totals - use API data if available
-  const totalRevenue = statistics?.totals?.revenue ?? 
-    (currentPeriodData.length > 0 
-      ? currentPeriodData.reduce((sum: number, d: { label: string; revenue: number; date: Date; index: number }) => {
-          const rev = d.revenue || 0;
-          return sum + (isNaN(rev) ? 0 : rev);
-        }, 0)
-      : 0);
-  
-  const totalTransactions = statistics?.totals?.transactions ?? 
-    (currentPeriodData.length > 0 
-      ? currentPeriodData.reduce((sum, item) => sum + (item.revenue || 0), 0) / 100 // Estimate based on revenue
-      : 0);
-  
-  const totalRefunds = statistics?.totals?.refunds ?? Math.round(totalRevenue * 0.02);
-  const totalChargebacks = statistics?.totals?.chargebacks ?? Math.round(totalRevenue * 0.005);
+  const totalRevenue = overview?.total_volume ?? statistics?.totals?.revenue ?? (currentPeriodData.length > 0 ? currentPeriodData.reduce((s,d)=>s+(d.revenue||0),0) : 0);
+  const totalTransactions = overview?.total_count ?? statistics?.totals?.transactions ?? (overview?.successful_count ?? 0);
+  const totalRefunds = overview?.refunds_total ?? statistics?.totals?.refunds ?? Math.round(totalRevenue * 0.02);
+  const totalChargebacks = overview?.chargebacks_total ?? statistics?.totals?.chargebacks ?? Math.round(totalRevenue * 0.005);
 
   // Chart dimensions and calculations
   const chartWidth = 800;
@@ -385,6 +312,7 @@ export default function StatisticsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="max-w-7xl mx-auto">
       <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
         <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
           <TrendUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -725,6 +653,7 @@ export default function StatisticsPage() {
             <p className="text-sm text-gray-500">No statistics found for this period</p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
