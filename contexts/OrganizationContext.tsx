@@ -44,7 +44,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     }
 
     const loadOrganization = async (retryCount = 0) => {
-      const MAX_RETRIES = 5;
+      const MAX_RETRIES = 10;
       const RETRY_DELAY_MS = 800;
       
       try {
@@ -122,7 +122,26 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Listen for an explicit signal that api credentials have been stored by AuthContext
+    const eventHandler = () => {
+      if (typeof window !== 'undefined') {
+        console.log('[OrganizationContext] Received apiCredentialsAvailable event, attempting to load organization now...');
+        loadOrganization(0);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('apiCredentialsAvailable', eventHandler as EventListener);
+    }
+
+    // Kick off initial attempt
     loadOrganization(0);
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('apiCredentialsAvailable', eventHandler as EventListener);
+      }
+    };
   }, [isAuthenticated, authLoading]);
 
   const setOrganization = async (org: Organization | null) => {

@@ -131,6 +131,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 console.log('[AuthContext] api_password:', profile.api_password);
                 console.log('[AuthContext] Base64 encoded:', btoa(`${profile.api_user}:${profile.api_password}`));
                 console.log('[AuthContext] ==========================================');
+                if (typeof window !== 'undefined') {
+                  try {
+                    window.dispatchEvent(new CustomEvent('apiCredentialsAvailable'));
+                    console.log('[AuthContext] Dispatched apiCredentialsAvailable event');
+                  } catch (e) {
+                    // ignore
+                  }
+                }
               } else {
                 console.warn('[AuthContext] Profile response missing api_user or api_password:', profile);
               }
@@ -190,6 +198,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 localStorage.setItem('apiUser', profile.api_user);
                 localStorage.setItem('apiPassword', profile.api_password);
                 console.log('[AuthContext] API credentials obtained from profile (2FA):', profile.api_user.substring(0, 8) + '...');
+                if (typeof window !== 'undefined') {
+                  try {
+                    window.dispatchEvent(new CustomEvent('apiCredentialsAvailable'));
+                    console.log('[AuthContext] Dispatched apiCredentialsAvailable event (2FA)');
+                  } catch (e) {
+                    // ignore
+                  }
+                }
               } else {
                 console.warn('[AuthContext] Profile response missing api_user or api_password (2FA)');
               }
