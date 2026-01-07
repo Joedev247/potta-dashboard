@@ -1032,8 +1032,8 @@ export default function PaymentsPage() {
             const filteredChargebacks = chargebacks.filter(chargeback => {
               const matchesSearch = !searchQuery || 
                 chargeback.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                chargeback.paymentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                chargeback.amount.toString().includes(searchQuery);
+                (chargeback.paymentId ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (chargeback.amount ?? 0).toString().includes(searchQuery);
               const matchesStatus = !selectedStatus || chargeback.status === selectedStatus.toLowerCase();
               return matchesSearch && matchesStatus;
             });
@@ -1044,7 +1044,7 @@ export default function PaymentsPage() {
             const wonCount = chargebacks.filter(c => c.status === 'won').length;
             const totalChargebackAmount = chargebacks
               .filter(c => c.status === 'open')
-              .reduce((sum, c) => sum + c.amount, 0);
+              .reduce((sum, c) => sum + (c.amount || 0), 0);
 
             return (
             <div>
@@ -1091,7 +1091,9 @@ export default function PaymentsPage() {
                           <div className="flex-1 min-w-0">
                             <div className="font-mono text-xs sm:text-sm text-gray-900 truncate">{chargeback.id}</div>
                             <div className="text-xs text-gray-500 mt-1">Payment: {chargeback.paymentId}</div>
-                            <div className="text-sm text-gray-600 mt-1">{formatDate(chargeback.createdAt)}</div>
+                            {chargeback.createdAt && (
+                              <div className="text-sm text-gray-600 mt-1">{formatDate(chargeback.createdAt)}</div>
+                            )}
                           </div>
                           <span className={`px-2 py-1 text-xs font-medium rounded flex items-center gap-1 flex-shrink-0 ml-2 ${
                             chargeback.status === 'open'
@@ -1132,7 +1134,7 @@ export default function PaymentsPage() {
                             {chargeback.status}
                           </span>
                         </div>
-                        <div className="text-sm text-gray-600">{formatDate(chargeback.createdAt)}</div>
+                        <div className="text-sm text-gray-600">{chargeback.createdAt ? formatDate(chargeback.createdAt) : 'N/A'}</div>
                         <div>
                           <button 
                             onClick={() => setSelectedItem({ ...chargeback, type: 'chargeback' })}
@@ -1752,7 +1754,9 @@ export default function PaymentsPage() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="font-mono text-xs sm:text-sm text-gray-900 truncate">{order.id}</div>
-                            <div className="text-sm text-gray-600 mt-1">{formatDate(order.createdAt)}</div>
+                            {order.createdAt && (
+                              <div className="text-sm text-gray-600 mt-1">{formatDate(order.createdAt || new Date().toISOString())}</div>
+                            )}
                           </div>
                           <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${
                             order.status === 'paid'
@@ -1768,8 +1772,8 @@ export default function PaymentsPage() {
                         </div>
                         <div>
                           <div className="text-xs text-gray-600">Customer</div>
-                          <div className="font-medium text-sm text-gray-900">{order.customer.name}</div>
-                          <div className="text-xs text-gray-500">{order.customer.email}</div>
+                          <div className="font-medium text-sm text-gray-900">{order.customer?.name || 'N/A'}</div>
+                          <div className="text-xs text-gray-500">{order.customer?.email || 'N/A'}</div>
                         </div>
                         <div className="flex items-center justify-between">
                           <div>
@@ -1793,8 +1797,8 @@ export default function PaymentsPage() {
                       <div className="hidden lg:grid grid-cols-7 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{order.id}</div>
                         <div>
-                          <div className="font-medium text-gray-900">{order.customer.name}</div>
-                          <div className="text-xs text-gray-500">{order.customer.email}</div>
+                          <div className="font-medium text-gray-900">{order.customer?.name || 'N/A'}</div>
+                          <div className="text-xs text-gray-500">{order.customer?.email || 'N/A'}</div>
                         </div>
                         <div className="font-semibold text-gray-900">{formatCurrency(order.amount, order.currency)}</div>
                         <div className="text-sm text-gray-600">{order.items.length} items</div>
@@ -1811,7 +1815,7 @@ export default function PaymentsPage() {
                             {order.status}
                           </span>
                         </div>
-                        <div className="text-sm text-gray-600">{formatDate(order.createdAt)}</div>
+                        <div className="text-sm text-gray-600">{order.createdAt ? formatDate(order.createdAt) : 'N/A'}</div>
                         <div>
                           <button 
                             onClick={() => setSelectedItem({ ...order, type: 'order' })}
