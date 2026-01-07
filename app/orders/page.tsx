@@ -391,7 +391,7 @@ export default function OrdersPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900">Order #{order.id.slice(0, 8)}</div>
-                        <div className="text-xs text-gray-600 mt-1">Customer: {order.customer_id.slice(0, 8)}</div>
+                        <div className="text-xs text-gray-600 mt-1">Customer: {(order.customer_id ?? '').slice(0, 8)}</div>
                       </div>
                       <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(order.status)}`}>
                         {order.status}
@@ -429,7 +429,7 @@ export default function OrdersPage() {
                   {/* Desktop Table Layout */}
                   <div className="hidden lg:grid grid-cols-5 gap-4 items-center">
                     <div className="text-sm font-medium text-gray-900">#{order.id.slice(0, 12)}</div>
-                    <div className="text-sm text-gray-600">{order.customer_id.slice(0, 12)}</div>
+                    <div className="text-sm text-gray-600">{(order.customer_id ?? '').slice(0, 12)}</div>
                     <div className="text-sm text-gray-600">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</div>
                     <div className="text-sm font-semibold text-gray-900">
                       {formatCurrency(order.amount, order.currency)}
