@@ -126,8 +126,8 @@ export default function OrdersPage() {
     const query = searchQuery.toLowerCase();
     return (
       order.id.toLowerCase().includes(query) ||
-      order.customer_id.toLowerCase().includes(query) ||
-      order.items.some(item => item.name.toLowerCase().includes(query))
+      (order.customer_id ?? '').toLowerCase().includes(query) ||
+      order.items.some(item => (item.name ?? '').toLowerCase().includes(query))
     );
   });
 

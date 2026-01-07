@@ -39,14 +39,13 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
         return;
       }
 
-      // Map to backend expected field names (tested via console)
+      // Build data matching the `BusinessActivityData` interface
       const data = {
-        primaryActivity: formData.description || `${formData.industry} - ${formData.businessName}`,
-        business_name: formData.businessName,
-        business_type: formData.businessType,
-        industry_sector: formData.industry,
-        registration_number: formData.registrationNumber || '',
-        vat_number: formData.vatNumber || null,
+        businessName: formData.businessName,
+        businessType: formData.businessType,
+        industry: formData.industry,
+        businessRegistrationNumber: formData.registrationNumber || '',
+        vatNumber: formData.vatNumber || null,
         website: formData.website || null,
         description: formData.description || '',
       };
