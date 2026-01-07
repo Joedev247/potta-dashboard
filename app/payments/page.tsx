@@ -956,7 +956,9 @@ export default function PaymentsPage() {
                           <div className="flex-1 min-w-0">
                             <div className="font-mono text-xs sm:text-sm text-gray-900 truncate">{refund.id}</div>
                             <div className="text-xs text-gray-500 mt-1">Payment: {refund.paymentId}</div>
-                            <div className="text-sm text-gray-600 mt-1">{formatDate(refund.createdAt)}</div>
+                            {refund.createdAt && (
+                              <div className="text-sm text-gray-600 mt-1">{formatDate(refund.createdAt)}</div>
+                            )}
                           </div>
                           <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${
                             refund.status === 'completed'
