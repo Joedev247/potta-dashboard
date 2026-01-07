@@ -997,7 +997,9 @@ export default function PaymentsPage() {
                             {refund.status}
                           </span>
                         </div>
-                        <div className="text-sm text-gray-600">{formatDate(refund.createdAt)}</div>
+                        {refund.createdAt && (
+                          <div className="text-sm text-gray-600">{formatDate(refund.createdAt)}</div>
+                        )}
                         <div>
                           <button 
                             onClick={() => setSelectedItem({ ...refund, type: 'refund' })}
