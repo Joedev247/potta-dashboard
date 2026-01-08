@@ -148,8 +148,9 @@ class ApiClient {
     // Balance endpoints also require x-api-key per API_DOCUMENTATION.md
     // Reports endpoints also require x-api-key as they are payment-related
     const needsApiKey = endpoint.includes('/make-payment') || 
-                        endpoint.includes('/paiments') ||
-                        endpoint.includes('/payments') ||
+              // payment-links endpoints require an API key as well
+              endpoint.includes('/payment-links') ||
+              endpoint.includes('/payments') ||
                         endpoint.includes('/refunds') ||
                         endpoint.includes('/chargebacks') ||
                         endpoint.includes('/orders') ||

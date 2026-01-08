@@ -142,7 +142,7 @@ export default function PaymentLinksPage() {
   ]);
 
   useEffect(() => {
-    if (activeTab === "list" && selectedApplicationId) {
+    if (activeTab === "list") {
       fetchPaymentLinks();
     }
   }, [activeTab, fetchPaymentLinks, selectedApplicationId]);
@@ -200,10 +200,33 @@ export default function PaymentLinksPage() {
         // Immediately show the created link in the list for instant feedback
         setPaymentLinks((prev) => [response.data as PaymentLink, ...(prev || [])]);
         setActiveTab("list");
-        // Also refresh the list from server to ensure consistency
-        setTimeout(() => {
-          fetchPaymentLinks();
-        }, 2000);
+        // Save potta payment URL to local history so users can easily access the payment app
+        try {
+          saveLinkToHistory((response.data as any).slug || (response.data as any).id);
+        } catch (e) {
+          // ignore
+        }
+        // Refresh the list from server using the same application API key
+        // Merge the created link into the server list if the backend hasn't returned it yet
+        try {
+          const created = response.data as PaymentLink;
+          const serverResp = await paymentLinksService.listPaymentLinks({
+            status: statusFilter || undefined,
+            page: pagination.page,
+            limit: pagination.limit,
+            appApiKey: appApiKey,
+          });
+
+          if (serverResp.success && serverResp.data) {
+            const items = serverResp.data.items || [];
+            const exists = items.some((i) => i.id === created.id);
+            const merged = exists ? items : [created, ...items];
+            setPaymentLinks(merged);
+            if (serverResp.data.pagination) setPagination(serverResp.data.pagination);
+          }
+        } catch (e) {
+          // ignore - we already showed the created link locally
+        }
         console.log("Payment link created:", response.data);
       } else {
         setCreateError(
@@ -290,6 +313,22 @@ export default function PaymentLinksPage() {
     navigator.clipboard.writeText(text);
     setCopiedLink(linkId);
     setTimeout(() => setCopiedLink(null), 2000);
+  };
+
+  // Save created payment link (potta URL format) to local history for easy access
+  const saveLinkToHistory = (slug: string) => {
+    try {
+      const url = `https://potta-payment.vercel.app/pay/${slug}`;
+      const key = "recent_payment_links";
+      const raw = localStorage.getItem(key);
+      const list = raw ? JSON.parse(raw) : [];
+      const deduped = (list || []).filter((i: any) => i.slug !== slug);
+      deduped.unshift({ slug, url, created_at: new Date().toISOString() });
+      const trimmed = deduped.slice(0, 20);
+      localStorage.setItem(key, JSON.stringify(trimmed));
+    } catch (e) {
+      // ignore storage errors
+    }
   };
 
   return (
@@ -491,13 +530,20 @@ export default function PaymentLinksPage() {
                     <div className="mb-4 p-3 bg-gray-50 rounded border border-gray-200">
                       <p className="text-xs text-gray-500 mb-1">Payment Link</p>
                       <div className="flex items-center gap-2">
-                        <code className="text-sm font-mono text-gray-700 break-all">
-                          {`https://payments.dev.instanvi.com/pay/${link.slug}`}
-                        </code>
+                        <a
+                          href={`https://potta-payment.vercel.app/pay/${link.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1"
+                        >
+                          <code className="text-sm font-mono text-gray-700 break-all">
+                            {`https://potta-payment.vercel.app/pay/${link.slug}`}
+                          </code>
+                        </a>
                         <button
                           onClick={() =>
                             copyToClipboard(
-                              `https://payments.dev.instanvi.com/pay/${link.slug}`,
+                              `https://potta-payment.vercel.app/pay/${link.slug}`,
                               link.id
                             )
                           }
@@ -855,13 +901,20 @@ export default function PaymentLinksPage() {
               <div className="mb-8 p-4 bg-gray-50  border border-gray-200">
                 <p className="text-sm text-gray-500 mb-2">Payment Link URL</p>
                 <div className="flex items-center gap-2">
-                  <code className="text-sm font-mono text-gray-700 break-all flex-1">
-                    {`https://payments.dev.instanvi.com/pay/${selectedLink.slug}`}
-                  </code>
+                  <a
+                    href={`https://potta-payment.vercel.app/pay/${selectedLink.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1"
+                  >
+                    <code className="text-sm font-mono text-gray-700 break-all flex-1">
+                      {`https://potta-payment.vercel.app/pay/${selectedLink.slug}`}
+                    </code>
+                  </a>
                   <button
                     onClick={() =>
                       copyToClipboard(
-                        `https://payments.dev.instanvi.com/pay/${selectedLink.slug}`,
+                        `https://potta-payment.vercel.app/pay/${selectedLink.slug}`,
                         selectedLink.id
                       )
                     }
