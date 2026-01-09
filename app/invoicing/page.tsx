@@ -634,7 +634,7 @@ export default function InvoicingPage() {
         </table>
         <div class="footer">
           <p>Generated on ${new Date().toLocaleDateString()}</p>
-          <p>Codev Payment Platform</p>
+          <p>Instanvi Payment Platform</p>
         </div>
       </body>
       </html>

@@ -64,7 +64,7 @@ export default function Sidebar() {
     : navigationItems;
 
   const orgInitials = organization?.name ? organization.name.substring(0, 2).toUpperCase() : 'CO';
-  const orgName = organization?.name || 'Codev';
+  const orgName = organization?.name || 'Instanvi';
 
   // Close sidebar when clicking outside on mobile
   useEffect(() => {

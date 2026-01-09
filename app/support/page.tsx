@@ -77,7 +77,7 @@ export default function SupportPage() {
             </div>
             <h3 className="font-bold text-gray-900 mb-2">Email Support</h3>
             <p className="text-sm text-gray-600 mb-4">Get help via email</p>
-            <p className="text-sm font-medium text-green-600">support@codev.com</p>
+            <p className="text-sm font-medium text-green-600">support@Instanvi.com</p>
           </div>
 
           <div className="bg-white border-2 border-gray-200 p-6 text-center hover:border-green-500 transition-all">

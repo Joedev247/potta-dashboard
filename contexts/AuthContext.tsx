@@ -108,7 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Profile endpoint uses `token` header, other endpoints use `Bearer base64(api_user:api_password)`
           try {
             console.log('[AuthContext] Fetching profile to get API credentials...');
-            const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://10.41.214.91:3005'}/api/users/customer/profile`, {
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://payments.dev.instanvi.com';
+            const profileResponse = await fetch(`${apiBase}/api/users/customer/profile`, {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json',
@@ -182,7 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // These are required for Bearer auth on organization endpoints
           try {
             console.log('[AuthContext] Fetching profile to get API credentials (2FA)...');
-            const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://10.41.214.91:3005'}/api/users/customer/profile`, {
+            const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://payments.dev.instanvi.com';
+            const profileResponse = await fetch(`${apiBase}/api/users/customer/profile`, {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json',

@@ -13,8 +13,8 @@ export default function LoginPage() {
   const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const callbackParam = params ? params.get('callbackURL') : null;
   const [formData, setFormData] = useState({
-    email: 'test@mollie-test.com',
-    password: 'password123',
+    email: '',
+    password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');

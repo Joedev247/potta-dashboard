@@ -601,7 +601,7 @@ export default function ReportsPage() {
     htmlContent += `
         <div class="footer">
           <p>Generated on ${new Date().toLocaleDateString()}</p>
-          <p>Codev Payment Platform</p>
+          <p>Instanvi Payment Platform</p>
         </div>
       </body>
       </html>
@@ -741,7 +741,7 @@ export default function ReportsPage() {
         </div>
         ${tableContent}
         <div class="footer">
-          <p>Generated on ${new Date().toLocaleDateString()} | Codev Payment Platform</p>
+          <p>Generated on ${new Date().toLocaleDateString()} | Instanvi Payment Platform</p>
         </div>
       </body>
       </html>

@@ -612,7 +612,7 @@ export default function PaymentsPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href="/payment-links" className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm text-sm text-gray-700">
+            <Link href="/payment-links" className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200  hover:shadow-sm text-sm text-gray-700">
               <LinkIcon className="w-4 h-4 text-green-600" />
               Payment Links
             </Link>

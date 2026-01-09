@@ -5,7 +5,7 @@ import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import LayoutWrapper from "@/components/LayoutWrapper";
 
 export const metadata: Metadata = {
-  title: "Codev - Payment Platform",
+  title: "Instanvi - Payment Platform",
   description: "instanvi UI Clone",
 };
 

@@ -133,7 +133,7 @@ export default function PaymentLinkPage() {
   if (error && !paymentLink) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+        <div className="bg-white  shadow-lg p-8 max-w-md w-full text-center">
           <WarningCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Link Not Available</h1>
           <p className="text-gray-600 mb-6">{error}</p>
@@ -153,7 +153,7 @@ export default function PaymentLinkPage() {
   if (paymentLink && paymentLink.status !== 'ACTIVE') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+        <div className="bg-white  shadow-lg p-8 max-w-md w-full text-center">
           <WarningCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Link Unavailable
@@ -188,7 +188,7 @@ export default function PaymentLinkPage() {
 
         {/* Payment Link Details Card */}
         {paymentLink && (
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
+          <div className="bg-white  shadow-lg p-8 mb-6">
             {paymentLink.description && (
               <div className="mb-6">
                 <p className="text-sm text-gray-500 mb-1">Description</p>
@@ -199,7 +199,7 @@ export default function PaymentLinkPage() {
             )}
 
             {/* Amount */}
-            <div className="mb-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border-2 border-green-100">
+            <div className="mb-6 p-6 bg-gradient-to-r from-green-50 to-blue-50  border-2 border-green-100">
               <p className="text-sm text-gray-600 mb-2">Amount Due</p>
               <p className="text-4xl font-bold text-green-600">
                 {formatCurrency(paymentLink.amount, paymentLink.currency)}
@@ -207,7 +207,7 @@ export default function PaymentLinkPage() {
             </div>
 
             {/* Additional Info */}
-            <div className="space-y-3 mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className="space-y-3 mb-6 p-4 bg-gray-50 ">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Currency:</span>
                 <span className="font-semibold text-gray-900">{paymentLink.currency}</span>
@@ -234,7 +234,7 @@ export default function PaymentLinkPage() {
 
         {/* Payment Success */}
         {paymentSuccess && (
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-6 text-center">
+          <div className="bg-white  shadow-lg p-8 mb-6 text-center">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               Payment Initiated Successfully!
@@ -243,7 +243,7 @@ export default function PaymentLinkPage() {
               Your payment of {formatCurrency(paymentSuccess.payment?.amount, paymentSuccess.payment?.currency)} has been initiated.
             </p>
             {paymentSuccess.payment?.transaction_id && (
-              <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+              <div className="bg-gray-50  p-4 mb-6 text-left">
                 <p className="text-xs text-gray-500 mb-1">Transaction ID</p>
                 <p className="text-sm font-mono text-gray-900 break-all">
                   {paymentSuccess.payment.transaction_id}
@@ -259,7 +259,7 @@ export default function PaymentLinkPage() {
                   setPaymentSuccess(null);
                   setPhoneNumber('');
                 }}
-                className="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
+                className="w-full px-6 py-3 bg-green-600 text-white font-semibold  hover:bg-green-700 transition-colors"
               >
                 Make Another Payment
               </button>
@@ -271,10 +271,10 @@ export default function PaymentLinkPage() {
         {!paymentSuccess && paymentLink?.status === 'ACTIVE' && (
           <form
             onSubmit={handleRedeemPaymentLink}
-            className="bg-white rounded-xl shadow-lg p-8"
+            className="bg-white  shadow-lg p-8"
           >
             {paymentError && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-start gap-3">
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700  flex items-start gap-3">
                 <WarningCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <span>{paymentError}</span>
               </div>
@@ -292,7 +292,7 @@ export default function PaymentLinkPage() {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="+237 6XX XXX XXX"
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 text-gray-900"
+                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500 text-gray-900"
                   required
                 />
               </div>
@@ -309,7 +309,7 @@ export default function PaymentLinkPage() {
               <select
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 text-gray-900 font-medium"
+                className="w-full px-4 py-3 border-2 border-gray-200  focus:outline-none focus:border-green-500 text-gray-900 font-medium"
                 required
               >
                 <option value="MTN_CAM">MTN Mobile Money</option>
@@ -324,7 +324,7 @@ export default function PaymentLinkPage() {
             <button
               type="submit"
               disabled={processing}
-              className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold  hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {processing ? (
                 <>
@@ -340,7 +340,7 @@ export default function PaymentLinkPage() {
             </button>
 
             {/* Security Notice */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="mt-6 p-4 bg-blue-50  border border-blue-200">
               <p className="text-xs text-blue-700">
                 🔒 Your payment is secure. We use industry-standard encryption to protect your data.
               </p>
