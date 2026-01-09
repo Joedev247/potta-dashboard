@@ -63,7 +63,7 @@ export default function Sidebar() {
     ? navigationItems.filter(item => item.name !== 'Get started')
     : navigationItems;
 
-  const orgInitials = organization?.name ? organization.name.substring(0, 2).toUpperCase() : 'CO';
+  const orgInitials = organization?.name ? organization.name.substring(0, 2).toUpperCase() : 'IN';
   const orgName = organization?.name || 'Instanvi';
 
   // Close sidebar when clicking outside on mobile
