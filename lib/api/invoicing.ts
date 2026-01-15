@@ -13,7 +13,7 @@
  */
 
 import { ApiResponse, PaginationResponse, apiClient } from './client';
-import { customersService, type Customer } from './customers';
+import { customersService } from './customers';
 
 export interface Invoice {
   id: string;
