@@ -61,7 +61,7 @@ export interface RegisterUserData {
 
 export interface ChangeUserStatusData {
   id: string;
-  status: 'ACTIVE' | 'STOP' | 'PENDING';
+  status: 'ACTIVE' | 'STOP' | 'PENDING' | 'INACTIVE';
 }
 
 export interface CreateProviderData {
@@ -373,11 +373,13 @@ class AdminService {
     try {
       // Backend expects: ACTIVE, STOP, PENDING (all uppercase)
       // Map frontend status values to backend values
-      let backendStatus: 'ACTIVE' | 'STOP' | 'PENDING' = data.status;
+      let backendStatus: 'ACTIVE' | 'STOP' | 'PENDING';
       
       // If status is INACTIVE (from frontend), map it to STOP (backend expects)
-      if (data.status === 'INACTIVE' || (data as any).status === 'INACTIVE') {
+      if (data.status === 'INACTIVE') {
         backendStatus = 'STOP';
+      } else {
+        backendStatus = data.status;
       }
       
       const response = await apiClient.put<any>('/users/admin/change-status', {
