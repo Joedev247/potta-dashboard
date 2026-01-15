@@ -51,7 +51,7 @@ export default function InvoicingPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionSuccess, setActionSuccess] = useState('');
-  const [actionError, setActionError] = useState('');
+  const [actionError, setActionError] = useState<string | null>('');
   
   // Edit form data
   const [editFormData, setEditFormData] = useState({
