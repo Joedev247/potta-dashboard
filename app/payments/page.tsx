@@ -3,7 +3,7 @@
 import { MagnifyingGlass, Plus, ArrowSquareOut, ArrowLeft, CaretDown, Calendar, X, ArrowCounterClockwise, CaretUp, ArrowRight, WarningCircle, Package, ArrowClockwise, Eye, CheckCircle, Copy, Spinner, CreditCard, UserCheck, Phone, Link as LinkIcon, CurrencyCircleDollar, User, Building, TextT, Storefront, Swap } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
-import { paymentsService, applicationsService, customersService, type Payment, type Refund, type Chargeback, type Order } from '@/lib/api';
+import { paymentsService, applicationsService, customersService, type Payment, type Refund, type Chargeback, type Order, type PaginationResponse } from '@/lib/api';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 import { useBalance } from '@/contexts/BalanceContext';
 
@@ -116,7 +116,7 @@ export default function PaymentsPage() {
   const [chargebacks, setChargebacks] = useState<Chargeback[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState({ payments: false, refunds: false, chargebacks: false, orders: false });
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 });
+  const [pagination, setPagination] = useState<Pick<PaginationResponse, 'page' | 'limit' | 'total' | 'totalPages'>>({ page: 1, limit: 20, total: 0, totalPages: 0 });
 
   const tabs = [
     { id: 'payments', label: 'Payments' },
@@ -294,7 +294,8 @@ export default function PaymentsPage() {
         const paginationData = depositResponse.data?.pagination || collectionResponse.data?.pagination;
         if (paginationData) {
           setPagination({
-            ...paginationData,
+            page: paginationData.page,
+            limit: paginationData.limit,
             total: combinedTotal,
             totalPages: pagination.limit > 0 ? Math.ceil(combinedTotal / pagination.limit) : 1,
           });
@@ -326,7 +327,8 @@ export default function PaymentsPage() {
           const paginationData = depositResponse.data?.pagination || collectionResponse.data?.pagination;
           if (paginationData) {
             setPagination({
-              ...paginationData,
+              page: paginationData.page,
+              limit: paginationData.limit,
               total: combinedTotal,
               totalPages: pagination.limit > 0 ? Math.ceil(combinedTotal / pagination.limit) : 1,
             });
