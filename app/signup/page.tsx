@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, Envelope, Eye, EyeSlash } from '@phosphor-icons/react';
@@ -19,6 +19,14 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate page load
+    setTimeout(() => {
+      setPageLoading(false);
+    }, 300);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -69,14 +77,50 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-white flex flex-col lg:flex-row fade-in">
       {/* Left Column - Form */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-white">
-        <div className="w-full max-w-md">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 tracking-tight text-center">Create an account</h1>
-          <p className="text-gray-500 mb-6 sm:mb-8 text-sm text-center">Get started with your free account today</p>
-          
-          <form onSubmit={handleSubmit} className="space-y-5">
+        {pageLoading ? (
+          <div className="w-full max-w-md fade-in">
+            {/* Skeleton Loader */}
+            <div className="space-y-5">
+              <div className="text-center mb-6 sm:mb-8">
+                <div className="h-10 bg-gray-200 rounded w-48 mx-auto mb-2 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded w-64 mx-auto animate-pulse"></div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <div className="h-4 bg-gray-200 rounded w-20 mb-2 animate-pulse"></div>
+                  <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="h-4 bg-gray-200 rounded w-16 mb-2 animate-pulse"></div>
+                    <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div>
+                    <div className="h-4 bg-gray-200 rounded w-16 mb-2 animate-pulse"></div>
+                    <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="h-4 bg-gray-200 rounded w-12 mb-2 animate-pulse"></div>
+                  <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div>
+                  <div className="h-4 bg-gray-200 rounded w-20 mb-2 animate-pulse"></div>
+                  <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full max-w-md fade-in">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 tracking-tight text-center">Create an account</h1>
+            <p className="text-gray-500 mb-6 sm:mb-8 text-sm text-center">Get started with your free account today</p>
+            
+            <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username */}
             <div>
               <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -89,8 +133,9 @@ export default function SignupPage() {
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
+                  placeholder="Enter your username"
                   required
-                  className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
+                  className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300 placeholder:text-gray-400"
                 />
                 <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
               </div>
@@ -110,8 +155,9 @@ export default function SignupPage() {
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
+                    placeholder="Enter first name"
                     required
-                    className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
+                    className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300 placeholder:text-gray-400"
                   />
                   <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
                 </div>
@@ -129,8 +175,9 @@ export default function SignupPage() {
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
+                    placeholder="Enter last name"
                     required
-                    className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
+                    className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300 placeholder:text-gray-400"
                   />
                   <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
                 </div>
@@ -149,8 +196,9 @@ export default function SignupPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
+                  placeholder="Enter your email"
                   required
-                  className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
+                  className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300 placeholder:text-gray-400"
                 />
                 <Envelope className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-green-500 transition-colors" />
               </div>
@@ -168,8 +216,9 @@ export default function SignupPage() {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
+                  placeholder="Enter your password"
                   required
-                  className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300"
+                  className="w-full px-4 py-3 sm:py-3.5 text-base border-2 border-gray-200  focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all duration-200 pr-12 bg-white hover:border-gray-300 placeholder:text-gray-400"
                 />
                 <button
                   type="button"
@@ -190,7 +239,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold  hover:from-green-600 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 disabled:transform-none"
+              className="w-full py-3.5 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold  hover:from-green-600 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 disabled:transform-none shadow-md hover:shadow-lg"
             >
               {loading ? 'Creating...' : 'Create Account'}
             </button>
@@ -202,7 +251,8 @@ export default function SignupPage() {
               Sign in
             </Link>
           </p>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Right Column - Testimonial */}
@@ -212,28 +262,45 @@ export default function SignupPage() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full -mr-48 -mt-48"></div>
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-white rounded-full -ml-40 -mb-40"></div>
         </div>
-        
-        <div className="max-w-md text-white relative z-10">
-          <blockquote className="text-xl lg:text-2xl font-medium leading-relaxed mb-6 text-white">
-            "Fintech is the technology and innovation that aims to compete with traditional financial methods."
-          </blockquote>
-          
-          <div className="flex gap-2 mb-6">
-            <div className="w-2 h-2 bg-white rounded-full"></div>
-            <div className="w-2 h-2 bg-white rounded-full"></div>
-            <div className="w-2 h-2 bg-white rounded-full"></div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white/20 rounded-full flex items-center justify-center border border-white/30">
-              <User className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
+        {pageLoading ? (
+          <div className="max-w-md text-white relative z-10 fade-in">
+            <div className="space-y-4">
+              <div className="h-12 bg-white/20 rounded w-12 mb-6 animate-pulse"></div>
+              <div className="h-6 bg-white/20 rounded w-full animate-pulse"></div>
+              <div className="h-6 bg-white/20 rounded w-3/4 animate-pulse"></div>
+              <div className="h-6 bg-white/20 rounded w-5/6 animate-pulse"></div>
+              <div className="flex gap-2 mb-6">
+                <div className="w-2 h-2 bg-white/20 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-white/20 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-white/20 rounded-full animate-pulse"></div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 rounded-full animate-pulse"></div>
+                <div className="flex-1">
+                  <div className="h-4 bg-white/20 rounded w-32 mb-2 animate-pulse"></div>
+                  <div className="h-3 bg-white/20 rounded w-24 animate-pulse"></div>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold text-base lg:text-lg text-white">Walapi Karaka</p>
-              <p className="text-green-100 text-xs lg:text-sm">Financial Officer</p>
+          </div>
+        ) : (
+          <div className="max-w-md text-white relative z-10 fade-in">
+           
+            <blockquote className="text-xl lg:text-2xl font-medium leading-relaxed mb-6 text-white">
+              "Fintech is the technology and innovation that aims to compete with traditional financial methods."
+            </blockquote>
+           
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white/20 rounded-full flex items-center justify-center border border-white/30">
+                <User className="w-5 h-5 lg:w-6 lg:h-6 text-white" weight="fill" />
+              </div>
+              <div>
+                <p className="font-semibold text-base lg:text-lg text-white">Walapi Karaka</p>
+                <p className="text-green-100 text-xs lg:text-sm">Financial Officer</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -212,86 +212,109 @@ export default function ApplicationsPage() {
       };
       
       // Check if backend is returning wrong apps (backend filtering issue)
-      const orgAppsInUserQuery = userAppsRaw.filter(app => normalizeType(app.type) === 'ORGANIZATION');
-      const personalAppsInOrgQuery = orgAppsRaw.filter(app => normalizeType(app.type) === 'PERSONAL');
+      // Check for apps with organization_id in user query (shouldn't happen)
+      const orgAppsInUserQuery = userAppsRaw.filter(app => {
+        const ownerOrgId = (app as any).owner_organization_id || (app as any).organization_id || (app as any).ownerOrganizationId;
+        return !!ownerOrgId;
+      });
+      
+      // Check for apps without organization_id in org query (shouldn't happen)
+      const personalAppsInOrgQuery = orgAppsRaw.filter(app => {
+        const ownerOrgId = (app as any).owner_organization_id || (app as any).organization_id || (app as any).ownerOrganizationId;
+        return !ownerOrgId;
+      });
       
       if (orgAppsInUserQuery.length > 0) {
-        console.warn('[Applications] BACKEND ISSUE: Organization apps found in user query (should not happen):', orgAppsInUserQuery.map(a => ({ id: a.id, name: a.name, type: a.type })));
+        console.warn('[Applications] BACKEND ISSUE: Organization apps (with organization_id) found in user query (should not happen):', orgAppsInUserQuery.map(a => ({ 
+          id: a.id, 
+          name: a.name, 
+          type: a.type,
+          organization_id: (a as any).owner_organization_id || (a as any).organization_id || null
+        })));
       }
       
       if (personalAppsInOrgQuery.length > 0) {
-        console.warn('[Applications] BACKEND ISSUE: Personal apps found in org query (backend not filtering correctly):', personalAppsInOrgQuery.map(a => ({ id: a.id, name: a.name, type: a.type })));
+        console.warn('[Applications] BACKEND ISSUE: Personal apps (without organization_id) found in org query (backend not filtering correctly):', personalAppsInOrgQuery.map(a => ({ 
+          id: a.id, 
+          name: a.name, 
+          type: a.type,
+          organization_id: (a as any).owner_organization_id || (a as any).organization_id || null
+        })));
       }
       
-      // Log apps with their type for debugging
-      console.log('[Applications] Type field analysis:', {
+      // Log apps with their organization_id for debugging
+      console.log('[Applications] Organization ID field analysis:', {
         totalUniqueApps: allApps.length,
         currentOrgId: organization?.id,
-        appsWithType: allApps.map(app => ({
-          id: app.id,
-          name: app.name,
-          type: app.type,
-          typeType: typeof app.type,
-          hasType: !!app.type,
-          typeEqualsPersonal: app.type === 'PERSONAL',
-          typeEqualsOrganization: app.type === 'ORGANIZATION',
-          allKeys: Object.keys(app),
-        })),
+        appsWithOrgId: allApps.map(app => {
+          const ownerOrgId = (app as any).owner_organization_id || (app as any).organization_id || (app as any).ownerOrganizationId;
+          return {
+            id: app.id,
+            name: app.name,
+            type: app.type,
+            owner_organization_id: ownerOrgId,
+            hasOrganizationId: !!ownerOrgId,
+            matchesCurrentOrg: organization?.id ? String(ownerOrgId) === String(organization.id) : null,
+            allKeys: Object.keys(app),
+          };
+        }),
       });
       
-      // Filter personal apps: type === 'PERSONAL'
-      // Also check if type is missing - in that case, apps from user query without org_id are personal
-      const allUserApps = allApps.filter((app: Application) => {
-        const normalizedType = normalizeType(app.type);
+      // Filter applications by organization_id field (PRIMARY METHOD)
+      // Apps with organization_id (owner_organization_id) belong to organizations
+      // Apps without organization_id are personal apps
+      
+      // Determine organization apps - check if app has any organization_id field
+      const allOrgApps = allApps.filter((app: Application) => {
+        // Check for organization_id in various possible fields
+        const ownerOrgId = (app as any).owner_organization_id || (app as any).organization_id || (app as any).ownerOrganizationId;
         
-        // Primary check: use type field if available
-        if (normalizedType === 'PERSONAL') {
-          console.log(`[Applications] App ${app.name} (${app.id}): type=${app.type} (normalized: ${normalizedType}), isPersonal=true (from type field)`);
+        // If app has an organization_id, it's an organizational app
+        if (ownerOrgId) {
+          // If we have a current organization context, only show apps that match
+          if (organization?.id) {
+            const matchesCurrentOrg = String(ownerOrgId) === String(organization.id);
+            console.log(`[Applications] App ${app.name} (${app.id}): has organization_id=${ownerOrgId}, matches current org=${matchesCurrentOrg}, isOrganization=true`);
+            return matchesCurrentOrg;
+          }
+          // If no org context but app has org_id, still show it (for debugging/visibility)
+          console.log(`[Applications] App ${app.name} (${app.id}): has organization_id=${ownerOrgId}, isOrganization=true (no current org context)`);
           return true;
         }
-        
-        // Fallback: if type is missing or invalid, assume personal (safer default)
-        if (!normalizedType) {
-          console.log(`[Applications] App ${app.name} (${app.id}): type=${app.type} (invalid/missing), defaulting to PERSONAL`);
-          return true; // Default to personal if type is missing
-        }
-        
-        console.log(`[Applications] App ${app.name} (${app.id}): type=${app.type} (normalized: ${normalizedType}), isPersonal=false`);
-        return false;
-      });
-      
-      // Determine organization apps
-      // Primary: type === 'ORGANIZATION'
-      // Secondary: legacy ownership fields (owner_organization_id or organization_id) matching current org
-      const allOrgApps = allApps.filter((app: Application) => {
-        if (!organization?.id) return false;
 
-        const orgId = organization.id;
-        const normalizedType = normalizeType(app.type);
-
-        // If this app was recently created by this frontend for the current org,
-        // force it into the org list (workaround for backend mislabeling)
+        // Check forced org app IDs (workaround for backend mislabeling)
         const forcedSet = new Set(forcedOrgAppIds);
         if (forcedSet.has(app.id)) {
           console.log(`[Applications] App ${app.name} (${app.id}): forced into ORG apps (frontend override)`);
           return true;
         }
 
-        if (normalizedType === 'ORGANIZATION') {
-          console.log(`[Applications] App ${app.name} (${app.id}): type=${app.type} (normalized: ${normalizedType}), isOrganization=true (from type field)`);
-          return true;
-        }
-
-        // Check legacy ownership fields that may indicate org ownership
-        const ownerOrgId = (app as any).owner_organization_id || (app as any).organization_id || (app as any).ownerOrganizationId;
-        if (ownerOrgId && String(ownerOrgId) === String(orgId)) {
-          console.log(`[Applications] App ${app.name} (${app.id}): owner_organization_id matches current org (${orgId}), treating as ORG app`);
-          return true;
-        }
-
-        // Not an org app
-        console.log(`[Applications] App ${app.name} (${app.id}): type=${app.type} (normalized: ${normalizedType}), isOrganization=false`);
+        // No organization_id found - not an org app
+        console.log(`[Applications] App ${app.name} (${app.id}): no organization_id found, isOrganization=false`);
         return false;
+      });
+      
+      // Filter personal apps - apps without organization_id
+      const allUserApps = allApps.filter((app: Application) => {
+        // Check for organization_id in various possible fields
+        const ownerOrgId = (app as any).owner_organization_id || (app as any).organization_id || (app as any).ownerOrganizationId;
+        
+        // If app has an organization_id, it's NOT a personal app
+        if (ownerOrgId) {
+          console.log(`[Applications] App ${app.name} (${app.id}): has organization_id=${ownerOrgId}, isPersonal=false`);
+          return false;
+        }
+
+        // Check if this app is in the forced org list (shouldn't be in personal)
+        const forcedSet = new Set(forcedOrgAppIds);
+        if (forcedSet.has(app.id)) {
+          console.log(`[Applications] App ${app.name} (${app.id}): is in forced org list, isPersonal=false`);
+          return false;
+        }
+
+        // No organization_id found - it's a personal app
+        console.log(`[Applications] App ${app.name} (${app.id}): no organization_id found, isPersonal=true`);
+        return true;
       });
 
       console.log('[Applications] Final filtered apps:', {
@@ -311,23 +334,16 @@ export default function ApplicationsPage() {
         } : null,
       });
 
-      // Check if type field is missing or invalid from any apps (backend issue)
-      const appsWithoutValidType = allApps.filter(app => {
-        const normalizedType = normalizeType(app.type);
-        return !normalizedType;
+      // Check if apps are missing organization_id information (for debugging)
+      const appsWithoutOrgId = allApps.filter(app => {
+        const ownerOrgId = (app as any).owner_organization_id || (app as any).organization_id || (app as any).ownerOrganizationId;
+        return !ownerOrgId;
       });
       
-      if (appsWithoutValidType.length > 0) {
-        console.warn('[Applications] WARNING: Some apps are missing or have invalid type field:', appsWithoutValidType.map(app => ({ 
-          id: app.id, 
-          name: app.name,
-          type: app.type,
-          typeType: typeof app.type,
-        })));
-        if (!appError && appsWithoutValidType.length === allApps.length) {
-          // Only show error if ALL apps are missing type (likely backend issue)
-          setAppError('Warning: Applications are missing type information. The backend may not be returning the type field. Using fallback logic based on query source.');
-        }
+      // Note: Apps without organization_id are treated as personal apps, which is expected behavior
+      // This is just for logging/debugging purposes
+      if (appsWithoutOrgId.length > 0) {
+        console.log('[Applications] Apps without organization_id (treated as personal):', appsWithoutOrgId.length);
       }
       
       // Final summary log
@@ -335,21 +351,37 @@ export default function ApplicationsPage() {
         totalAppsFromBackend: allApps.length,
         personalAppsFound: allUserApps.length,
         organizationAppsFound: allOrgApps.length,
-        note: 'Using type field for filtering (backend organization_id filter is broken)',
-        allAppIds: allApps.map(a => ({ id: a.id, name: a.name, type: a.type })),
-        personalAppIds: allUserApps.map(a => ({ id: a.id, name: a.name, type: a.type })),
-        organizationAppIds: allOrgApps.map(a => ({ id: a.id, name: a.name, type: a.type })),
+        note: 'Using organization_id field for filtering (primary method)',
+        allAppIds: allApps.map(a => ({ 
+          id: a.id, 
+          name: a.name, 
+          type: a.type,
+          owner_organization_id: (a as any).owner_organization_id || (a as any).organization_id || null
+        })),
+        personalAppIds: allUserApps.map(a => ({ 
+          id: a.id, 
+          name: a.name, 
+          type: a.type,
+          owner_organization_id: (a as any).owner_organization_id || (a as any).organization_id || null
+        })),
+        organizationAppIds: allOrgApps.map(a => ({ 
+          id: a.id, 
+          name: a.name, 
+          type: a.type,
+          owner_organization_id: (a as any).owner_organization_id || (a as any).organization_id || null
+        })),
       });
 
-      // Reconcile forced IDs: if backend now correctly marks an app as ORG,
+      // Reconcile forced IDs: if backend now correctly has organization_id set,
       // remove it from the forced list and persist the change.
       if (organization?.id && forcedOrgAppIds && forcedOrgAppIds.length > 0) {
         const stillNeeded = forcedOrgAppIds.filter(id => {
-          // keep id if backend has NOT marked it as organization
+          // keep id if backend has NOT set organization_id
           const app = allApps.find(a => a.id === id);
           if (!app) return true; // keep until we see it in backend
-          const normalizedType = normalizeType(app.type);
-          return normalizedType !== 'ORGANIZATION';
+          const ownerOrgId = (app as any).owner_organization_id || (app as any).organization_id || (app as any).ownerOrganizationId;
+          // If app now has organization_id, we don't need to force it anymore
+          return !ownerOrgId || String(ownerOrgId) !== String(organization.id);
         });
         if (JSON.stringify(stillNeeded) !== JSON.stringify(forcedOrgAppIds)) {
           setForcedOrgAppIds(stillNeeded);
@@ -468,7 +500,7 @@ export default function ApplicationsPage() {
                 default_currency: appFormData.defaultCurrency || undefined,
               },
             },
-            editingApp.type === 'ORGANIZATION' ? organization?.id : undefined // Use type field to determine org context
+            editingApp ? ((editingApp as any).owner_organization_id || (editingApp as any).organization_id || (editingApp as any).ownerOrganizationId) : undefined // Use organization_id to determine org context
           )
         : await applicationsService.createApplication(appData);
       
@@ -483,13 +515,14 @@ export default function ApplicationsPage() {
           expectedType: appFormData.organization_id ? 'ORGANIZATION' : 'PERSONAL',
         });
         
-        // Check if this was supposed to be an organization app but type wasn't set correctly
-        if (appFormData.organization_id && createdApp.type !== 'ORGANIZATION') {
-          console.warn('[Applications] WARNING: Organization app created but type is not ORGANIZATION. Expected ORGANIZATION, got:', createdApp.type);
-          setAppError('Application created but type was not set correctly. This may be a backend issue. Please check the backend logs.');
-        } else if (!appFormData.organization_id && createdApp.type !== 'PERSONAL') {
-          console.warn('[Applications] WARNING: Personal app created but type is not PERSONAL. Expected PERSONAL, got:', createdApp.type);
-          setAppError('Application created but type was not set correctly. This may be a backend issue. Please check the backend logs.');
+        // Check if this was supposed to be an organization app but organization_id wasn't set correctly
+        const createdAppOrgId = (createdApp as any).owner_organization_id || (createdApp as any).organization_id || (createdApp as any).ownerOrganizationId;
+        if (appFormData.organization_id && !createdAppOrgId) {
+          console.warn('[Applications] WARNING: Organization app created but organization_id is missing. Expected organization_id, got:', createdAppOrgId);
+          setAppError('Application created but organization_id was not set correctly. This may be a backend issue. Please check the backend logs.');
+        } else if (!appFormData.organization_id && createdAppOrgId) {
+          console.warn('[Applications] WARNING: Personal app created but organization_id is set. Expected no organization_id, got:', createdAppOrgId);
+          setAppError('Application created but organization_id was set incorrectly. This may be a backend issue. Please check the backend logs.');
         }
       }
       
@@ -510,18 +543,22 @@ export default function ApplicationsPage() {
         try {
           const createdApp = response.data as Application;
           if (createdApp) {
-            if (createdApp.type === 'ORGANIZATION' || appFormData.organization_id) {
+            const createdAppOrgId = (createdApp as any).owner_organization_id || (createdApp as any).organization_id || (createdApp as any).ownerOrganizationId;
+            // If app has organization_id or was created with organization_id, it's an org app
+            if (createdAppOrgId || appFormData.organization_id) {
               setOrgApps(prev => {
                 if (prev.find(a => a.id === createdApp.id)) return prev;
                 return [createdApp, ...prev];
               });
-              // Remember this app id as org-owned (frontend fallback) and persist
-              setForcedOrgAppIds(prev => {
-                if (prev.includes(createdApp.id)) return prev;
-                const next = [createdApp.id, ...prev];
-                saveForcedIds(organization?.id, next);
-                return next;
-              });
+              // If backend didn't set organization_id but we sent it, remember this app id as org-owned (frontend fallback)
+              if (!createdAppOrgId && appFormData.organization_id) {
+                setForcedOrgAppIds(prev => {
+                  if (prev.includes(createdApp.id)) return prev;
+                  const next = [createdApp.id, ...prev];
+                  saveForcedIds(organization?.id, next);
+                  return next;
+                });
+              }
             } else {
               setUserApps(prev => {
                 if (prev.find(a => a.id === createdApp.id)) return prev;
@@ -624,9 +661,10 @@ export default function ApplicationsPage() {
     setAppError('');
     
     try {
-      // Determine if app belongs to organization or user based on type field
+      // Determine if app belongs to organization or user based on organization_id field
       const app = [...userApps, ...orgApps].find(a => a.id === appId);
-      const orgId = app?.type === 'ORGANIZATION' ? organization?.id : undefined;
+      const appOrgId = app ? ((app as any).owner_organization_id || (app as any).organization_id || (app as any).ownerOrganizationId) : null;
+      const orgId = appOrgId && organization?.id && String(appOrgId) === String(organization.id) ? organization.id : undefined;
       
       const response = await applicationsService.deleteApplication(appId, orgId);
       if (response.success) {
@@ -656,9 +694,10 @@ export default function ApplicationsPage() {
     setAppError('');
     
     try {
-      // Determine if app belongs to organization or user based on type field
+      // Determine if app belongs to organization or user based on organization_id field
       const app = [...userApps, ...orgApps].find(a => a.id === appId);
-      const orgId = app?.type === 'ORGANIZATION' ? organization?.id : undefined;
+      const appOrgId = app ? ((app as any).owner_organization_id || (app as any).organization_id || (app as any).ownerOrganizationId) : null;
+      const orgId = appOrgId && organization?.id && String(appOrgId) === String(organization.id) ? organization.id : undefined;
       
       const response = await applicationsService.regenerateCredentials(appId, orgId);
       if (response.success && response.data) {
@@ -706,7 +745,7 @@ export default function ApplicationsPage() {
 
   const getEnvironmentBadge = (env: string) => {
     const colors = {
-      SANDBOX: 'bg-blue-100 text-blue-700 border-blue-200',
+      SANDBOX: 'bg-gray-100 text-gray-700 border-gray-200',
       PROD: 'bg-green-100 text-green-700 border-green-200',
     };
     return colors[env as keyof typeof colors] || colors.SANDBOX;
@@ -826,7 +865,7 @@ export default function ApplicationsPage() {
           {/* Personal Applications */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <User className="w-5 h-5 text-blue-600" />
+              <User className="w-5 h-5 text-gray-600" />
               <h2 className="text-xl font-bold text-gray-900">Personal Applications</h2>
               <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
                 {userApps.length}
@@ -1233,9 +1272,9 @@ function ApplicationCard({
             </div>
           )}
           {app.last_used_at && (
-            <div className="p-3 bg-gradient-to-br from-blue-50 to-blue-100/50  border border-blue-200/50">
+            <div className="p-3 bg-gradient-to-br from-gray-50 to-gray-100/50  border border-gray-200/50">
               <div className="flex items-center gap-2 mb-1">
-                <Calendar className="w-4 h-4 text-blue-600" />
+                <Calendar className="w-4 h-4 text-gray-600" />
                 <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Last Used</p>
               </div>
               <p className="text-sm font-bold text-gray-900">{formatDate(app.last_used_at)}</p>

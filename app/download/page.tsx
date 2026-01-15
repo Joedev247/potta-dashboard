@@ -11,9 +11,9 @@ export default function DownloadPage() {
       version: '2.1.0',
       size: '45.2 MB',
       badge: 'Latest',
-      color: 'from-blue-100 to-blue-50',
-      borderColor: 'border-blue-100',
-      buttonColor: 'from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+      color: 'from-gray-100 to-gray-50',
+      borderColor: 'border-gray-100',
+      buttonColor: 'from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700'
     },
     {
       name: 'Android',
@@ -44,9 +44,9 @@ export default function DownloadPage() {
       version: '2.1.0',
       size: '142.3 MB',
       badge: 'Latest',
-      color: 'from-blue-100 to-blue-50',
-      borderColor: 'border-blue-100',
-      buttonColor: 'from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+      color: 'from-gray-100 to-gray-50',
+      borderColor: 'border-gray-100',
+      buttonColor: 'from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700'
     },
     {
       name: 'Web App',
@@ -55,9 +55,9 @@ export default function DownloadPage() {
       version: 'Always up to date',
       size: 'No download required',
       badge: 'Available',
-      color: 'from-purple-100 to-purple-50',
-      borderColor: 'border-purple-100',
-      buttonColor: 'from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
+      color: 'from-gray-100 to-gray-50',
+      borderColor: 'border-gray-100',
+      buttonColor: 'from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700'
     }
   ];
 

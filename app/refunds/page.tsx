@@ -219,7 +219,7 @@ export default function RefundsPage() {
       case 'SUCCESS':
         return 'bg-green-100 text-green-700';
       case 'PROCESSING':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-gray-100 text-gray-700';
       case 'FAILED':
         return 'bg-red-100 text-red-700';
       default:

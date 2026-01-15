@@ -522,11 +522,43 @@ export default function ProductsPage() {
 
       {/* Products List */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Spinner className="w-8 h-8 animate-spin text-green-600" />
-        </div>
+        <>
+          {/* Skeleton Table */}
+          <div className="bg-white border border-gray-200 rounded overflow-hidden fade-in">
+            <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+              <div className="hidden lg:grid grid-cols-6 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                ))}
+              </div>
+              <div className="lg:hidden h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+            </div>
+            <div className="divide-y divide-gray-200">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="px-4 sm:px-6 py-3 sm:py-4">
+                  <div className="lg:hidden space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
+                        <div className="h-3 bg-gray-200 rounded w-24 animate-pulse"></div>
+                      </div>
+                      <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                    </div>
+                    <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                    <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div className="hidden lg:grid grid-cols-6 gap-4 items-center">
+                    {[...Array(6)].map((_, j) => (
+                      <div key={j} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
       ) : (
-        <div className="bg-white border border-gray-200 rounded overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded overflow-hidden fade-in">
           <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
             <div className="hidden lg:grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
               <div>Product</div>
@@ -683,66 +715,97 @@ export default function ProductsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-end">
           {/* Backdrop */}
           <div 
-            className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out"
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-fade-in"
             onClick={() => {
               resetForm();
               setShowCreateModal(false);
             }}
           />
           {/* Modal Content */}
-          <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto">
-            {/* Sticky Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Package className="w-6 h-6" />
-                Create Product
-              </h2>
+          <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl slide-in-right overflow-y-auto">
+            {/* Sticky Header with Gradient */}
+            <div className="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 text-white px-5 py-4 flex items-center justify-between z-10 shadow-lg">
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                <h1 className="text-xl font-bold">Create Product</h1>
+              </div>
               <button
                 onClick={() => {
                   resetForm();
                   setShowCreateModal(false);
                 }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-1.5 hover:bg-white/10  transition-colors"
                 aria-label="Close modal"
               >
-                <X className="w-6 h-6 text-gray-500" />
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
+            
             {/* Form Content */}
-            <div className="p-6">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleCreateProduct();
-                }}
-                className="space-y-4"
-              >
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleCreateProduct();
+              }}
+              className="p-5 space-y-5"
+            >
+              {/* Success/Error Messages */}
+              {errorMessage && (
+                <div className="p-4 bg-red-50 border border-red-200  flex items-start gap-3">
+                  <WarningCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-800 font-medium">{errorMessage}</p>
+                  </div>
+                  <button
+                    onClick={() => setErrorMessage('')}
+                    className="text-red-400 hover:text-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              {successMessage && (
+                <div className="p-4 bg-green-50 border border-green-200  flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-green-800 font-semibold">Product created successfully!</p>
+                    <p className="text-xs text-green-700 mt-1">{successMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Product Name Field */}
+              <div className="p-4 bg-gray-50 border border-gray-200 ">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Product Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                   placeholder="Web Development Service"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+
+              {/* Description Field */}
+              <div className="p-4 bg-gray-50 border border-gray-200 ">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm"
                   placeholder="Professional web development services"
                   rows={3}
                 />
+                <p className="text-xs text-gray-700 mt-2">Optional: Detailed product description</p>
               </div>
+
+              {/* Price and Currency Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="p-4 bg-gray-50 border border-gray-200 ">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Price <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -751,19 +814,19 @@ export default function ProductsPage() {
                     min="0"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                     placeholder="0.00"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="p-4 bg-gray-50 border border-gray-200 ">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Currency <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                     required
                   >
                     <option value="XAF">XAF</option>
@@ -773,27 +836,35 @@ export default function ProductsPage() {
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">SKU</label>
+
+              {/* SKU Field */}
+              <div className="p-4 bg-yellow-50 border border-yellow-200 ">
+                <label className="block text-sm font-semibold text-yellow-900 mb-2">SKU</label>
                 <input
                   type="text"
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  className="w-full px-3 py-2 bg-white border border-yellow-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                   placeholder="PROD-001"
                 />
+                <p className="text-xs text-yellow-700 mt-2">Optional: Stock Keeping Unit identifier</p>
               </div>
-              <div>
-                <label className="flex items-center gap-2">
+
+              {/* Active Status */}
+              <div className="p-4 bg-green-50 border border-green-200 ">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.isActive}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                     className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
                   />
-                  <span className="text-sm font-medium text-gray-700">Active</span>
+                  <span className="text-sm font-semibold text-green-900">Active Product</span>
                 </label>
+                <p className="text-xs text-green-700 mt-2">Active products are available for use in invoices</p>
               </div>
+
+              {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
@@ -801,14 +872,14 @@ export default function ProductsPage() {
                     resetForm();
                     setShowCreateModal(false);
                   }}
-                  className="flex-1 px-4 py-2 border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded"
+                  className="flex-1 px-4 py-2 border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-white text-green-700 font-medium hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2 text-sm shadow-sm border border-green-200"
                 >
                   {actionLoading ? (
                     <>
@@ -816,65 +887,114 @@ export default function ProductsPage() {
                       Creating...
                     </>
                   ) : (
-                    'Create Product'
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Create Product
+                    </>
                   )}
                 </button>
               </div>
-              </form>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Edit Product Modal */}
+      {/* Edit Product Modal - Right Slide */}
       {showEditModal && selectedProduct && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white  max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Edit Product</h2>
-                <button
-                  onClick={() => {
-                    resetForm();
-                    setShowEditModal(false);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-end">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-fade-in"
+            onClick={() => {
+              resetForm();
+              setShowEditModal(false);
+            }}
+          />
+          {/* Modal Content */}
+          <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl slide-in-right overflow-y-auto">
+            {/* Sticky Header with Gradient */}
+            <div className="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 text-white px-5 py-4 flex items-center justify-between z-10 shadow-lg">
+              <div className="flex items-center gap-2">
+                <PencilSimple className="w-5 h-5" />
+                <h1 className="text-xl font-bold">Edit Product</h1>
+                {selectedProduct.name && (
+                  <span className="text-xs text-white/80 truncate max-w-[200px]">({selectedProduct.name})</span>
+                )}
               </div>
+              <button
+                onClick={() => {
+                  resetForm();
+                  setShowEditModal(false);
+                }}
+                className="p-1.5 hover:bg-white/10  transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
             </div>
+            
+            {/* Form Content */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleUpdateProduct();
               }}
-              className="p-6 space-y-4"
+              className="p-5 space-y-5"
             >
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              {/* Success/Error Messages */}
+              {errorMessage && (
+                <div className="p-4 bg-red-50 border border-red-200  flex items-start gap-3">
+                  <WarningCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-800 font-medium">{errorMessage}</p>
+                  </div>
+                  <button
+                    onClick={() => setErrorMessage('')}
+                    className="text-red-400 hover:text-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              {successMessage && (
+                <div className="p-4 bg-green-50 border border-green-200  flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-green-800 font-semibold">Product updated successfully!</p>
+                    <p className="text-xs text-green-700 mt-1">{successMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Product Name Field */}
+              <div className="p-4 bg-gray-50 border border-gray-200 ">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Product Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+
+              {/* Description Field */}
+              <div className="p-4 bg-gray-50 border border-gray-200 ">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm"
                   rows={3}
                 />
               </div>
+
+              {/* Price and Currency Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="p-4 bg-gray-50 border border-gray-200 ">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Price <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -883,18 +1003,18 @@ export default function ProductsPage() {
                     min="0"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="p-4 bg-gray-50 border border-gray-200 ">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Currency <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                     required
                   >
                     <option value="XAF">XAF</option>
@@ -904,15 +1024,19 @@ export default function ProductsPage() {
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">SKU</label>
+
+              {/* SKU Field */}
+              <div className="p-4 bg-yellow-50 border border-yellow-200 ">
+                <label className="block text-sm font-semibold text-yellow-900 mb-2">SKU</label>
                 <input
                   type="text"
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  className="w-full px-3 py-2 bg-white border border-yellow-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                 />
               </div>
+
+              {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
@@ -920,14 +1044,14 @@ export default function ProductsPage() {
                     resetForm();
                     setShowEditModal(false);
                   }}
-                  className="flex-1 px-4 py-2 border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded"
+                  className="flex-1 px-4 py-2 border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-white text-green-700 font-medium hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2 text-sm shadow-sm border border-green-200"
                 >
                   {actionLoading ? (
                     <>
@@ -935,7 +1059,10 @@ export default function ProductsPage() {
                       Updating...
                     </>
                   ) : (
-                    'Update Product'
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Update Product
+                    </>
                   )}
                 </button>
               </div>
@@ -946,96 +1073,126 @@ export default function ProductsPage() {
 
       {/* View Product Modal */}
       {showViewModal && selectedProduct && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white  max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 backdrop-fade-in">
+          <div className="bg-white shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto modal-fade-in">
+            {/* Modal Header with Gradient */}
+            <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Product Details</h2>
+                <div>
+                  <h2 className="text-xl font-bold mb-0.5">Product Details</h2>
+                  <p className="text-green-100 text-xs">Product Information</p>
+                </div>
                 <button
                   onClick={() => {
                     setShowViewModal(false);
                     setSelectedProduct(null);
                   }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
+
+            <div className="p-4 space-y-4">
               {errorMessage && (
-                <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded flex items-center gap-2">
-                  <WarningCircle className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm">{errorMessage}</span>
+                <div className="p-3 bg-red-50 border-l-4 border-red-500 text-red-700 rounded flex items-center gap-2">
+                  <WarningCircle className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-xs">{errorMessage}</span>
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-600 font-medium">Product ID</label>
-                  <p className="text-sm font-mono text-gray-500 mt-1 break-all">{selectedProduct.id}</p>
+
+              {/* Key Information Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 border border-gray-200">
+                  <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">Product ID</div>
+                  <div className="text-xs font-mono text-gray-900 break-all">{selectedProduct.id}</div>
                 </div>
                 {selectedProduct.organization_id && (
-                  <div>
-                    <label className="text-sm text-gray-600 font-medium">Organization ID</label>
-                    <p className="text-sm font-mono text-gray-500 mt-1 break-all">{selectedProduct.organization_id}</p>
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 border border-gray-200">
+                    <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">Organization ID</div>
+                    <div className="text-xs font-mono text-gray-900 break-all">{selectedProduct.organization_id}</div>
                   </div>
                 )}
-                <div>
-                  <label className="text-sm text-gray-600 font-medium">Product Name</label>
-                  <p className="text-lg font-semibold text-gray-900 mt-1">{selectedProduct.name}</p>
+                <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 border border-green-200">
+                  <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Product Name</div>
+                  <div className="text-sm font-semibold text-green-900">{selectedProduct.name}</div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600 font-medium">Status</label>
+                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-3 border border-emerald-200">
+                  <div className="text-xs text-emerald-600 font-semibold uppercase tracking-wide mb-1">Status</div>
                   <div className="mt-1">
-                    <span className={`inline-block px-3 py-1 text-sm font-medium rounded ${
+                    <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${
                       selectedProduct.isActive
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-700'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-500 text-white'
                     }`}>
                       {selectedProduct.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600 font-medium flex items-center gap-1">
-                    <CurrencyDollar className="w-4 h-4" />
+                <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-3 border border-amber-200">
+                  <div className="text-xs text-amber-600 font-semibold uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <CurrencyDollar className="w-3 h-3" />
                     Price
-                  </label>
-                  <p className="text-lg font-semibold text-gray-900 mt-1">
-                    {formatCurrency(selectedProduct.price, selectedProduct.currency)}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 font-medium">SKU</label>
-                  <p className="text-lg text-gray-900 mt-1">{selectedProduct.sku || 'N/A'}</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-sm text-gray-600 font-medium">Description</label>
-                  <p className="text-lg text-gray-900 mt-1">{selectedProduct.description || 'N/A'}</p>
-                </div>
-                {selectedProduct.createdAt && (
-                  <div>
-                    <label className="text-sm text-gray-600 font-medium">Created At</label>
-                    <p className="text-lg text-gray-900 mt-1">{formatDate(selectedProduct.createdAt)}</p>
                   </div>
-                )}
-                {selectedProduct.updatedAt && (
-                  <div>
-                    <label className="text-sm text-gray-600 font-medium">Updated At</label>
-                    <p className="text-lg text-gray-900 mt-1">{formatDate(selectedProduct.updatedAt)}</p>
+                  <div className="text-lg font-bold text-amber-900">
+                    {formatCurrency(selectedProduct.price, selectedProduct.currency)}
+                  </div>
+                </div>
+                {selectedProduct.sku && (
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 border border-gray-200">
+                    <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">SKU</div>
+                    <div className="text-sm font-semibold text-gray-900">{selectedProduct.sku}</div>
                   </div>
                 )}
               </div>
+
+              {/* Description */}
+              {selectedProduct.description && (
+                <div className="bg-gray-50 p-4 border border-gray-200">
+                  <h3 className="text-base font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-300 flex items-center gap-2">
+                    <Package className="w-4 h-4 text-gray-600" />
+                    Description
+                  </h3>
+                  <p className="text-sm text-gray-900 leading-relaxed">{selectedProduct.description}</p>
+                </div>
+              )}
+
+              {/* Metadata */}
+              {(selectedProduct.createdAt || selectedProduct.updatedAt) && (
+                <div className="bg-gray-50 p-4 border border-gray-200">
+                  <h3 className="text-base font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-300 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-600" />
+                    Metadata
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedProduct.createdAt && (
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Created At</div>
+                        <div className="text-sm text-gray-900 font-medium">{formatDate(selectedProduct.createdAt)}</div>
+                      </div>
+                    )}
+                    {selectedProduct.updatedAt && (
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Updated At</div>
+                        <div className="text-sm text-gray-900 font-medium">{formatDate(selectedProduct.updatedAt)}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-4">
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
               <button
                 onClick={() => {
                   setShowViewModal(false);
                   handleEditProduct(selectedProduct);
                 }}
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-2"
+                className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-1.5"
               >
-                <PencilSimple className="w-4 h-4" />
+                <PencilSimple className="w-3.5 h-3.5" />
                 Edit
               </button>
               <button
@@ -1043,7 +1200,7 @@ export default function ProductsPage() {
                   setShowViewModal(false);
                   setSelectedProduct(null);
                 }}
-                className="px-6 py-2 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors rounded"
+                className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 rounded"
               >
                 Close
               </button>
@@ -1054,36 +1211,40 @@ export default function ProductsPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white  max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <WarningCircle className="w-6 h-6 text-red-500" />
-              <h3 className="text-lg font-bold text-gray-900">Delete Product</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white shadow-2xl max-w-sm w-full  overflow-hidden">
+            <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-4">
+              <div className="flex items-center gap-2">
+                <WarningCircle className="w-5 h-5" />
+                <h3 className="text-lg font-bold">Delete Product</h3>
+              </div>
             </div>
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to delete this product? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 px-4 py-2 border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteProduct}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 bg-red-500 text-white font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
-              >
-                {actionLoading ? (
-                  <>
-                    <Spinner className="w-4 h-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
-                )}
-              </button>
+            <div className="p-4">
+              <p className="text-sm text-gray-600 mb-4">
+                Are you sure you want to delete this product? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="flex-1 px-3 py-2 border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteProduct}
+                  disabled={actionLoading}
+                  className="flex-1 px-3 py-2 bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Spinner className="w-3.5 h-3.5 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

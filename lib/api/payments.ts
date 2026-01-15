@@ -7,14 +7,19 @@ import { ApiResponse, PaginationResponse, apiClient } from './client';
 export interface Payment {
   id: string;
   paymentLinkId?: string;
+  customer_id?: string;
   amount: number;
   currency: string;
   description?: string;
   status: 'pending' | 'paid' | 'failed' | 'expired' | 'cancelled' | string;
   paymentMethod?: string;
   customer?: {
+    id?: string;
     name?: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
+    phone?: string;
   };
   createdAt: string;
   paidAt?: string | null;
@@ -129,6 +134,51 @@ export interface OrdersListResponse {
 
 class PaymentsService {
   /**
+   * Get helpful error message for generic "Initialization error"
+   * Provides context-specific error messages based on request data
+   */
+  private getHelpfulErrorMessage(requestData: any, statusCode: number): string | null {
+    // Check for common issues that cause initialization errors
+    const issues: string[] = [];
+    
+    // Check amount - might be too small
+    // Amount could be in centimes or XAF format
+    if (requestData.amount && requestData.amount < 100) {
+      // Likely in centimes, below 1 XAF minimum
+      issues.push(`Amount (${requestData.amount} centimes = ${requestData.amount / 100} XAF) is below the minimum transaction amount. Mobile money providers typically require at least 1 XAF (100 centimes) or more.`);
+    } else if (requestData.amount && requestData.amount >= 100 && requestData.amount < 10000) {
+      // Could be in XAF format, check if it's below 100 XAF minimum
+      // If it's actually centimes, 100-10000 would be 1-100 XAF which might be acceptable
+      // But if it's XAF, then 100-10000 XAF should be fine
+      // We'll just note that very small amounts might be an issue
+      if (requestData.amount < 1000) {
+        issues.push(`Amount (${requestData.amount}) may be too small. Please verify the amount format - mobile money providers typically require at least 100 XAF for transactions.`);
+      }
+    }
+    
+    // Check if application_id is missing (required for some operations)
+    if (!requestData.application_id) {
+      issues.push('Application ID is missing. This may be required for payment initialization.');
+    }
+    
+    // Check if username is missing for COLLECTION type
+    if (requestData.type === 'COLLECTION' && !requestData.username) {
+      issues.push('Username is missing. COLLECTION type transactions may require a merchant username.');
+    }
+    
+    // Check provider configuration
+    if (requestData.provider && (requestData.provider === 'MTN_CAM' || requestData.provider === 'ORANGE_CAM')) {
+      issues.push('Provider credentials may not be properly configured for this application. Please verify your MTN/Orange API credentials in the application settings.');
+    }
+    
+    if (issues.length > 0) {
+      return `Initialization error: ${issues.join(' ')} Please check your payment configuration and try again.`;
+    }
+    
+    return null;
+  }
+
+  /**
    * Make a payment (initialize payment)
    * POST /api/paiments/make-payment
    */
@@ -150,29 +200,117 @@ class PaymentsService {
   }): Promise<ApiResponse<{ transaction_id: string; status: string; amount: number; currency?: string }>> {
     try {
       // Transform data to match backend API format (snake_case)
-      // Backend expects phone_number as a number, not a string
-      const phoneNumberStr = data.phoneNumber.replace(/\D/g, ''); // Remove non-digits
-      const phoneNumberNum = parseInt(phoneNumberStr, 10);
+      // Backend expects phone_number as a NUMBER (not string)
+      // For Cameroon providers, send LOCAL number only (9 digits starting with 6)
+      // The backend will add the country code (237) when calling MTN/Orange API
+      let phoneNumberStr = data.phoneNumber.replace(/\D/g, ''); // Remove non-digits
       
-      if (isNaN(phoneNumberNum) || phoneNumberStr.length < 4) {
+      // Remove country code if present (237 for Cameroon)
+      // MTN/Orange APIs expect just the local 9-digit number
+      if (phoneNumberStr.startsWith('237')) {
+        phoneNumberStr = phoneNumberStr.substring(3); // Remove '237' prefix
+      }
+      
+      // Remove leading 0 if present (local format: 0653878190 -> 653878190)
+      phoneNumberStr = phoneNumberStr.replace(/^0+/, '');
+      
+      // Validate phone number length (should be 9 digits for Cameroon)
+      if (phoneNumberStr.length !== 9) {
         return {
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
-            message: 'Invalid phone number format. Phone number must be at least 4 digits.',
+            message: `Invalid phone number format. Cameroon phone numbers must be 9 digits (e.g., 653878190). Got ${phoneNumberStr.length} digits.`,
           },
         };
       }
+      
+      // Validate it starts with 6 (Cameroon mobile numbers start with 6)
+      if (!phoneNumberStr.startsWith('6')) {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid phone number format. Cameroon mobile numbers must start with 6.',
+          },
+        };
+      }
+      
+      // Convert to number - backend expects numeric value
+      const phoneNumberForRequest = parseInt(phoneNumberStr, 10);
+
+      if (isNaN(phoneNumberForRequest)) {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid phone number format. Phone number must be numeric.',
+          },
+        };
+      }
+
+      console.log('[Payment] Phone number formatting:', {
+        original: data.phoneNumber,
+        cleaned: phoneNumberStr,
+        finalFormat: phoneNumberForRequest,
+        provider: data.provider,
+        note: 'Sending local number only - backend will add country code when calling MTN/Orange API',
+      });
 
       // Generate transaction_id - backend REQUIRES it (cannot be empty)
       const transactionId = typeof crypto !== 'undefined' && crypto.randomUUID 
         ? crypto.randomUUID() 
         : `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // For XAF currency (and mobile money in general), amounts must be integers (no decimals)
+      // Round the amount to ensure it's a whole number
+      const currency = data.currency || 'XAF';
+      const isXAF = currency.toUpperCase() === 'XAF';
+      const finalAmount = isXAF ? Math.round(data.amount) : data.amount;
+      
+      // Validate amount
+      if (finalAmount <= 0) {
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Amount must be greater than 0.',
+          },
+        };
+      }
+      
+      // Validate minimum amount for mobile money (typically 100 XAF for Cameroon)
+      // Note: Amount format depends on how it's passed - could be in XAF or centimes
+      // If amount is less than 100, it's likely in centimes (100 centimes = 1 XAF)
+      // If amount is 100 or more, it could be in XAF or centimes
+      // For safety, we'll check if it's below a reasonable minimum
+      const MIN_AMOUNT_CENTIMES = 100; // 1 XAF minimum (100 centimes)
+      const MIN_AMOUNT_XAF = 100; // 100 XAF minimum (if amount is in XAF)
+      
+      // If amount is very small (< 100), it's likely in centimes and below minimum
+      // If amount is between 100-1000, it might be in XAF but still too small
+      if (isXAF) {
+        if (finalAmount < MIN_AMOUNT_CENTIMES) {
+          // Amount is likely in centimes and below 1 XAF minimum
+          return {
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: `Amount is too small. Minimum transaction amount is 1 XAF (100 centimes). Your amount: ${finalAmount} centimes (${finalAmount / 100} XAF).`,
+            },
+          };
+        } else if (finalAmount >= MIN_AMOUNT_CENTIMES && finalAmount < MIN_AMOUNT_XAF) {
+          // Amount is between 1-100 XAF, might be acceptable but warn
+          // Don't block, but this might still fail on backend
+          console.warn(`[Payment] Amount ${finalAmount} is between 1-100 XAF. This may be below the minimum transaction amount required by the mobile money provider.`);
+        }
+      }
+      
       // Build request data - use snake_case for all fields to match backend expectations
       const requestData: any = {
         type: data.type,
-        amount: data.amount,
-        phone_number: phoneNumberNum, // Backend expects snake_case and number type
+        amount: finalAmount, // Use rounded amount for XAF, original for other currencies
+        phone_number: phoneNumberForRequest, // String with +237 for Cameroon, number for others
         provider: data.provider, // MTN_CAM or ORANGE_CAM
         transaction_id: transactionId, // Backend REQUIRES this field (cannot be empty)
       };
@@ -180,6 +318,30 @@ class PaymentsService {
       // Include optional application_id if provided via param or environment
       const appId = data.applicationId || process.env.NEXT_PUBLIC_APPLICATION_ID;
       if (appId) requestData.application_id = appId;
+      
+      // Include username if provided - may be required for COLLECTION type transactions
+      // MTN/Orange APIs might need merchant username for collection operations
+      if (data.username && data.username.trim()) {
+        // Clean username: remove spaces, special characters, convert to lowercase
+        const cleanedUsername = data.username
+          .trim()
+          .replace(/\s+/g, '') // Remove all whitespace
+          .replace(/[^a-zA-Z0-9]/g, '') // Remove all non-alphanumeric characters
+          .toLowerCase();
+        
+        if (cleanedUsername.length >= 4 && cleanedUsername.length <= 15) {
+          requestData.username = cleanedUsername;
+        } else {
+          console.warn('[Payment] Username validation failed:', {
+            original: data.username,
+            cleaned: cleanedUsername,
+            length: cleanedUsername.length,
+            reason: cleanedUsername.length < 4 
+              ? 'Too short (minimum 4 characters)' 
+              : 'Too long (maximum 15 characters)',
+          });
+        }
+      }
       
       // Only include optional fields if they have values
       if (data.description) {
@@ -214,6 +376,76 @@ class PaymentsService {
             ? await res.json() 
             : await res.text();
           
+          // Check if response body contains an error even if HTTP status is 201/200
+          // Backend may return 201 Created but with error in body: { status_code: 422, message: "..." }
+          if (typeof responseBody === 'object' && responseBody !== null) {
+            const statusCode = (responseBody as any).status_code;
+            const isError = statusCode && (statusCode < 200 || statusCode >= 300);
+            
+            // If body indicates an error, treat it as an error regardless of HTTP status
+            if (isError) {
+              let errorMessage = (responseBody as any).message || `Request failed with status ${statusCode}`;
+              const errorDetails = (responseBody as any).data || responseBody;
+              
+              // Try to extract more detailed error information from the data field
+              if (errorDetails && typeof errorDetails === 'object') {
+                // Check for validation errors array
+                if (Array.isArray(errorDetails)) {
+                  const validationErrors = errorDetails
+                    .map((err: any) => {
+                      if (typeof err === 'string') return err;
+                      if (err?.message) return err.message;
+                      if (err?.field && err?.error) return `${err.field}: ${err.error}`;
+                      return JSON.stringify(err);
+                    })
+                    .filter(Boolean);
+                  if (validationErrors.length > 0) {
+                    errorMessage = validationErrors.join(', ');
+                  }
+                } else if (errorDetails.message && typeof errorDetails.message === 'string') {
+                  errorMessage = errorDetails.message;
+                } else if (errorDetails.message && Array.isArray(errorDetails.message)) {
+                  errorMessage = errorDetails.message.join(', ');
+                } else if (errorDetails.errors && Array.isArray(errorDetails.errors)) {
+                  errorMessage = errorDetails.errors.join(', ');
+                } else if (errorDetails.error && typeof errorDetails.error === 'string') {
+                  errorMessage = errorDetails.error;
+                }
+              }
+              
+              // If error message is generic "Initialization error", provide more helpful context
+              if (errorMessage === 'Initialization error' || errorMessage.toLowerCase().includes('initialization')) {
+                const helpfulMessage = this.getHelpfulErrorMessage(requestData, statusCode);
+                if (helpfulMessage) {
+                  errorMessage = helpfulMessage;
+                }
+              }
+              
+              console.error('[Payment] Backend returned error in response body:', {
+                httpStatus: res.status,
+                bodyStatusCode: statusCode,
+                message: errorMessage,
+                details: errorDetails,
+                requestData: {
+                  type: requestData.type,
+                  amount: requestData.amount,
+                  provider: requestData.provider,
+                  hasApplicationId: !!requestData.application_id,
+                  hasUsername: !!requestData.username,
+                },
+              });
+              
+              return {
+                success: false,
+                error: {
+                  code: `HTTP_${statusCode}`,
+                  message: errorMessage,
+                  details: errorDetails,
+                },
+              };
+            }
+          }
+          
           if (res.ok && responseBody) {
             const raw = responseBody.data || responseBody;
             return {
@@ -221,17 +453,31 @@ class PaymentsService {
               data: {
                 transaction_id: raw.transaction_id || raw.transactionId || raw.id || '',
                 status: raw.status || 'pending',
-                amount: raw.amount ?? data.amount,
-                currency: raw.currency || data.currency,
+                amount: raw.amount ?? finalAmount,
+                currency: raw.currency || currency,
               },
             };
+          }
+          
+          // Extract error message from response
+          let errorMessage = `Request failed with status ${res.status}`;
+          if (responseBody) {
+            if (typeof responseBody === 'object') {
+              errorMessage = responseBody.message || responseBody.status || errorMessage;
+              // Handle backend error format: { status_code, status, message, data }
+              if (responseBody.status_code && responseBody.message) {
+                errorMessage = responseBody.message;
+              }
+            } else if (typeof responseBody === 'string') {
+              errorMessage = responseBody;
+            }
           }
           
           return {
             success: false,
             error: {
               code: `HTTP_${res.status}`,
-              message: (responseBody && responseBody.message) || `Request failed with status ${res.status}`,
+              message: errorMessage,
               details: responseBody,
             },
           };
@@ -251,14 +497,80 @@ class PaymentsService {
       const response = await apiClient.post<any>('/paiments/make-payment', requestData);
       
       if (response.success && response.data) {
-        const raw = response.data.data || response.data;
+        // Double-check: even if apiClient says success, verify the response body doesn't contain an error
+        // Backend may return HTTP 201 but with error in body: { status_code: 422, message: "..." }
+        const responseData = response.data;
+        if (typeof responseData === 'object' && responseData !== null) {
+          const statusCode = (responseData as any).status_code;
+          const isError = statusCode && (statusCode < 200 || statusCode >= 300);
+          
+          if (isError) {
+            let errorMessage = (responseData as any).message || `Request failed with status ${statusCode}`;
+            const errorDetails = (responseData as any).data || responseData;
+            
+            // Try to extract more detailed error information
+            if (errorDetails && typeof errorDetails === 'object') {
+              if (Array.isArray(errorDetails)) {
+                const validationErrors = errorDetails
+                  .map((err: any) => {
+                    if (typeof err === 'string') return err;
+                    if (err?.message) return err.message;
+                    if (err?.field && err?.error) return `${err.field}: ${err.error}`;
+                    return JSON.stringify(err);
+                  })
+                  .filter(Boolean);
+                if (validationErrors.length > 0) {
+                  errorMessage = validationErrors.join(', ');
+                }
+              } else if (errorDetails.message && typeof errorDetails.message === 'string') {
+                errorMessage = errorDetails.message;
+              } else if (errorDetails.message && Array.isArray(errorDetails.message)) {
+                errorMessage = errorDetails.message.join(', ');
+              } else if (errorDetails.errors && Array.isArray(errorDetails.errors)) {
+                errorMessage = errorDetails.errors.join(', ');
+              }
+            }
+            
+            // If error message is generic "Initialization error", provide more helpful context
+            if (errorMessage === 'Initialization error' || errorMessage.toLowerCase().includes('initialization')) {
+              const helpfulMessage = this.getHelpfulErrorMessage(requestData, statusCode);
+              if (helpfulMessage) {
+                errorMessage = helpfulMessage;
+              }
+            }
+            
+            console.error('[Payment] Backend returned error in response body (via apiClient):', {
+              bodyStatusCode: statusCode,
+              message: errorMessage,
+              details: errorDetails,
+              requestData: {
+                type: requestData.type,
+                amount: requestData.amount,
+                provider: requestData.provider,
+                hasApplicationId: !!requestData.application_id,
+                hasUsername: !!requestData.username,
+              },
+            });
+            
+            return {
+              success: false,
+              error: {
+                code: `HTTP_${statusCode}`,
+                message: errorMessage,
+                details: errorDetails,
+              },
+            };
+          }
+        }
+        
+        const raw = responseData.data || responseData;
         return {
           success: true,
           data: {
             transaction_id: raw.transaction_id || raw.transactionId || raw.id || '',
             status: raw.status || 'pending',
-            amount: raw.amount ?? data.amount,
-            currency: raw.currency || data.currency,
+            amount: raw.amount ?? finalAmount,
+            currency: raw.currency || currency,
           },
         };
       }
@@ -273,12 +585,52 @@ class PaymentsService {
             data: {
               transaction_id: raw.transaction_id || raw.transactionId || raw.id || '',
               status: raw.status || 'pending',
-              amount: raw.amount ?? data.amount,
-              currency: raw.currency || data.currency,
+              amount: raw.amount ?? finalAmount,
+              currency: raw.currency || currency,
             },
           };
         }
         return fallback;
+      }
+      
+      // Improve error message extraction for 422 and other errors
+      if (response.error) {
+        // If the error message is generic, try to extract more details
+        if (response.error.message === 'Initialization error' || response.error.code === 'HTTP_422') {
+          const details = response.error.details;
+          if (details && typeof details === 'object') {
+            // Try to extract validation errors from details
+            if (Array.isArray(details)) {
+              const validationErrors = details
+                .map((err: any) => {
+                  if (typeof err === 'string') return err;
+                  if (err?.message) return err.message;
+                  if (err?.field && err?.error) return `${err.field}: ${err.error}`;
+                  return JSON.stringify(err);
+                })
+                .filter(Boolean);
+              if (validationErrors.length > 0) {
+                response.error.message = validationErrors.join(', ');
+              }
+            } else if (details.message && details.message !== 'Initialization error') {
+              if (Array.isArray(details.message)) {
+                response.error.message = details.message.join(', ');
+              } else {
+                response.error.message = details.message;
+              }
+            } else if (details.errors && Array.isArray(details.errors)) {
+              response.error.message = details.errors.join(', ');
+            }
+          }
+          
+          // If still generic, provide helpful context
+          if (response.error.message === 'Initialization error' || response.error.message.toLowerCase().includes('initialization')) {
+            const helpfulMessage = this.getHelpfulErrorMessage(requestData, 422);
+            if (helpfulMessage) {
+              response.error.message = helpfulMessage;
+            }
+          }
+        }
       }
       
       return response;
@@ -514,37 +866,59 @@ class PaymentsService {
     startDate?: string;
     endDate?: string;
     search?: string;
+    type?: 'DEPOSIT' | 'COLLECTION';
   }): Promise<ApiResponse<PaymentsListResponse>> {
-    const response = await apiClient.get<any>('/reports/payments', {
+    const response = await apiClient.get<any>('/paiments/transactions', {
       startDate: params?.startDate,
       endDate: params?.endDate,
       status: params?.status,
-      format: 'JSON',
+      page: params?.page,
+      limit: params?.limit,
+      search: params?.search,
+      type: params?.type,
     });
 
     if (!response.success || !response.data) {
       return response as ApiResponse<PaymentsListResponse>;
     }
 
-    const rawPayments = (response.data as any).payments || [];
-    const page = params?.page || 1;
-    const limit = params?.limit || rawPayments.length || 20;
-    const total = (response.data as any).summary?.total ?? rawPayments.length;
+    const dataPayload = response.data as any;
+    const rawPayments = dataPayload?.payments || (Array.isArray(dataPayload) ? dataPayload : dataPayload?.data || []);
+    const page = params?.page || dataPayload?.page || 1;
+    const limit = params?.limit || dataPayload?.limit || rawPayments.length || 20;
+    const total = dataPayload?.summary?.total ?? dataPayload?.total ?? rawPayments.length;
     const totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
 
-    const payments: Payment[] = rawPayments.map((p: any) => ({
-      id: p.id || p.transaction_id || '',
-      amount: p.amount ?? 0,
-      currency: p.currency || 'XAF',
-      description: p.description,
-      status: (p.status || 'pending').toLowerCase(),
-      paymentMethod: p.paymentMethod || p.method,
-      customer: p.customer
-        ? { name: p.customer.name || p.customer.firstName || '', email: p.customer.email }
-        : undefined,
-      createdAt: p.createdAt || p.created_at || new Date().toISOString(),
-      paidAt: p.paidAt || p.paid_at || null,
-    }));
+    const payments: Payment[] = rawPayments.map((p: any) => {
+      // Normalize customer data
+      let customerData = p.customer || undefined;
+      if (customerData) {
+        customerData = {
+          id: customerData.id,
+          name: customerData.name || 
+                (customerData.firstName && customerData.lastName 
+                  ? `${customerData.firstName} ${customerData.lastName}` 
+                  : customerData.firstName || customerData.lastName || undefined),
+          firstName: customerData.firstName || customerData.first_name,
+          lastName: customerData.lastName || customerData.last_name,
+          email: customerData.email,
+          phone: customerData.phone || customerData.phone_number,
+        };
+      }
+      
+      return {
+        id: p.id || p.transaction_id || '',
+        customer_id: p.customer_id || p.customerId || undefined,
+        amount: p.amount ?? 0,
+        currency: p.currency || 'XAF',
+        description: p.description,
+        status: (p.status || 'pending').toLowerCase(),
+        paymentMethod: p.paymentMethod || p.method,
+        customer: customerData,
+        createdAt: p.createdAt || p.created_at || new Date().toISOString(),
+        paidAt: p.paidAt || p.paid_at || null,
+      };
+    });
 
     return {
       success: true,

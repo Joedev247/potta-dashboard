@@ -11,7 +11,7 @@
   --primary-green: #10b981;
   --primary-green-dark: #059669;
   --primary-green-light: #34d399;
-  --instanvi-purple: #6b46c1;
+  --instanvi-gray: #6b46c1;
   --card-bg: #f9fafb;
   --border-color: #e5e7eb;
   --text-secondary: #6b7280;
@@ -66,4 +66,66 @@ html,
 body {
   height: 100%;
   overflow-x: hidden;
+}
+
+/* Slide-in animation for right sidebar */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.5s ease-out;
+}
+
+/* Fade-in animation for backdrop */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.backdrop-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Fade-in animation for tab content */
+@keyframes fadeInContent {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeInContent 0.4s ease-out;
+}
+
+/* Modal fade-in animation */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-fade-in {
+  animation: modalFadeIn 0.3s ease-out;
 }

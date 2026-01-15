@@ -13,7 +13,7 @@ import {
   User,
   Key
 } from '@phosphor-icons/react';
-import { authService } from '@/lib/api';
+import { authService, adminService } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AdminSetupPage() {
@@ -82,88 +82,51 @@ export default function AdminSetupPage() {
     }
 
     try {
-      // Use regular signup endpoint with admin role
-      // This endpoint doesn't require admin authentication
-      console.log('[AdminSetupPage] Attempting signup with role: admin');
-      const response = await authService.signup({
+      // Call admin register endpoint directly
+      console.log('[AdminSetupPage] Attempting admin register via adminService.registerUser');
+      const response = await adminService.registerUser({
         username: formData.username,
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName || undefined,
         lastName: formData.lastName || undefined,
-        role: 'admin', // Set role to admin
+        role: 'admin',
+        isInternal: true,
       });
 
-      console.log('[AdminSetupPage] Signup response:', {
-        success: response.success,
-        hasData: !!response.data,
-        user: response.data?.user,
-        userRole: response.data?.user?.role,
-        error: response.error,
-      });
+      console.log('[AdminSetupPage] Admin register response:', { success: response.success, data: response.data, error: response.error });
 
       if (response.success && response.data) {
-        const user = response.data.user;
-        const token = response.data.token;
-        
-        // Validate token before storing
-        if (!token || token.length < 10) {
-          console.error('[AdminSetupPage] Invalid token received from backend:', {
-            tokenLength: token?.length,
-            tokenPreview: token ? token.substring(0, 10) + '...' : 'null',
-          });
-          setErrorMessage('Invalid token received from server. Please try again or contact support.');
-          setLoading(false);
-          return;
-        }
-        
-        console.log('[AdminSetupPage] Token received:', {
-          tokenLength: token.length,
-          tokenPreview: token.substring(0, 20) + '...',
-        });
-        
-        // Ensure role is set to admin in the user object
-        // Backend might not return role, so we set it explicitly
-        const adminUser = {
-          ...user,
-          role: user?.role || 'admin', // Use role from response or default to admin
-        };
-        
-        console.log('[AdminSetupPage] Setting user with role:', adminUser.role);
-        
-        // Update localStorage with admin role
-        localStorage.setItem('accessToken', token);
-        localStorage.setItem('user', JSON.stringify(adminUser));
-        localStorage.setItem('isAuthenticated', 'true');
-        
-        // Update AuthContext state immediately
-        if (updateUser) {
-          try {
-            await updateUser({ role: 'admin' });
-            console.log('[AdminSetupPage] Updated AuthContext with admin role');
-          } catch (err) {
-            console.warn('[AdminSetupPage] Could not update AuthContext, will reload page:', err);
+        // Try to sign in immediately to obtain token
+        try {
+          const loginResp = await authService.login({ email: formData.email, password: formData.password });
+          console.log('[AdminSetupPage] Login after register response:', loginResp);
+
+          if (loginResp.success && loginResp.data) {
+            // Persist role locally if backend didn't set it in user object
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const adminUser = { ...(storedUser || {}), role: 'admin' };
+            localStorage.setItem('user', JSON.stringify(adminUser));
+
+            setSuccessMessage('✅ Admin account created and signed in. Redirecting to admin panel...');
+            setTimeout(() => window.location.href = '/admin', 1200);
+            return;
           }
+
+          // If login didn't return token, still store user locally and instruct backend to set role
+          const adminUserLocal = { ...(response.data || {}), role: 'admin' };
+          localStorage.setItem('user', JSON.stringify(adminUserLocal));
+          setSuccessMessage('Account created. Please ask backend to set admin role or check email for verification.');
+          setLoading(false);
+        } catch (loginErr) {
+          console.error('[AdminSetupPage] Error logging in after register:', loginErr);
+          setErrorMessage('Account created but automatic sign-in failed. Please sign in manually after verification.');
+          setLoading(false);
         }
-        
-        // Force refresh AuthContext by reloading the page
-        // This ensures the AuthContext picks up the new user with admin role
-        setSuccessMessage('Admin account created successfully! Redirecting...');
-        
-        // Wait a moment to show success message, then reload to refresh AuthContext
-        setTimeout(() => {
-          // Use window.location.href to force full page reload and refresh AuthContext
-          window.location.href = '/admin';
-        }, 1500);
       } else {
-        // Handle specific error cases
-        if (response.error?.code === 'USER_EXISTS' || response.error?.message?.toLowerCase().includes('already exists')) {
-          setErrorMessage('An account with this email or username already exists. Please use different credentials.');
-        } else if (response.error?.code === 'VALIDATION_ERROR') {
-          setErrorMessage(response.error.message || 'Please check your input and try again.');
-        } else {
-          setErrorMessage(response.error?.message || 'Failed to create admin account. Please try again.');
-        }
+        // Pass through friendly error messages
+        const err = response.error?.message || response.error?.code || 'Failed to create admin account';
+        setErrorMessage(String(err));
         setLoading(false);
       }
     } catch (error: any) {

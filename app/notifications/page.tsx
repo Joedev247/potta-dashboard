@@ -112,7 +112,7 @@ export default function NotificationsPage() {
       case 'error':
         return <WarningCircle className="w-5 h-5 text-red-600" />;
       default:
-        return <Info className="w-5 h-5 text-blue-600" />;
+        return <Info className="w-5 h-5 text-gray-600" />;
     }
   };
 
@@ -125,7 +125,7 @@ export default function NotificationsPage() {
       case 'error':
         return 'bg-red-100';
       default:
-        return 'bg-blue-100';
+        return 'bg-gray-100';
     }
   };
 

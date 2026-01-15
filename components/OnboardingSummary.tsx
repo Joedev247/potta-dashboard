@@ -357,7 +357,7 @@ export default function OnboardingSummary({
             
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-start gap-3">
-                <Code className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Code className="w-5 h-5 text-gray-600 mt-0.5 flex-shrink-0" />
                 <div>
                   <h4 className="text-sm font-semibold text-gray-900">API Integration</h4>
                   <p className="text-xs text-gray-500">Seamless integration with REST APIs</p>
@@ -435,9 +435,9 @@ export default function OnboardingSummary({
           </h2>
           
           <div className="space-y-3">
-            <div className="p-3 bg-blue-50 border border-blue-100">
-              <div className="text-xs font-semibold text-blue-700 mb-1">Tip #1: Optimize Your Profile</div>
-              <p className="text-xs text-blue-600">Complete all profile sections for faster transaction approvals and higher limits.</p>
+            <div className="p-3 bg-gray-50 border border-gray-100">
+              <div className="text-xs font-semibold text-gray-700 mb-1">Tip #1: Optimize Your Profile</div>
+              <p className="text-xs text-gray-600">Complete all profile sections for faster transaction approvals and higher limits.</p>
             </div>
             
             <div className="p-3 bg-green-50 border border-green-100">

@@ -79,12 +79,13 @@ class CustomersService {
       // Handle different response structures
       const raw = response.data.data || response.data;
       
+      const phoneValue = raw.phone || raw.phone_number;
       const customer: Customer = {
         id: raw.id || '',
         firstName: raw.firstName || raw.first_name || '',
         lastName: raw.lastName || raw.last_name || '',
         email: raw.email || '',
-        phone: raw.phone || undefined,
+        phone: phoneValue && phoneValue.trim() ? phoneValue.trim() : undefined,
         address: raw.address || undefined,
         organization_id: raw.organization_id || raw.organizationId || undefined,
         createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
@@ -130,17 +131,20 @@ class CustomersService {
         : (Array.isArray(data) ? data : []);
 
       // Normalize customer data
-      const normalizedCustomers: Customer[] = customers.map((customer: any) => ({
-        id: customer.id || '',
-        firstName: customer.firstName || customer.first_name || '',
-        lastName: customer.lastName || customer.last_name || '',
-        email: customer.email || '',
-        phone: customer.phone || undefined,
-        address: customer.address || undefined,
-        organization_id: customer.organization_id || customer.organizationId || undefined,
-        createdAt: customer.createdAt || customer.created_at,
-        updatedAt: customer.updatedAt || customer.updated_at,
-      }));
+      const normalizedCustomers: Customer[] = customers.map((customer: any) => {
+        const phoneValue = customer.phone || customer.phone_number;
+        return {
+          id: customer.id || '',
+          firstName: customer.firstName || customer.first_name || '',
+          lastName: customer.lastName || customer.last_name || '',
+          email: customer.email || '',
+          phone: phoneValue && phoneValue.trim() ? phoneValue.trim() : undefined,
+          address: customer.address || undefined,
+          organization_id: customer.organization_id || customer.organizationId || undefined,
+          createdAt: customer.createdAt || customer.created_at,
+          updatedAt: customer.updatedAt || customer.updated_at,
+        };
+      });
 
       return {
         success: true,
@@ -173,12 +177,13 @@ class CustomersService {
       // Handle different response structures
       const raw = response.data.data || response.data;
       
+      const phoneValue = raw.phone || raw.phone_number;
       const customer: Customer = {
         id: raw.id || customerId,
         firstName: raw.firstName || raw.first_name || '',
         lastName: raw.lastName || raw.last_name || '',
         email: raw.email || '',
-        phone: raw.phone || undefined,
+        phone: phoneValue && phoneValue.trim() ? phoneValue.trim() : undefined,
         address: raw.address || undefined,
         organization_id: raw.organization_id || raw.organizationId || undefined,
         createdAt: raw.createdAt || raw.created_at,
@@ -239,12 +244,13 @@ class CustomersService {
       // If response includes updated customer data, normalize it
       if (response.data) {
         const raw = response.data.data || response.data;
+        const phoneValue = raw.phone || raw.phone_number || data.phone;
         const customer: Customer = {
           id: raw.id || customerId,
           firstName: raw.firstName || raw.first_name || data.firstName || '',
           lastName: raw.lastName || raw.last_name || data.lastName || '',
           email: raw.email || data.email || '',
-          phone: raw.phone || data.phone || undefined,
+          phone: phoneValue && phoneValue.trim() ? phoneValue.trim() : undefined,
           address: raw.address || data.address || undefined,
           organization_id: raw.organization_id || raw.organizationId || undefined,
           createdAt: raw.createdAt || raw.created_at,

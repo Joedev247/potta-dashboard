@@ -61,11 +61,14 @@ class BalanceService {
       const response = await apiClient.get<any>('/balances', currency ? { currency } : undefined);
       
       if (!response.success || !response.data) {
+        console.warn('[BalanceService] API response not successful:', response);
         return response as ApiResponse<Balance>;
       }
 
       // Handle different response structures
       const raw = response.data.data || response.data;
+      
+      console.log('[BalanceService] Raw response data:', raw);
       
       // Helper function to safely convert to number
       const toNumber = (value: any, defaultValue: number = 0): number => {
@@ -78,11 +81,13 @@ class BalanceService {
       
       const balance: Balance = {
         currency: raw.currency || currency || 'XAF',
-        available: toNumber(raw.balance ?? raw.available, 0),
+        available: toNumber(raw.available_balance ?? raw.balance ?? raw.available, 0),
         pending: toNumber(raw.pending_balance ?? raw.pending, 0),
-        reserved: toNumber(raw.reserved ?? raw.reserved_balance, 0),
+        reserved: toNumber(raw.reserved_balance ?? raw.reserved, 0),
         lastUpdated: raw.lastUpdated || raw.last_updated || raw.updatedAt || raw.updated_at || new Date().toISOString(),
       };
+
+      console.log('[BalanceService] Normalized balance object:', balance);
 
       return {
         success: true,

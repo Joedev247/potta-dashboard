@@ -20,7 +20,7 @@ export interface StakeholderData {
 export interface BusinessActivityData {
   businessName: string;
   businessType: string;
-  industry: string;
+  primaryActivity: string;
   businessRegistrationNumber: string;
   vatNumber?: string | null;
   website?: string | null;

@@ -12,6 +12,7 @@ interface User {
   phone?: string;
   isVerified: boolean;
   role?: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
 }
 
 interface SignupData {
@@ -123,6 +124,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               
               const profile = profileData.data || profileData;
               
+              // Update user status if available in profile
+              if (profile.status && user) {
+                const updatedUser = { ...user, status: profile.status };
+                setUser(updatedUser);
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+              }
+              
               if (profile.api_user && profile.api_password) {
                 localStorage.setItem('apiUser', profile.api_user);
                 localStorage.setItem('apiPassword', profile.api_password);
@@ -195,6 +203,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (profileResponse.ok) {
               const profileData = await profileResponse.json();
               const profile = profileData.data || profileData;
+              
+              // Update user status if available in profile
+              if (profile.status && user) {
+                const updatedUser = { ...user, status: profile.status };
+                setUser(updatedUser);
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+              }
               
               if (profile.api_user && profile.api_password) {
                 localStorage.setItem('apiUser', profile.api_user);
@@ -351,9 +366,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const profile = await usersService.getProfile();
             if (profile.success && profile.data) {
-              setUser(profile.data as any);
+              const profileData = profile.data as any;
+              setUser(profileData);
               setIsAuthenticated(true);
-              localStorage.setItem('user', JSON.stringify(profile.data));
+              localStorage.setItem('user', JSON.stringify(profileData));
             }
           } catch (err) {
             // ignore — token is persisted and user can re-fetch later
@@ -377,6 +393,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const normalizedUser: User = {
           ...response.data,
           phone: response.data.phone || undefined,
+          status: response.data.status || user.status, // Preserve status from profile or existing user
         };
         setUser(normalizedUser);
         localStorage.setItem('user', JSON.stringify(normalizedUser));
@@ -387,6 +404,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const updatedUser: User = {
         ...user,
         ...userData,
+        status: user.status, // Preserve existing status
       };
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));

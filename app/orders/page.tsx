@@ -289,7 +289,7 @@ export default function OrdersPage() {
       case 'COMPLETED':
         return 'bg-green-100 text-green-700';
       case 'PROCESSING':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-gray-100 text-gray-700';
       case 'CANCELLED':
         return 'bg-red-100 text-red-700';
       default:
@@ -451,7 +451,7 @@ export default function OrdersPage() {
                           setStatusFormData({ status: order.status as any });
                           setShowStatusModal(true);
                         }}
-                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                        className="text-gray-600 hover:text-gray-700 text-sm font-medium"
                       >
                         Update Status
                       </button>

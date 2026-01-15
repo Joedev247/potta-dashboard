@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { BalanceProvider } from "@/contexts/BalanceContext";
 import LayoutWrapper from "@/components/LayoutWrapper";
 
 export const metadata: Metadata = {
@@ -21,9 +22,11 @@ export default function RootLayout({
       >
         <AuthProvider>
           <OrganizationProvider>
-            <LayoutWrapper>
-              {children}
-            </LayoutWrapper>
+            <BalanceProvider>
+              <LayoutWrapper>
+                {children}
+              </LayoutWrapper>
+            </BalanceProvider>
           </OrganizationProvider>
         </AuthProvider>
       </body>

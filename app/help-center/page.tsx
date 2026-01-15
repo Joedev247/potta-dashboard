@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   Question, 
   MagnifyingGlass, 
@@ -24,6 +24,7 @@ interface Article {
 export default function HelpCenterPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedArticle, setExpandedArticle] = useState<string | null>(null);
+  const [pageLoading, setPageLoading] = useState(true);
 
   const categories = [
     {
@@ -345,125 +346,167 @@ For detailed API documentation, check out the API reference in Browse > API Keys
     })).filter(category => category.articles.length > 0);
   }, [searchQuery]);
 
+  useEffect(() => {
+    // Simulate page load
+    setTimeout(() => {
+      setPageLoading(false);
+    }, 300);
+  }, []);
+
   const toggleArticle = (question: string) => {
     setExpandedArticle(expandedArticle === question ? null : question);
   };
 
   return (
-    <div className="p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white fade-in">
       <div className="w-full max-w-5xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-              <Question className="w-6 h-6 text-white" />
+        <div className="mb-6 sm:mb-8 fade-in">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+              <Question className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <h1 className="text-4xl font-bold text-gray-900">Help Center</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Help Center</h1>
           </div>
         </div>
 
         {/* Search Bar */}
-        <div className="mb-8">
-          <div className="relative">
-            <MagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search for help articles..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-12 py-4 border-2 border-gray-200 focus:outline-none focus:border-green-500 text-lg"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-          {searchQuery && (
-            <p className="mt-2 text-sm text-gray-600">
+        <div className="mb-6 sm:mb-8 fade-in">
+          {pageLoading ? (
+            <div className="h-14 bg-gray-200 rounded animate-pulse"></div>
+          ) : (
+            <div className="relative">
+              <MagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search for help articles..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-12 py-3 sm:py-4 border-2 border-gray-200 focus:outline-none focus:border-green-500 text-base sm:text-lg transition-all shadow-sm hover:shadow-md"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          )}
+          {!pageLoading && searchQuery && (
+            <p className="mt-2 text-sm text-gray-600 fade-in">
               Found {filteredPopularArticles.length} article(s) matching "{searchQuery}"
             </p>
           )}
         </div>
 
         {/* Popular Articles */}
-        <div className="bg-white border-2 border-gray-200 p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Popular Articles</h2>
-          <div className="space-y-3">
-            {filteredPopularArticles.length > 0 ? (
-              filteredPopularArticles.map((article, index) => {
-                const isExpanded = expandedArticle === article.question;
-                return (
-                  <div
-                    key={index}
-                    className="border border-green-100 bg-gradient-to-r from-green-50 to-emerald-50 overflow-hidden transition-all"
-                  >
-                    <button
-                      onClick={() => toggleArticle(article.question)}
-                      className="w-full flex items-center justify-between p-4 hover:bg-green-100 transition-colors text-left"
-                    >
-                      <span className="font-medium text-gray-900 pr-4">{article.question}</span>
-                      {isExpanded ? (
-                        <CaretDown className="w-5 h-5 text-green-600 flex-shrink-0" />
-                      ) : (
-                        <CaretRight className="w-5 h-5 text-green-600 flex-shrink-0" />
-                      )}
-                    </button>
-                    {isExpanded && (
-                      <div className="px-4 pb-4 border-t border-green-100 bg-white">
-                        <div className="pt-4 text-gray-700 whitespace-pre-line leading-relaxed">
-                          {article.answer}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                No articles found matching your search.
-              </div>
-            )}
+        {pageLoading ? (
+          <div className="bg-white border-2 border-gray-200 p-6 sm:p-8 mb-6 sm:mb-8 shadow-sm fade-in">
+            <div className="h-7 bg-gray-200 rounded w-40 mb-6 animate-pulse"></div>
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-16 bg-gray-200 rounded animate-pulse"></div>
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* Categories */}
-        {filteredCategories.length > 0 && (
-          <div className="grid grid-cols-2 gap-6">
-            {filteredCategories.map((category, index) => {
-            const Icon = category.icon;
-            return (
-              <div key={index} className="bg-white border-2 border-gray-200 p-6 hover:border-green-500 transition-all">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">{category.title}</h3>
-                </div>
-                <ul className="space-y-2">
-                  {category.articles.map((article, idx) => (
-                    <li key={idx}>
-                      <button className="text-left text-gray-700 hover:text-green-600 transition-colors text-sm">
-                        {article}
+        ) : (
+          <div className="bg-white border-2 border-gray-200 p-6 sm:p-8 mb-6 sm:mb-8 shadow-sm hover:shadow-md transition-shadow fade-in">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Popular Articles</h2>
+            <div className="space-y-3">
+              {filteredPopularArticles.length > 0 ? (
+                filteredPopularArticles.map((article, index) => {
+                  const isExpanded = expandedArticle === article.question;
+                  return (
+                    <div
+                      key={index}
+                      className="border border-green-100 bg-gradient-to-r from-green-50 to-emerald-50 overflow-hidden transition-all duration-300 hover:shadow-md fade-in"
+                    >
+                      <button
+                        onClick={() => toggleArticle(article.question)}
+                        className="w-full flex items-center justify-between p-4 hover:bg-green-100 transition-all duration-200 text-left"
+                      >
+                        <span className="font-medium text-gray-900 pr-4">{article.question}</span>
+                        <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                          {isExpanded ? (
+                            <CaretDown className="w-5 h-5 text-green-600 flex-shrink-0" />
+                          ) : (
+                            <CaretRight className="w-5 h-5 text-green-600 flex-shrink-0" />
+                          )}
+                        </div>
                       </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 border-t border-green-100 bg-white fade-in">
+                          <div className="pt-4 text-gray-700 whitespace-pre-line leading-relaxed">
+                            {article.answer}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8 text-gray-500 fade-in">
+                  No articles found matching your search.
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {searchQuery && filteredCategories.length === 0 && filteredPopularArticles.length === 0 && (
-          <div className="bg-white border-2 border-gray-200 p-8 text-center">
+        {/* Categories */}
+        {pageLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white border-2 border-gray-200 p-6 shadow-sm fade-in">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+                  <div className="h-6 bg-gray-200 rounded w-32 animate-pulse"></div>
+                </div>
+                <div className="space-y-2">
+                  {[...Array(4)].map((_, idx) => (
+                    <div key={idx} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          filteredCategories.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 fade-in">
+              {filteredCategories.map((category, index) => {
+              const Icon = category.icon;
+              return (
+                <div key={index} className="bg-white border-2 border-gray-200 p-6 hover:border-green-500 hover:shadow-md transition-all duration-300 fade-in">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center shadow-sm">
+                      <Icon className="w-5 h-5 text-green-600" />
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900">{category.title}</h3>
+                  </div>
+                  <ul className="space-y-2">
+                    {category.articles.map((article, idx) => (
+                      <li key={idx}>
+                        <button className="text-left text-gray-700 hover:text-green-600 transition-colors duration-200 text-sm w-full py-1 px-2 -ml-2 rounded hover:bg-green-50">
+                          {article}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+            </div>
+          )
+        )}
+
+        {!pageLoading && searchQuery && filteredCategories.length === 0 && filteredPopularArticles.length === 0 && (
+          <div className="bg-white border-2 border-gray-200 p-6 sm:p-8 text-center shadow-sm fade-in">
             <p className="text-gray-600 mb-4">No results found for "{searchQuery}"</p>
             <button
               onClick={() => setSearchQuery('')}
-              className="px-6 py-2 bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors rounded"
+              className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-200 rounded shadow-sm hover:shadow-md"
             >
               Clear Search
             </button>
@@ -471,22 +514,24 @@ For detailed API documentation, check out the API reference in Browse > API Keys
         )}
 
         {/* Contact Support */}
-        <div className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-100 p-8">
-          <div className="flex items-center gap-3 mb-4">
-            <ChatCircle className="w-6 h-6 text-green-600" />
-            <h3 className="text-xl font-bold text-gray-900">Still need help?</h3>
+        {!pageLoading && (
+          <div className="mt-6 sm:mt-8 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-100 p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <ChatCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Still need help?</h3>
+            </div>
+            <p className="text-gray-600 mb-4 text-sm sm:text-base">
+              Can't find what you're looking for? Our support team is here to help you.
+            </p>
+            <Link 
+              href="/support"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-sm hover:shadow-md rounded"
+            >
+              Contact Support
+              <ArrowSquareOut className="w-4 h-4" />
+            </Link>
           </div>
-          <p className="text-gray-600 mb-4">
-            Can't find what you're looking for? Our support team is here to help you.
-          </p>
-          <Link 
-            href="/support"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all"
-          >
-            Contact Support
-            <ArrowSquareOut className="w-4 h-4" />
-          </Link>
-        </div>
+        )}
       </div>
     </div>
   );

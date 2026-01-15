@@ -240,8 +240,8 @@ export default function GetStartedPage() {
 
         {/* Payment Links Card */}
         <div className="group bg-white p-4 sm:p-6 border-2 border-gray-200 hover:border-green-500 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
-          <div className="mb-3 sm:mb-4 bg-gradient-to-br from-blue-50 to-cyan-50 p-3 sm:p-4 h-40 sm:h-48 flex items-center justify-center border border-blue-100 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="mb-3 sm:mb-4 bg-gradient-to-br from-gray-50 to-cyan-50 p-3 sm:p-4 h-40 sm:h-48 flex items-center justify-center border border-gray-100 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <img 
               src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=300&fit=crop&q=80" 
               alt="Payment Links" 
@@ -254,8 +254,8 @@ export default function GetStartedPage() {
 
         {/* Online Payments Card */}
         <div className="group bg-white p-4 sm:p-6 border-2 border-gray-200 hover:border-green-500 transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
-          <div className="mb-3 sm:mb-4 bg-gradient-to-br from-purple-50 to-pink-50 p-3 sm:p-4 h-40 sm:h-48 flex items-center justify-center border border-purple-100 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="mb-3 sm:mb-4 bg-gradient-to-br from-gray-50 to-pink-50 p-3 sm:p-4 h-40 sm:h-48 flex items-center justify-center border border-gray-100 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <img 
               src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop&q=80" 
               alt="Online Payments" 
@@ -305,8 +305,8 @@ export default function GetStartedPage() {
         <div className="space-y-3">
           <div className="group flex items-center justify-between p-3 bg-white border-2 border-gray-200 hover:border-green-400 transition-all duration-300">
             <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-green-50 transition-all">
-                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 group-hover:text-green-600 transition-colors" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-gray-100 to-gray-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-green-50 transition-all">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-green-600 transition-colors" />
               </div>
               <span className="text-sm sm:text-base text-gray-900 font-semibold truncate">Stakeholder Information</span>
             </div>
@@ -317,8 +317,8 @@ export default function GetStartedPage() {
 
           <div className="group flex items-center justify-between p-3 bg-white border-2 border-gray-200 hover:border-green-400 transition-all duration-300">
             <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-green-50 transition-all">
-            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 group-hover:text-green-600 transition-colors" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-gray-100 to-gray-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-green-50 transition-all">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-green-600 transition-colors" />
               </div>
               <span className="text-sm sm:text-base text-gray-900 font-semibold truncate">Business Activity</span>
             </div>
@@ -329,7 +329,7 @@ export default function GetStartedPage() {
 
           <div className="group flex items-center justify-between p-3 bg-white border-2 border-gray-200 hover:border-green-400 transition-all duration-300">
             <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-green-50 transition-all">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-gray-100 to-gray-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-green-50 transition-all">
                 <TrendUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 group-hover:text-green-700 transition-colors" />
               </div>
               <span className="text-sm sm:text-base text-gray-900 font-semibold truncate">Payment Methods</span>
@@ -341,7 +341,7 @@ export default function GetStartedPage() {
 
           <div className="group flex items-center justify-between p-3 bg-white border-2 border-gray-200 hover:border-green-400 transition-all duration-300">
             <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-green-50 transition-all">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-gray-100 to-gray-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:from-green-100 group-hover:to-green-50 transition-all">
                 <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600 group-hover:text-green-600 transition-colors" />
               </div>
               <span className="text-sm sm:text-base text-gray-900 font-semibold truncate">ID Document</span>

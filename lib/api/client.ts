@@ -148,17 +148,19 @@ class ApiClient {
     // Balance endpoints also require x-api-key per API_DOCUMENTATION.md
     // Reports endpoints also require x-api-key as they are payment-related
     const needsApiKey = endpoint.includes('/make-payment') || 
-              // payment-links endpoints require an API key as well
-              endpoint.includes('/payment-links') ||
-              endpoint.includes('/payments') ||
-                        endpoint.includes('/refunds') ||
-                        endpoint.includes('/chargebacks') ||
-                        endpoint.includes('/orders') ||
-                        endpoint.includes('/invoices') ||
-                        endpoint.includes('/products') ||
-                        endpoint.includes('/bank-accounts') ||
-                        endpoint.includes('/balances') ||
-                        endpoint.includes('/reports');
+          // payment-links endpoints require an API key as well
+          endpoint.includes('/payment-links') ||
+          // new payment service path "paiments" also requires x-api-key
+          endpoint.includes('/paiments') ||
+          endpoint.includes('/payments') ||
+              endpoint.includes('/refunds') ||
+              endpoint.includes('/chargebacks') ||
+              endpoint.includes('/orders') ||
+              endpoint.includes('/invoices') ||
+              endpoint.includes('/products') ||
+              endpoint.includes('/bank-accounts') ||
+              endpoint.includes('/balances') ||
+              endpoint.includes('/reports');
     
     // API key is only needed for payment-related endpoints, NOT organizations
     let apiKey: string | null = null;
@@ -265,8 +267,9 @@ class ApiClient {
       // This shouldn't normally happen but provides graceful degradation
       headers['token'] = token;
       console.warn(`[API Client] Organization endpoint ${endpoint} using token header (no api credentials available)`);
-    } else if (apiUser && apiPassword) {
+    } else if (!isAuthEndpoint && apiUser && apiPassword) {
       // Other endpoints with api credentials - use ONLY Bearer auth
+      // IMPORTANT: Do NOT attach Bearer auth for auth endpoints (signup/login/etc.)
       const encodedCredentials = btoa(`${apiUser}:${apiPassword}`);
       headers['Authorization'] = `Bearer ${encodedCredentials}`;
       console.log(`[API Client] Using Bearer auth for ${endpoint}`);

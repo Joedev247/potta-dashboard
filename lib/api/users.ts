@@ -16,6 +16,7 @@ export interface UserProfile {
   isVerified: boolean;
   role: string;
   bio?: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
 }
 
 export interface AccountSettings {

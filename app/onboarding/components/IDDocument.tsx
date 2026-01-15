@@ -336,8 +336,8 @@ export default function IDDocument({ onNext, onPrevious }: IDDocumentProps) {
           </div>
         ) : null}
 
-        <div className="bg-blue-50 border border-blue-200  p-4">
-          <p className="text-sm text-blue-800">
+        <div className="bg-gray-50 border border-gray-200  p-4">
+          <p className="text-sm text-gray-800">
             <strong>Security Note:</strong> Your document will be stored securely and encrypted. 
             We use industry-standard security measures to protect your information.
           </p>

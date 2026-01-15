@@ -6,8 +6,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { balanceService } from '@/lib/api';
 import type { ApiResponse } from '@/lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils/format';
+import { useBalance } from '@/contexts/BalanceContext';
 
 export default function WalletPage() {
+  // Get balance context for syncing with payment page
+  const { balance: contextBalance, loading: contextLoading, error: contextError, refreshBalance: refreshContextBalance } = useBalance();
   // Modal states
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -33,7 +36,7 @@ export default function WalletPage() {
     description: '',
   });
 
-  // Balance state
+  // Balance state - now synced with context
   const [balance, setBalance] = useState({ available: 0, pending: 0, reserved: 0, currency: 'XAF', lastUpdated: '' });
   const [transactions, setTransactions] = useState<any[]>([]);
   const [payouts, setPayouts] = useState<any[]>([]);
@@ -57,6 +60,14 @@ export default function WalletPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [showFilters, setShowFilters] = useState(false);
+
+  // Sync balance from context (primary source)
+  useEffect(() => {
+    if (contextBalance && (contextBalance.available !== undefined || contextBalance.available !== null)) {
+      setBalance(contextBalance);
+      console.log('[Balance Page] Updated balance from context:', contextBalance);
+    }
+  }, [contextBalance]);
 
   // Fetch balance
   const fetchBalance = useCallback(async () => {
@@ -317,6 +328,7 @@ export default function WalletPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="fade-in">
       {/* Header Section */}
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 mb-4 sm:mb-6">
@@ -378,7 +390,13 @@ export default function WalletPage() {
                 </div>
             )}
             {loading.balance ? (
-              <Spinner className="w-8 h-8 sm:w-12 sm:h-12 animate-spin" />
+              <div className="space-y-3">
+                <div className="h-12 sm:h-16 bg-white/20 rounded w-48 animate-pulse"></div>
+                <div className="flex gap-4">
+                  <div className="h-4 bg-white/20 rounded w-24 animate-pulse"></div>
+                  <div className="h-4 bg-white/20 rounded w-24 animate-pulse"></div>
+                </div>
+              </div>
             ) : (
               <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
                 {showBalance ? formatCurrency(balance.available, balance.currency) : '••••••'}
@@ -447,10 +465,10 @@ export default function WalletPage() {
 
       {/* Pending Payouts Section */}
       {stats.pendingPayouts > 0 && (
-        <div className="mb-6 sm:mb-8 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 p-4 sm:p-6">
+        <div className="mb-6 sm:mb-8 bg-gradient-to-r from-gray-50 to-cyan-50 border-2 border-gray-200 p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-500 rounded-full flex items-center justify-center flex-shrink-0">
                 <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div>
@@ -460,7 +478,7 @@ export default function WalletPage() {
             </div>
             <Link
               href="/payments?tab=refunds"
-              className="w-full sm:w-auto px-4 py-2 text-sm sm:text-base bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors text-center"
+              className="w-full sm:w-auto px-4 py-2 text-sm sm:text-base bg-gray-500 text-white font-semibold hover:bg-gray-600 transition-colors text-center"
             >
               View All
             </Link>
@@ -580,9 +598,35 @@ export default function WalletPage() {
 
         {/* Transactions List */}
         {loading.transactions ? (
-          <div className="flex items-center justify-center py-20">
-            <Spinner className="w-8 h-8 animate-spin text-green-600" />
-          </div>
+          <>
+            {/* Skeleton Transactions */}
+            <div className="divide-y divide-gray-200">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full animate-pulse"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                        <div className="h-3 bg-gray-200 rounded w-48 animate-pulse"></div>
+                        <div className="h-3 bg-gray-200 rounded w-24 animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="h-6 bg-gray-200 rounded w-24 animate-pulse"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Skeleton Pagination */}
+            <div className="p-4 sm:p-6 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="h-4 bg-gray-200 rounded w-48 animate-pulse"></div>
+              <div className="flex items-center gap-2">
+                <div className="h-10 bg-gray-200 rounded w-20 animate-pulse"></div>
+                <div className="h-10 bg-gray-200 rounded w-24 animate-pulse"></div>
+                <div className="h-10 bg-gray-200 rounded w-16 animate-pulse"></div>
+              </div>
+            </div>
+          </>
         ) : transactions.length > 0 ? (
           <>
             <div className="divide-y divide-gray-200">
@@ -616,7 +660,7 @@ export default function WalletPage() {
                           <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                             transaction.status === 'completed' ? 'bg-green-100 text-green-700' :
                             transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                            transaction.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                            transaction.status === 'processing' ? 'bg-gray-100 text-gray-700' :
                             'bg-red-100 text-red-700'
                           }`}>
                             {transaction.status}
@@ -680,6 +724,7 @@ export default function WalletPage() {
             </p>
           </div>
         )}
+      </div>
       </div>
 
       {/* Deposit Modal */}
@@ -946,12 +991,12 @@ export default function WalletPage() {
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 p-4">
+              <div className="bg-gray-50 border border-gray-200 p-4">
                 <div className="flex items-start gap-3">
-                  <WarningCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <WarningCircle className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs text-blue-800 font-medium mb-1">Processing Time</p>
-                    <p className="text-xs text-blue-700">
+                    <p className="text-xs text-gray-800 font-medium mb-1">Processing Time</p>
+                    <p className="text-xs text-gray-700">
                       Withdrawals are typically processed within 1-3 business days. You'll receive a notification once completed.
                     </p>
                   </div>
@@ -1043,7 +1088,7 @@ export default function WalletPage() {
                 <span className={`px-3 py-1 text-sm font-medium rounded-full ${
                   selectedTransaction.status === 'completed' ? 'bg-green-100 text-green-700' :
                   selectedTransaction.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                  selectedTransaction.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                  selectedTransaction.status === 'processing' ? 'bg-gray-100 text-gray-700' :
                   'bg-red-100 text-red-700'
                 }`}>
                   {selectedTransaction.status}

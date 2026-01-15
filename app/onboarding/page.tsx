@@ -44,6 +44,13 @@ export default function OnboardingPage() {
         return;
       }
 
+      // Check if user is activated/enabled - only ACTIVE users can proceed with onboarding
+      if (user.status && user.status !== 'ACTIVE') {
+        setLoading(false);
+        // Show a message that the user needs to be activated by an admin
+        return;
+      }
+
       // Trust AuthContext's isAuthenticated state - don't check token length here
       // ProtectedRoute already handles authentication checks
       try {
@@ -184,6 +191,31 @@ export default function OnboardingPage() {
       router.push('/');
     }
   };
+
+  // Check if user is not activated
+  if (!loading && user && user.status && user.status !== 'ACTIVE') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
+        <div className="max-w-md mx-auto px-4 text-center">
+          <div className="bg-yellow-50 border-2 border-yellow-200  p-8">
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Pending Activation</h2>
+            <p className="text-gray-600 mb-4">
+              Your account is currently {user.status === 'PENDING' ? 'pending activation' : 'inactive'}. 
+              Please wait for an administrator to activate your account before proceeding with onboarding.
+            </p>
+            <p className="text-sm text-gray-500">
+              Once your account is activated, you'll be able to complete the onboarding process.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

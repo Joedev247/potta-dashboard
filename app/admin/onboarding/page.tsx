@@ -362,7 +362,7 @@ export default function AdminOnboardingPage() {
   // Get document type badge color
   const getDocumentTypeBadge = (type: string) => {
     const colors: Record<string, string> = {
-      ID_CARD: 'bg-blue-100 text-blue-700 border-blue-200',
+      ID_CARD: 'bg-gray-100 text-gray-700 border-gray-200',
       PASSPORT: 'bg-green-100 text-green-700 border-green-200',
       BUSINESS_REGISTRATION: 'bg-green-100 text-green-700 border-green-200',
       VAT_CERTIFICATE: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -375,7 +375,7 @@ export default function AdminOnboardingPage() {
   // Get step name badge color
   const getStepNameBadge = (stepName: string) => {
     const colors: Record<string, string> = {
-      STAKEHOLDER: 'bg-blue-100 text-blue-700 border-blue-200',
+      STAKEHOLDER: 'bg-gray-100 text-gray-700 border-gray-200',
       BUSINESS: 'bg-green-100 text-green-700 border-green-200',
       PAYMENT_METHODS: 'bg-green-100 text-green-700 border-green-200',
       DOCUMENTS: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -621,7 +621,7 @@ export default function AdminOnboardingPage() {
                         </button>
                         <button
                           onClick={() => openVerifyModal(document)}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+                          className="text-gray-600 hover:text-gray-700 text-sm font-medium flex items-center gap-1"
                         >
                           <CheckCircle className="w-4 h-4" />
                           Review
@@ -746,7 +746,7 @@ export default function AdminOnboardingPage() {
                         </button>
                         <button
                           onClick={() => openApproveModal(step)}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+                          className="text-gray-600 hover:text-gray-700 text-sm font-medium flex items-center gap-1"
                         >
                           <CheckCircle className="w-4 h-4" />
                           Review

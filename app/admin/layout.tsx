@@ -12,11 +12,12 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   
-  // Don't apply admin protection to setup page
+  // ⚠️ TEMPORARILY DISABLED: All pages now have open access for testing
+  // Auth protection will be re-enabled later
   const isSetupPage = pathname === '/admin/setup';
   
   if (isSetupPage) {
-    // Setup page doesn't need admin protection or layout
+    // Setup page doesn't need layout
     return <>{children}</>;
   }
   

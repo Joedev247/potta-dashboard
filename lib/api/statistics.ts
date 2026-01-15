@@ -138,6 +138,24 @@ class StatisticsService {
     }
     return apiClient.get(`/organizations/${orgId}/statistics/timeseries?${qs.toString()}`);
   }
+
+  async getBreakdown(params: { startDate: string; endDate: string; dimension: 'payment_method' | 'status' | 'currency' | 'product'; tz?: string }) {
+    const orgId = typeof window !== 'undefined' ? localStorage.getItem('currentOrganizationId') : null;
+    if (!orgId) return { success: false, error: { code: 'NO_ORG', message: 'No organization selected' } } as ApiResponse<any>;
+    return apiClient.get(`/organizations/${orgId}/statistics/breakdown`, params as any);
+  }
+
+  async getEvents(params: { startDate?: string; endDate?: string; page?: number; limit?: number; status?: string; type?: string; tz?: string }) {
+    const orgId = typeof window !== 'undefined' ? localStorage.getItem('currentOrganizationId') : null;
+    if (!orgId) return { success: false, error: { code: 'NO_ORG', message: 'No organization selected' } } as ApiResponse<any>;
+    return apiClient.get(`/organizations/${orgId}/statistics/events`, params as any);
+  }
+
+  async refreshStatistics() {
+    const orgId = typeof window !== 'undefined' ? localStorage.getItem('currentOrganizationId') : null;
+    if (!orgId) return { success: false, error: { code: 'NO_ORG', message: 'No organization selected' } } as ApiResponse<any>;
+    return apiClient.post(`/organizations/${orgId}/statistics/refresh`, {});
+  }
 }
 
 export const statisticsService = new StatisticsService();

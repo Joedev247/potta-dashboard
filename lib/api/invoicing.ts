@@ -13,6 +13,7 @@
  */
 
 import { ApiResponse, PaginationResponse, apiClient } from './client';
+import { customersService, type Customer } from './customers';
 
 export interface Invoice {
   id: string;
@@ -22,7 +23,11 @@ export interface Invoice {
   customer?: {
     id?: string;
     name?: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
+    phone?: string;
+    address?: string;
   };
   amount?: number;
   currency?: string;
@@ -106,7 +111,50 @@ class InvoicingService {
    */
   async createInvoice(data: CreateInvoiceData): Promise<ApiResponse<Invoice>> {
     try {
-      const response = await apiClient.post<any>('/invoices', data);
+      // Transform data to match API expectations (snake_case)
+      // Calculate amount from line items
+      let totalAmount = 0;
+      const transformedLineItems = data.line_items.map(item => {
+        const quantity = item.quantity || 0;
+        const unitPrice = item.unitPrice || 0;
+        const taxRate = item.taxRate || 0;
+        const discountRate = item.discountRate || 0;
+        
+        // Calculate item subtotal
+        const itemSubtotal = quantity * unitPrice;
+        
+        // Calculate tax amount
+        const taxAmount = (itemSubtotal * taxRate) / 100;
+        
+        // Calculate discount amount
+        const discountAmount = (itemSubtotal * discountRate) / 100;
+        
+        // Calculate item total (subtotal + tax - discount)
+        const itemTotal = itemSubtotal + taxAmount - discountAmount;
+        totalAmount += itemTotal;
+        
+        return {
+          productId: item.productId,
+          description: item.description,
+          quantity: quantity,
+          unit_price: unitPrice, // Convert to snake_case
+          tax_rate: taxRate, // Convert to snake_case
+          discount_rate: discountRate, // Convert to snake_case
+        };
+      });
+
+      // Prepare API payload with snake_case fields
+      const apiPayload = {
+        customer_id: data.customer_id,
+        organization_id: data.organization_id,
+        line_items: transformedLineItems,
+        amount: totalAmount, // Add required amount field
+        due_date: data.due_date,
+        currency: data.currency || 'XAF',
+        notes: data.notes,
+      };
+
+      const response = await apiClient.post<any>('/invoices', apiPayload);
       
       if (!response.success || !response.data) {
         return response as ApiResponse<Invoice>;
@@ -177,12 +225,33 @@ class InvoicingService {
         : (Array.isArray(data) ? data : []);
 
       // Normalize invoice data
-      const normalizedInvoices: Invoice[] = invoices.map((invoice: any) => ({
+      const normalizedInvoices: Invoice[] = invoices.map((invoice: any) => {
+        // Normalize customer data
+        let customerData = invoice.customer || undefined;
+        const customerId = invoice.customer_id || invoice.customerId || undefined;
+        
+        if (customerData) {
+          // Normalize customer object to include all fields
+          customerData = {
+            id: customerData.id || customerId,
+            name: customerData.name || 
+                  (customerData.firstName && customerData.lastName 
+                    ? `${customerData.firstName} ${customerData.lastName}` 
+                    : customerData.firstName || customerData.lastName || undefined),
+            firstName: customerData.firstName || customerData.first_name,
+            lastName: customerData.lastName || customerData.last_name,
+            email: customerData.email,
+            phone: customerData.phone || customerData.phone_number,
+            address: customerData.address,
+          };
+        }
+        
+        return {
         id: invoice.id || '',
         invoiceNumber: invoice.invoiceNumber || invoice.invoice_number || undefined,
-        customer_id: invoice.customer_id || invoice.customerId || undefined,
+          customer_id: customerId,
         organization_id: invoice.organization_id || invoice.organizationId || undefined,
-        customer: invoice.customer || undefined,
+          customer: customerData,
         amount: invoice.amount ?? 0,
         currency: invoice.currency || 'XAF',
         status: invoice.status || 'DRAFT',
@@ -194,7 +263,8 @@ class InvoicingService {
         payments: invoice.payments || undefined,
         createdAt: invoice.createdAt || invoice.created_at,
         updatedAt: invoice.updatedAt || invoice.updated_at,
-      }));
+        };
+      });
     
       return {
         success: true,
@@ -228,12 +298,71 @@ class InvoicingService {
       // Handle different response structures
       const raw = response.data.data || response.data;
       
+      // Extract customer data from response
+      let customerData = raw.customer || undefined;
+      const customerId = raw.customer_id || raw.customerId || undefined;
+      
+      // If we have customer_id but no full customer object, fetch customer details
+      if (customerId && (!customerData || !customerData.email)) {
+        try {
+          const customerResponse = await customersService.getCustomer(customerId);
+          if (customerResponse.success && customerResponse.data) {
+            const customer = customerResponse.data;
+            customerData = {
+              id: customer.id,
+              name: customer.firstName && customer.lastName 
+                ? `${customer.firstName} ${customer.lastName}` 
+                : customer.firstName || customer.lastName || undefined,
+              firstName: customer.firstName,
+              lastName: customer.lastName,
+              email: customer.email,
+              phone: customer.phone,
+              address: customer.address,
+            };
+          }
+        } catch (customerError) {
+          console.warn('Failed to fetch customer details:', customerError);
+          // Continue with partial customer data if available
+        }
+      }
+      
+      // Normalize customer data if it exists
+      if (customerData) {
+        // If customer data is a simple object, normalize it
+        if (customerData.firstName || customerData.lastName) {
+          customerData = {
+            id: customerData.id || customerId,
+            name: customerData.name || 
+                  (customerData.firstName && customerData.lastName 
+                    ? `${customerData.firstName} ${customerData.lastName}` 
+                    : customerData.firstName || customerData.lastName || undefined),
+            firstName: customerData.firstName,
+            lastName: customerData.lastName,
+            email: customerData.email,
+            phone: customerData.phone || customerData.phone_number,
+            address: customerData.address,
+          };
+        } else if (customerData.name && !customerData.firstName) {
+          // If we only have name, try to split it
+          const nameParts = customerData.name.split(' ');
+          customerData = {
+            id: customerData.id || customerId,
+            name: customerData.name,
+            firstName: nameParts[0] || undefined,
+            lastName: nameParts.slice(1).join(' ') || undefined,
+            email: customerData.email,
+            phone: customerData.phone || customerData.phone_number,
+            address: customerData.address,
+          };
+        }
+      }
+      
       const invoice: Invoice = {
         id: raw.id || invoiceId,
         invoiceNumber: raw.invoiceNumber || raw.invoice_number || undefined,
-        customer_id: raw.customer_id || raw.customerId || undefined,
+        customer_id: customerId,
         organization_id: raw.organization_id || raw.organizationId || undefined,
-        customer: raw.customer || undefined,
+        customer: customerData,
         amount: raw.amount ?? 0,
         currency: raw.currency || 'XAF',
         status: raw.status || 'DRAFT',

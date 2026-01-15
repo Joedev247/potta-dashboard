@@ -211,7 +211,7 @@ export default function OrganizationSetup({ onNext, onSkip }: OrganizationSetupP
       </div>
 
       {checkingCredentials && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded flex items-center gap-2">
+        <div className="mb-4 p-3 bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded flex items-center gap-2">
           <Spinner className="w-4 h-4 animate-spin" />
           Loading authentication credentials...
         </div>

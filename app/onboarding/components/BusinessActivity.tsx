@@ -39,11 +39,18 @@ export default function BusinessActivity({ onNext, onPrevious }: BusinessActivit
         return;
       }
 
+      // Validate primaryActivity (industry) is at least 3 characters
+      if (!formData.industry || formData.industry.trim().length < 3) {
+        setError('Industry Sector must be at least 3 characters long.');
+        setLoading(false);
+        return;
+      }
+
       // Build data matching the `BusinessActivityData` interface
       const data = {
         businessName: formData.businessName,
         businessType: formData.businessType,
-        industry: formData.industry,
+        primaryActivity: formData.industry.trim(),
         businessRegistrationNumber: formData.registrationNumber || '',
         vatNumber: formData.vatNumber || null,
         website: formData.website || null,

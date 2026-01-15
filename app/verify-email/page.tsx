@@ -162,15 +162,15 @@ export default function VerifyEmailPage() {
               <>
                 <div className="mb-6">
                   <div className="inline-block">
-                    <svg className="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Check your email</h1>
                 <p className="text-sm sm:text-base text-gray-600 mb-6">We've sent a verification email to <strong>{user.email}</strong>. Click the verification link in the email to confirm your account and complete your registration.</p>
-                <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6">
-                  <p className="text-xs sm:text-sm text-blue-800">If you don't see the email, check your spam folder or click the button below to resend.</p>
+                <div className="bg-gray-50 border border-gray-200 rounded p-4 mb-6">
+                  <p className="text-xs sm:text-sm text-gray-800">If you don't see the email, check your spam folder or click the button below to resend.</p>
                 </div>
 
                 {resendMessage && (

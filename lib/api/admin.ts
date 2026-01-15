@@ -61,7 +61,7 @@ export interface RegisterUserData {
 
 export interface ChangeUserStatusData {
   id: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: 'ACTIVE' | 'STOP' | 'PENDING';
 }
 
 export interface CreateProviderData {
@@ -88,7 +88,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   role?: string;
-  status?: 'ACTIVE' | 'INACTIVE';
+  status?: 'ACTIVE' | 'STOP' | 'PENDING' | 'INACTIVE'; // INACTIVE kept for backward compatibility, maps to STOP
   createdAt?: string;
   updatedAt?: string;
 }
@@ -117,6 +117,58 @@ export interface ChangeOrganizationStatusData {
   admin_notes?: string;
 }
 
+export interface OnboardingDocument {
+  id: string;
+  userId?: string;
+  organizationId?: string;
+  documentType: string;
+  fileName: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  uploadedAt?: string;
+  verifiedAt?: string;
+  verifiedBy?: string;
+  rejectionReason?: string;
+  fileUrl?: string;
+}
+
+export interface PendingDocument {
+  id: string;
+  userId?: string;
+  organizationId?: string;
+  user?: { id: string; email: string; username: string };
+  organization?: { id: string; name: string };
+  documentType: string;
+  fileName: string;
+  fileUrl?: string;
+  uploadedAt?: string;
+  createdAt?: string;
+}
+
+export interface OnboardingStep {
+  id: string;
+  userId?: string;
+  organizationId?: string;
+  stepName: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  submittedAt?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectionReason?: string;
+  data?: any;
+}
+
+export interface PendingStep {
+  id: string;
+  userId?: string;
+  organizationId?: string;
+  user?: { id: string; email: string; username: string };
+  organization?: { id: string; name: string };
+  stepName: string;
+  submittedAt?: string;
+  createdAt?: string;
+  data?: any;
+}
+
 class AdminService {
   /**
    * Get system logs with pagination
@@ -124,7 +176,7 @@ class AdminService {
    */
   async getLogs(params?: { page?: number; limit?: number }): Promise<ApiResponse<LogsResponse>> {
     try {
-      const response = await apiClient.get<any>('/admin/logs', params);
+      const response = await apiClient.get<any>('/users/admin/logs', params);
       
       if (!response.success || !response.data) {
         return {
@@ -137,9 +189,34 @@ class AdminService {
         };
       }
 
-      const data = response.data.data || response.data;
-      const logs = data.logs || [];
-      const pagination = data.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
+      // Backend returns: { status_code: 200, data: { data: [...logs...], count, totalPages, currentPage } }
+      // API client extracts: response.data = backendResponse.data = { data: [...logs...], count, totalPages, currentPage }
+      const responseData = response.data;
+      
+      // Handle different response structures
+      let logs: any[] = [];
+      let count = 0;
+      let totalPages = 0;
+      let currentPage = 1;
+      
+      if (Array.isArray(responseData)) {
+        // If response.data is directly an array
+        logs = responseData;
+        count = logs.length;
+        totalPages = 1;
+        currentPage = 1;
+      } else if (responseData && typeof responseData === 'object') {
+        // Extract logs array from responseData.data (the nested data property)
+        logs = Array.isArray(responseData.data) 
+          ? responseData.data 
+          : (Array.isArray(responseData.logs) ? responseData.logs : []);
+        
+        count = responseData.count || 0;
+        totalPages = responseData.totalPages || responseData.total_pages || 0;
+        currentPage = parseInt(String(responseData.currentPage || responseData.current_page || '1'), 10);
+      }
+      
+      const limit = params?.limit || 20;
 
       // Normalize log entries
       const normalizedLogs: LogEntry[] = logs.map((log: any) => ({
@@ -149,7 +226,7 @@ class AdminService {
         status: log.response?.statusCode || log.status || 200,
         executionTime: log.executionTime,
         userId: log.userId || log.user_id,
-        ipAddress: log.ipAddress || log.ip_address,
+        ipAddress: log.request?.ip || log.ipAddress || log.ip_address || '',
         requestBody: log.request?.body,
         responseBody: log.response?.body,
         createdAt: log.createdAt || log.created_at,
@@ -160,12 +237,12 @@ class AdminService {
         data: {
           logs: normalizedLogs,
           pagination: {
-            page: pagination.page || 1,
-            limit: pagination.limit || 20,
-            total: pagination.total || 0,
-            totalPages: pagination.totalPages || pagination.total_pages || 0,
-            hasNext: pagination.hasNext || (pagination.page || 1) < (pagination.totalPages || pagination.total_pages || 0),
-            hasPrev: pagination.hasPrev || (pagination.page || 1) > 1,
+            page: currentPage,
+            limit: limit,
+            total: count,
+            totalPages: totalPages,
+            hasNext: currentPage < totalPages,
+            hasPrev: currentPage > 1,
           },
         },
       };
@@ -188,7 +265,7 @@ class AdminService {
    */
   async getLogById(id: string): Promise<ApiResponse<LogEntry>> {
     try {
-      const response = await apiClient.get<any>(`/admin/logs/${id}`);
+      const response = await apiClient.get<any>(`/users/admin/logs/${id}`);
       
       if (!response.success || !response.data) {
         return response as ApiResponse<LogEntry>;
@@ -240,21 +317,34 @@ class AdminService {
         isInternal: data.isInternal !== undefined ? data.isInternal : true,
       };
 
-      const response = await apiClient.post<any>('/admin/register', requestData);
+      const response = await apiClient.post<any>('/users/admin/register', requestData);
       
       if (!response.success || !response.data) {
         return response as ApiResponse<User>;
       }
 
       const raw = response.data.data || response.data;
+      // Backend returns STOP, map to INACTIVE for frontend display
+      let status = raw.status || 'ACTIVE';
+      if (status === 'STOP') {
+        status = 'INACTIVE';
+      }
+      
+      // Extract role name from object if role is an object
+      let role = raw.role || data.role;
+      if (role && typeof role === 'object') {
+        role = role.name || role.role || role.value || (role.id ? String(role.id) : 'user');
+      }
+      role = role || 'user';
+      
       const user: User = {
         id: raw.id || '',
         username: raw.username || data.username,
         email: raw.email || data.email,
         firstName: raw.firstName || raw.first_name || data.firstName,
         lastName: raw.lastName || raw.last_name || data.lastName,
-        role: raw.role || data.role || 'user',
-        status: raw.status || 'ACTIVE',
+        role: role as string,
+        status: status as 'ACTIVE' | 'INACTIVE' | 'PENDING',
         createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
         updatedAt: raw.updatedAt || raw.updated_at,
       };
@@ -281,9 +371,18 @@ class AdminService {
    */
   async changeUserStatus(data: ChangeUserStatusData): Promise<ApiResponse<User>> {
     try {
-      const response = await apiClient.put<any>('/admin/change-status', {
+      // Backend expects: ACTIVE, STOP, PENDING (all uppercase)
+      // Map frontend status values to backend values
+      let backendStatus: 'ACTIVE' | 'STOP' | 'PENDING' = data.status;
+      
+      // If status is INACTIVE (from frontend), map it to STOP (backend expects)
+      if (data.status === 'INACTIVE' || (data as any).status === 'INACTIVE') {
+        backendStatus = 'STOP';
+      }
+      
+      const response = await apiClient.put<any>('/users/admin/change-status', {
         id: data.id,
-        status: data.status,
+        status: backendStatus,
       });
       
       if (!response.success) {
@@ -293,14 +392,27 @@ class AdminService {
       // If response includes updated user data, normalize it
       if (response.data) {
         const raw = response.data.data || response.data;
+        // Backend returns STOP, map to INACTIVE for frontend display
+        let displayStatus = raw.status || backendStatus;
+        if (displayStatus === 'STOP') {
+          displayStatus = 'INACTIVE';
+        }
+        
+        // Extract role name from object if role is an object
+        let role = raw.role;
+        if (role && typeof role === 'object') {
+          role = role.name || role.role || role.value || (role.id ? String(role.id) : 'user');
+        }
+        role = role || 'user';
+        
         const user: User = {
           id: raw.id || data.id,
           username: raw.username,
           email: raw.email,
           firstName: raw.firstName || raw.first_name,
           lastName: raw.lastName || raw.last_name,
-          role: raw.role,
-          status: data.status,
+          role: role as string,
+          status: displayStatus as 'ACTIVE' | 'INACTIVE' | 'PENDING',
           createdAt: raw.createdAt || raw.created_at,
           updatedAt: raw.updatedAt || raw.updated_at || new Date().toISOString(),
         };
@@ -338,7 +450,7 @@ class AdminService {
         status: data.status || 'PENDING',
       };
 
-      const response = await apiClient.post<any>('/admin/created-provider', requestData);
+      const response = await apiClient.post<any>('/users/admin/created-provider', requestData);
       
       if (!response.success || !response.data) {
         return response;
@@ -367,7 +479,7 @@ class AdminService {
    */
   async activateProvider(data: ActivateProviderData): Promise<ApiResponse<any>> {
     try {
-      const response = await apiClient.put<any>('/admin/activated-provider', {
+      const response = await apiClient.put<any>('/users/admin/activated-provider', {
         user_id: data.user_id,
         provider: data.provider,
         status: data.status,
@@ -399,7 +511,7 @@ class AdminService {
    */
   async findUsers(params?: FindUserQuery): Promise<ApiResponse<User[]>> {
     try {
-      const response = await apiClient.get<any>('/admin/find', params);
+      const response = await apiClient.get<any>('/users/admin/find', params);
       
       if (!response.success || !response.data) {
         return { ...response, data: [] };
@@ -409,17 +521,34 @@ class AdminService {
       const users = Array.isArray(data) ? data : (data.users || []);
 
       // Normalize user data
-      const normalizedUsers: User[] = users.map((user: any) => ({
-        id: user.id || '',
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName || user.first_name,
-        lastName: user.lastName || user.last_name,
-        role: user.role,
-        status: user.status || 'ACTIVE',
-        createdAt: user.createdAt || user.created_at,
-        updatedAt: user.updatedAt || user.updated_at,
-      }));
+      // Backend returns: ACTIVE, STOP, PENDING
+      // Map STOP to INACTIVE for frontend display consistency
+      const normalizedUsers: User[] = users.map((user: any) => {
+        let status = user.status || 'ACTIVE';
+        // Map backend STOP to frontend INACTIVE for display
+        if (status === 'STOP') {
+          status = 'INACTIVE';
+        }
+        
+        // Extract role name from object if role is an object
+        let role = user.role;
+        if (role && typeof role === 'object') {
+          role = role.name || role.role || role.value || (role.id ? String(role.id) : 'user');
+        }
+        role = role || 'user';
+        
+        return {
+          id: user.id || '',
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName || user.first_name,
+          lastName: user.lastName || user.last_name,
+          role: role as string,
+          status: status as 'ACTIVE' | 'INACTIVE' | 'PENDING',
+          createdAt: user.createdAt || user.created_at,
+          updatedAt: user.updatedAt || user.updated_at,
+        };
+      });
 
       return {
         success: true,
@@ -550,6 +679,232 @@ class AdminService {
    */
   async getQueues(params?: { page?: number; limit?: number }): Promise<ApiResponse<any>> {
     return apiClient.get<any>('/admin/queues', params);
+  }
+
+  /**
+   * Get pending onboarding documents
+   * GET /api/onboarding/admin/documents/pending
+   */
+  async getPendingOnboardingDocuments(params?: { page?: number; limit?: number }): Promise<ApiResponse<any>> {
+    try {
+      const response = await apiClient.get<any>('/onboarding/admin/documents/pending', params);
+      
+      if (!response.success || !response.data) {
+        return { ...response, data: { documents: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false } } };
+      }
+
+      const data = response.data.data || response.data;
+      const documents = (Array.isArray(data) ? data : (data.documents || data.data || [])) as PendingDocument[];
+
+      // Normalize documents
+      const normalizedDocs: PendingDocument[] = documents.map((doc: any) => ({
+        id: doc.id || '',
+        userId: doc.userId || doc.user_id,
+        organizationId: doc.organizationId || doc.organization_id,
+        user: doc.user ? {
+          id: doc.user.id || '',
+          email: doc.user.email || '',
+          username: doc.user.username || '',
+        } : undefined,
+        organization: doc.organization ? {
+          id: doc.organization.id || '',
+          name: doc.organization.name || '',
+        } : undefined,
+        documentType: doc.documentType || doc.document_type || '',
+        fileName: doc.fileName || doc.file_name || '',
+        fileUrl: doc.fileUrl || doc.file_url,
+        uploadedAt: doc.uploadedAt || doc.uploaded_at,
+        createdAt: doc.createdAt || doc.created_at,
+      }));
+
+      return {
+        success: true,
+        data: {
+          documents: normalizedDocs,
+          pagination: {
+            page: (data.pagination?.page || 1),
+            limit: (data.pagination?.limit || 20),
+            total: (data.pagination?.total || 0),
+            totalPages: (data.pagination?.totalPages || data.pagination?.total_pages || 0),
+            hasNext: data.pagination?.hasNext || ((data.pagination?.page || 1) < (data.pagination?.totalPages || data.pagination?.total_pages || 0)),
+            hasPrev: data.pagination?.hasPrev || ((data.pagination?.page || 1) > 1),
+          },
+        },
+      };
+    } catch (error: any) {
+      console.error('Error fetching pending onboarding documents:', error);
+      return {
+        success: false,
+        error: {
+          code: 'PENDING_DOCS_ERROR',
+          message: error?.message || 'Failed to fetch pending documents',
+        },
+        data: { documents: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false } },
+      };
+    }
+  }
+
+  /**
+   * Verify onboarding document (approve or reject)
+   * PUT /api/onboarding/admin/documents/:id/verify
+   */
+  async verifyOnboardingDocument(
+    docId: string,
+    data: { status: 'APPROVED' | 'REJECTED'; rejectionReason?: string }
+  ): Promise<ApiResponse<OnboardingDocument>> {
+    try {
+      const requestData = {
+        status: data.status,
+        rejectionReason: data.rejectionReason,
+      };
+
+      const response = await apiClient.put<any>(`/onboarding/admin/documents/${docId}/verify`, requestData);
+      
+      if (!response.success || !response.data) {
+        return response as ApiResponse<OnboardingDocument>;
+      }
+
+      const raw = response.data.data || response.data;
+      const document: OnboardingDocument = {
+        id: raw.id || docId,
+        userId: raw.userId || raw.user_id,
+        organizationId: raw.organizationId || raw.organization_id,
+        documentType: raw.documentType || raw.document_type || '',
+        fileName: raw.fileName || raw.file_name || '',
+        status: raw.status || data.status,
+        fileUrl: raw.fileUrl || raw.file_url,
+        uploadedAt: raw.uploadedAt || raw.uploaded_at,
+        verifiedAt: raw.verifiedAt || raw.verified_at || new Date().toISOString(),
+        verifiedBy: raw.verifiedBy || raw.verified_by,
+        rejectionReason: raw.rejectionReason || raw.rejection_reason || data.rejectionReason,
+      };
+
+      return {
+        success: true,
+        data: document,
+      };
+    } catch (error: any) {
+      console.error('Error verifying document:', error);
+      return {
+        success: false,
+        error: {
+          code: 'DOC_VERIFY_ERROR',
+          message: error?.message || 'Failed to verify document',
+        },
+      };
+    }
+  }
+
+  /**
+   * Get pending onboarding steps
+   * GET /api/onboarding/admin/steps/pending
+   */
+  async getPendingOnboardingSteps(params?: { page?: number; limit?: number }): Promise<ApiResponse<any>> {
+    try {
+      const response = await apiClient.get<any>('/onboarding/admin/steps/pending', params);
+      
+      if (!response.success || !response.data) {
+        return { ...response, data: { steps: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false } } };
+      }
+
+      const data = response.data.data || response.data;
+      const steps = (Array.isArray(data) ? data : (data.steps || data.data || [])) as PendingStep[];
+
+      // Normalize steps
+      const normalizedSteps: PendingStep[] = steps.map((step: any) => ({
+        id: step.id || '',
+        userId: step.userId || step.user_id,
+        organizationId: step.organizationId || step.organization_id,
+        user: step.user ? {
+          id: step.user.id || '',
+          email: step.user.email || '',
+          username: step.user.username || '',
+        } : undefined,
+        organization: step.organization ? {
+          id: step.organization.id || '',
+          name: step.organization.name || '',
+        } : undefined,
+        stepName: step.stepName || step.step_name || '',
+        submittedAt: step.submittedAt || step.submitted_at,
+        createdAt: step.createdAt || step.created_at,
+        data: step.data || step.submissionData || step.submission_data,
+      }));
+
+      return {
+        success: true,
+        data: {
+          steps: normalizedSteps,
+          pagination: {
+            page: (data.pagination?.page || 1),
+            limit: (data.pagination?.limit || 20),
+            total: (data.pagination?.total || 0),
+            totalPages: (data.pagination?.totalPages || data.pagination?.total_pages || 0),
+            hasNext: data.pagination?.hasNext || ((data.pagination?.page || 1) < (data.pagination?.totalPages || data.pagination?.total_pages || 0)),
+            hasPrev: data.pagination?.hasPrev || ((data.pagination?.page || 1) > 1),
+          },
+        },
+      };
+    } catch (error: any) {
+      console.error('Error fetching pending onboarding steps:', error);
+      return {
+        success: false,
+        error: {
+          code: 'PENDING_STEPS_ERROR',
+          message: error?.message || 'Failed to fetch pending steps',
+        },
+        data: { steps: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false } },
+      };
+    }
+  }
+
+  /**
+   * Approve or reject onboarding step
+   * PUT /api/onboarding/admin/steps/:id/approve
+   */
+  async approveOnboardingStep(
+    stepId: string,
+    data: { status: 'APPROVED' | 'REJECTED'; rejectionReason?: string }
+  ): Promise<ApiResponse<OnboardingStep>> {
+    try {
+      const requestData = {
+        status: data.status,
+        rejectionReason: data.rejectionReason,
+      };
+
+      const response = await apiClient.put<any>(`/onboarding/admin/steps/${stepId}/approve`, requestData);
+      
+      if (!response.success || !response.data) {
+        return response as ApiResponse<OnboardingStep>;
+      }
+
+      const raw = response.data.data || response.data;
+      const step: OnboardingStep = {
+        id: raw.id || stepId,
+        userId: raw.userId || raw.user_id,
+        organizationId: raw.organizationId || raw.organization_id,
+        stepName: raw.stepName || raw.step_name || '',
+        status: raw.status || data.status,
+        submittedAt: raw.submittedAt || raw.submitted_at,
+        approvedAt: raw.approvedAt || raw.approved_at || new Date().toISOString(),
+        approvedBy: raw.approvedBy || raw.approved_by,
+        rejectionReason: raw.rejectionReason || raw.rejection_reason || data.rejectionReason,
+        data: raw.data || raw.submissionData || raw.submission_data,
+      };
+
+      return {
+        success: true,
+        data: step,
+      };
+    } catch (error: any) {
+      console.error('Error approving onboarding step:', error);
+      return {
+        success: false,
+        error: {
+          code: 'STEP_APPROVE_ERROR',
+          message: error?.message || 'Failed to approve onboarding step',
+        },
+      };
+    }
   }
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { FileText, Download, Calendar, Funnel, CaretDown, Eye, CheckCircle, Printer, CaretLeft, CaretRight, X, Spinner } from '@phosphor-icons/react';
+import { FileText, Download, Calendar, Funnel, CaretDown, Eye, CheckCircle, Printer, CaretLeft, CaretRight, X } from '@phosphor-icons/react';
 import { reportsService, invoicingService } from '@/lib/api';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { formatDate as formatDateUtil, formatCurrency } from '@/lib/utils/format';
@@ -521,57 +521,328 @@ export default function ReportsPage() {
   // Generate PDF content as HTML
   const generatePDFContent = (type: 'annual' | 'report') => {
     const year = selectedYear || new Date().getFullYear().toString();
+    const reportTitle = type === 'annual' 
+      ? `Annual Balance Report - ${year}` 
+      : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Report`;
+    
     let htmlContent = `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
       <head>
         <meta charset="UTF-8">
-        <title>${type === 'annual' ? `Annual Report ${year}` : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Report`}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${reportTitle}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; }
-          h1 { color: #333; border-bottom: 2px solid #10b981; padding-bottom: 10px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background-color: #f3f4f6; padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; }
-          td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
-          .header { margin-bottom: 30px; }
-          .date-range { color: #6b7280; margin-bottom: 20px; }
-          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px; }
+          @media print {
+            @page { margin: 1cm; size: A4; }
+            body { margin: 0; padding: 20px; }
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #111827;
+            background: #ffffff;
+            padding: 40px;
+          }
+          .report-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+          }
+          .header {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+          }
+          .header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+          }
+          .header .subtitle {
+            font-size: 16px;
+            opacity: 0.95;
+            font-weight: 500;
+            margin-top: 8px;
+          }
+          .header .period {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+          }
+          .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px 40px;
+            background: #f9fafb;
+          }
+          .summary-card {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          }
+          .summary-card .label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+          }
+          .summary-card .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+          }
+          .summary-card.revenue .value { color: #10b981; }
+          .summary-card.refunds .value { color: #ef4444; }
+          .summary-card.net .value { color: #3b82f6; }
+          .content-section {
+            padding: 40px;
+          }
+          .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #3b82f6;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          }
+          thead {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+          }
+          th {
+            padding: 16px 14px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 700;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #d1d5db;
+          }
+          th.text-right {
+            text-align: right;
+          }
+          td {
+            padding: 14px;
+            border-bottom: 1px solid #e5e7eb;
+            color: #111827;
+            font-size: 14px;
+          }
+          td.text-right {
+            text-align: right;
+          }
+          tbody tr {
+            transition: background-color 0.2s;
+          }
+          tbody tr:hover {
+            background-color: #f9fafb;
+          }
+          tbody tr:last-child td {
+            border-bottom: none;
+          }
+          .highlight-row {
+            background-color: #eff6ff !important;
+            font-weight: 700;
+          }
+          .highlight-row td {
+            color: #1e40af;
+            font-size: 15px;
+          }
+          .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .status-paid, .status-completed { background: #10b981; color: white; }
+          .status-pending { background: #f59e0b; color: white; }
+          .status-failed, .status-cancelled { background: #ef4444; color: white; }
+          .status-sent { background: #3b82f6; color: white; }
+          .currency-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f0f9ff;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+          }
+          .currency-section h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 16px;
+          }
+          .currency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+          }
+          .currency-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #bfdbfe;
+          }
+          .currency-item .currency-code {
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 4px;
+          }
+          .currency-item .currency-amount {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+          }
+          .footer {
+            padding: 30px 40px;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+          }
+          .footer p {
+            margin-bottom: 4px;
+          }
+          .footer strong {
+            color: #374151;
+            font-weight: 600;
+          }
         </style>
       </head>
       <body>
+        <div class="report-container">
         <div class="header">
-          <h1>${type === 'annual' ? `Annual Balance Report - ${year}` : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Report`}</h1>
-          <div class="date-range">Period: ${selectedRange.start} - ${selectedRange.end}</div>
+            <h1>${reportTitle}</h1>
+            <div class="subtitle">Financial Analysis & Summary</div>
+            <div class="period">Period: ${selectedRange.start} - ${selectedRange.end}</div>
         </div>
     `;
 
     if (type === 'annual' || activeTab === 'balance-report') {
       const report = financialReport || { revenue: 0, refunds: 0, net: 0, byCurrency: {} };
+      const currencyEntries = Object.entries(report.byCurrency || {});
+      
       htmlContent += `
+          <div class="summary-cards">
+            <div class="summary-card revenue">
+              <div class="label">Total Revenue</div>
+              <div class="value">${formatCurrency(report.revenue || 0, 'XAF')}</div>
+            </div>
+            <div class="summary-card refunds">
+              <div class="label">Total Refunds</div>
+              <div class="value">${formatCurrency(report.refunds || 0, 'XAF')}</div>
+            </div>
+            <div class="summary-card net">
+              <div class="label">Net Amount</div>
+              <div class="value">${formatCurrency(report.net || 0, 'XAF')}</div>
+            </div>
+          </div>
+          
+          <div class="content-section">
+            <h2 class="section-title">Financial Summary</h2>
         <table>
           <thead>
             <tr>
               <th>Category</th>
-              <th style="text-align: right;">Amount</th>
+                  <th class="text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>Revenue</td><td style="text-align: right;">${formatCurrency(report.revenue || 0, 'XAF')}</td></tr>
-            <tr><td>Refunds</td><td style="text-align: right;">${formatCurrency(report.refunds || 0, 'XAF')}</td></tr>
-            <tr style="background-color: #f9fafb; font-weight: bold;"><td>Net Amount</td><td style="text-align: right;">${formatCurrency(report.net || 0, 'XAF')}</td></tr>
-            ${Object.entries(report.byCurrency || {}).map(([currency, amount]) => 
-              `<tr><td>${currency}</td><td style="text-align: right;">${formatCurrency(amount as number, currency)}</td></tr>`
-            ).join('')}
+                <tr>
+                  <td><strong>Revenue</strong></td>
+                  <td class="text-right"><strong>${formatCurrency(report.revenue || 0, 'XAF')}</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Refunds</strong></td>
+                  <td class="text-right"><strong>${formatCurrency(report.refunds || 0, 'XAF')}</strong></td>
+                </tr>
+                <tr class="highlight-row">
+                  <td><strong>Net Amount</strong></td>
+                  <td class="text-right"><strong>${formatCurrency(report.net || 0, 'XAF')}</strong></td>
+                </tr>
           </tbody>
         </table>
       `;
+      
+      if (currencyEntries.length > 0) {
+        htmlContent += `
+            <div class="currency-section">
+              <h3>Breakdown by Currency</h3>
+              <div class="currency-grid">
+                ${currencyEntries.map(([currency, amount]) => `
+                  <div class="currency-item">
+                    <div class="currency-code">${currency}</div>
+                    <div class="currency-amount">${formatCurrency(amount as number, currency)}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+        `;
+      }
+      
+      htmlContent += `</div>`;
     } else {
       const dataToExport = getFilteredData();
       const columns = activeTab === 'settlements' 
         ? ['Settlement ID', 'Date', 'Amount', 'Status']
         : ['Invoice ID', 'Date', 'Amount', 'Status'];
       
+      // Calculate totals
+      const totalAmount = dataToExport.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+      const statusCounts = dataToExport.reduce((acc: any, item: any) => {
+        const status = (item.status || 'unknown').toLowerCase();
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {});
+      
       htmlContent += `
+          <div class="summary-cards">
+            <div class="summary-card net">
+              <div class="label">Total ${activeTab === 'settlements' ? 'Settlements' : 'Invoices'}</div>
+              <div class="value">${dataToExport.length}</div>
+            </div>
+            <div class="summary-card revenue">
+              <div class="label">Total Amount</div>
+              <div class="value">${formatCurrency(totalAmount, 'XAF')}</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">Status Breakdown</div>
+              <div class="value" style="font-size: 14px; line-height: 1.8;">
+                ${Object.entries(statusCounts).map(([status, count]) => 
+                  `<div>${status}: ${count}</div>`
+                ).join('')}
+              </div>
+            </div>
+          </div>
+          
+          <div class="content-section">
+            <h2 class="section-title">${activeTab === 'settlements' ? 'Settlements' : 'Invoices'} Details</h2>
         <table>
           <thead>
             <tr>
@@ -582,26 +853,42 @@ export default function ReportsPage() {
       `;
       
       dataToExport.forEach((item: any) => {
+        const status = (item.status || 'unknown').toLowerCase();
+        const statusClass = status.includes('paid') || status.includes('completed') ? 'paid' :
+                          status.includes('pending') ? 'pending' :
+                          status.includes('failed') || status.includes('cancelled') ? 'failed' :
+                          status.includes('sent') ? 'sent' : 'pending';
+        
         htmlContent += `
           <tr>
-            <td>${item.id}</td>
-            <td>${item.date}</td>
-            <td>XAF ${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-            <td>${item.status}</td>
+                  <td><strong>${item.id}</strong></td>
+                  <td>${item.date || 'N/A'}</td>
+                  <td class="text-right"><strong>${formatCurrency(item.amount || 0, 'XAF')}</strong></td>
+                  <td><span class="status-badge status-${statusClass}">${item.status || 'N/A'}</span></td>
           </tr>
         `;
       });
       
       htmlContent += `
           </tbody>
+              <tfoot>
+                <tr class="highlight-row">
+                  <td colspan="2"><strong>Total</strong></td>
+                  <td class="text-right"><strong>${formatCurrency(totalAmount, 'XAF')}</strong></td>
+                  <td></td>
+                </tr>
+              </tfoot>
         </table>
+          </div>
       `;
     }
 
     htmlContent += `
         <div class="footer">
-          <p>Generated on ${new Date().toLocaleDateString()}</p>
-          <p>Instanvi Payment Platform</p>
+            <p>Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p><strong>Instanvi Payment Platform</strong></p>
+            <p>This is an automated report generated by the system.</p>
+          </div>
         </div>
       </body>
       </html>
@@ -612,18 +899,40 @@ export default function ReportsPage() {
 
   // Print only the report content
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) return;
 
     let tableContent = '';
     let title = '';
     let headers: string[] = [];
+    let summaryCards = '';
     
     if (activeTab === 'balance-report') {
-      title = 'Financial Report';
+      title = 'Financial Balance Report';
       headers = ['Category', 'Amount'];
       const report = financialReport || { revenue: 0, refunds: 0, net: 0, byCurrency: {} };
+      const currencyEntries = Object.entries(report.byCurrency || {});
+      
+      summaryCards = `
+        <div class="summary-cards">
+          <div class="summary-card revenue">
+            <div class="label">Total Revenue</div>
+            <div class="value">${formatCurrency(report.revenue || 0, 'XAF')}</div>
+          </div>
+          <div class="summary-card refunds">
+            <div class="label">Total Refunds</div>
+            <div class="value">${formatCurrency(report.refunds || 0, 'XAF')}</div>
+          </div>
+          <div class="summary-card net">
+            <div class="label">Net Amount</div>
+            <div class="value">${formatCurrency(report.net || 0, 'XAF')}</div>
+          </div>
+        </div>
+      `;
+      
       tableContent = `
+        <div class="content-section">
+          <h2 class="section-title">Financial Summary</h2>
         <table>
           <thead>
             <tr>
@@ -631,14 +940,34 @@ export default function ReportsPage() {
             </tr>
           </thead>
           <tbody>
-            <tr><td>Revenue</td><td style="text-align: right;">${formatCurrency(report.revenue || 0, 'XAF')}</td></tr>
-            <tr><td>Refunds</td><td style="text-align: right;">${formatCurrency(report.refunds || 0, 'XAF')}</td></tr>
-            <tr style="background-color: #f9fafb; font-weight: bold;"><td>Net Amount</td><td style="text-align: right;">${formatCurrency(report.net || 0, 'XAF')}</td></tr>
-            ${Object.entries(report.byCurrency || {}).map(([currency, amount]) => 
-              `<tr><td>${currency}</td><td style="text-align: right;">${formatCurrency(amount as number, currency)}</td></tr>`
-            ).join('')}
+              <tr>
+                <td><strong>Revenue</strong></td>
+                <td class="text-right"><strong>${formatCurrency(report.revenue || 0, 'XAF')}</strong></td>
+              </tr>
+              <tr>
+                <td><strong>Refunds</strong></td>
+                <td class="text-right"><strong>${formatCurrency(report.refunds || 0, 'XAF')}</strong></td>
+              </tr>
+              <tr class="highlight-row">
+                <td><strong>Net Amount</strong></td>
+                <td class="text-right"><strong>${formatCurrency(report.net || 0, 'XAF')}</strong></td>
+              </tr>
           </tbody>
         </table>
+          ${currencyEntries.length > 0 ? `
+            <div class="currency-section">
+              <h3>Breakdown by Currency</h3>
+              <div class="currency-grid">
+                ${currencyEntries.map(([currency, amount]) => `
+                  <div class="currency-item">
+                    <div class="currency-code">${currency}</div>
+                    <div class="currency-amount">${formatCurrency(amount as number, currency)}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
       `;
     } else {
       const dataToExport = getFilteredData();
@@ -647,7 +976,37 @@ export default function ReportsPage() {
         ? ['Settlement ID', 'Date', 'Amount', 'Status']
         : ['Invoice ID', 'Date', 'Amount', 'Status'];
       
+      const totalAmount = dataToExport.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+      const statusCounts = dataToExport.reduce((acc: any, item: any) => {
+        const status = (item.status || 'unknown').toLowerCase();
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {});
+      
+      summaryCards = `
+        <div class="summary-cards">
+          <div class="summary-card net">
+            <div class="label">Total ${activeTab === 'settlements' ? 'Settlements' : 'Invoices'}</div>
+            <div class="value">${dataToExport.length}</div>
+          </div>
+          <div class="summary-card revenue">
+            <div class="label">Total Amount</div>
+            <div class="value">${formatCurrency(totalAmount, 'XAF')}</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Status Breakdown</div>
+            <div class="value" style="font-size: 14px; line-height: 1.8;">
+              ${Object.entries(statusCounts).map(([status, count]) => 
+                `<div>${status}: ${count}</div>`
+              ).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+      
       tableContent = `
+        <div class="content-section">
+          <h2 class="section-title">${activeTab === 'settlements' ? 'Settlements' : 'Invoices'} Details</h2>
         <table>
           <thead>
             <tr>
@@ -655,93 +1014,252 @@ export default function ReportsPage() {
             </tr>
           </thead>
           <tbody>
-            ${dataToExport.map((item: any) => `
-              <tr>
-                <td>${item.id}</td>
-                <td>${item.date}</td>
-                <td>XAF ${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td>${item.status}</td>
+              ${dataToExport.map((item: any) => {
+                const status = (item.status || 'unknown').toLowerCase();
+                const statusClass = status.includes('paid') || status.includes('completed') ? 'paid' :
+                                  status.includes('pending') ? 'pending' :
+                                  status.includes('failed') || status.includes('cancelled') ? 'failed' :
+                                  status.includes('sent') ? 'sent' : 'pending';
+                return `
+                  <tr>
+                    <td><strong>${item.id}</strong></td>
+                    <td>${item.date || 'N/A'}</td>
+                    <td class="text-right"><strong>${formatCurrency(item.amount || 0, 'XAF')}</strong></td>
+                    <td><span class="status-badge status-${statusClass}">${item.status || 'N/A'}</span></td>
               </tr>
-            `).join('')}
+                `;
+              }).join('')}
           </tbody>
+            <tfoot>
+              <tr class="highlight-row">
+                <td colspan="2"><strong>Total</strong></td>
+                <td class="text-right"><strong>${formatCurrency(totalAmount, 'XAF')}</strong></td>
+                <td></td>
+              </tr>
+            </tfoot>
         </table>
+        </div>
       `;
     }
 
     const printContent = `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
       <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${title}</title>
         <style>
           @media print {
+            @page { margin: 1cm; size: A4; }
             body { margin: 0; padding: 20px; }
             .no-print { display: none !important; }
-            @page { margin: 1cm; size: A4; }
           }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
-            font-family: Arial, sans-serif; 
-            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #111827;
+            background: #ffffff;
             padding: 20px;
+          }
+          .report-container {
+            max-width: 900px;
+            margin: 0 auto;
             background: white;
+          }
+          .header {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+          }
+          .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+          }
+          .header .subtitle {
+            font-size: 14px;
+            opacity: 0.95;
+            margin-top: 8px;
+          }
+          .header .period {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+          }
+          .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            padding: 24px;
+            background: #f9fafb;
+          }
+          .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          }
+          .summary-card .label {
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+          }
+          .summary-card .value {
+            font-size: 20px;
+            font-weight: 700;
             color: #111827;
           }
-          h1 { 
-            color: #111827; 
-            margin-bottom: 10px;
-            font-size: 24px;
-            font-weight: bold;
+          .summary-card.revenue .value { color: #10b981; }
+          .summary-card.refunds .value { color: #ef4444; }
+          .summary-card.net .value { color: #3b82f6; }
+          .content-section {
+            padding: 30px;
           }
-          .report-header {
-            margin-bottom: 20px;
+          .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 16px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #10b981;
-          }
-          .period-info {
-            color: #6b7280;
-            font-size: 14px;
-            margin-bottom: 20px;
+            border-bottom: 3px solid #3b82f6;
           }
           table { 
             width: 100%; 
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 16px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           }
-          th { 
-            background-color: #f3f4f6; 
-            padding: 12px; 
+          thead {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+          }
+          th {
+            padding: 14px 12px;
             text-align: left; 
-            border-bottom: 2px solid #e5e7eb;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 700;
             color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #d1d5db;
           }
-          td { 
-            padding: 10px 12px; 
+          th.text-right {
+            text-align: right;
+          }
+          td {
+            padding: 12px;
             border-bottom: 1px solid #e5e7eb;
             color: #111827;
+            font-size: 13px;
           }
-          tr:hover {
+          td.text-right {
+            text-align: right;
+          }
+          tbody tr:hover {
             background-color: #f9fafb;
           }
-          .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            color: #6b7280;
+          .highlight-row {
+            background-color: #eff6ff !important;
+            font-weight: 700;
+          }
+          .highlight-row td {
+            color: #1e40af;
+            font-size: 14px;
+          }
+          .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .status-paid, .status-completed { background: #10b981; color: white; }
+          .status-pending { background: #f59e0b; color: white; }
+          .status-failed, .status-cancelled { background: #ef4444; color: white; }
+          .status-sent { background: #3b82f6; color: white; }
+          .currency-section {
+            margin-top: 24px;
+            padding: 16px;
+            background: #f0f9ff;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+          }
+          .currency-section h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 12px;
+          }
+          .currency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+          }
+          .currency-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #bfdbfe;
+          }
+          .currency-item .currency-code {
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 4px;
             font-size: 12px;
+          }
+          .currency-item .currency-amount {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+          }
+          .footer {
+            padding: 24px;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
             text-align: center;
+            color: #6b7280;
+            font-size: 11px;
+            border-radius: 0 0 8px 8px;
+          }
+          .footer p {
+            margin-bottom: 3px;
+          }
+          .footer strong {
+            color: #374151;
+            font-weight: 600;
           }
         </style>
       </head>
       <body>
-        <div class="report-header">
+        <div class="report-container">
+          <div class="header">
           <h1>${title}</h1>
-          <div class="period-info">Period: ${selectedRange.start} - ${selectedRange.end}</div>
+            <div class="subtitle">Financial Analysis & Summary</div>
+            <div class="period">Period: ${selectedRange.start} - ${selectedRange.end}</div>
         </div>
+          ${summaryCards}
         ${tableContent}
         <div class="footer">
-          <p>Generated on ${new Date().toLocaleDateString()} | Instanvi Payment Platform</p>
+            <p>Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p><strong>Instanvi Payment Platform</strong></p>
+            <p>This is an automated report generated by the system.</p>
+          </div>
         </div>
       </body>
       </html>
@@ -982,6 +1500,7 @@ export default function ReportsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="fade-in">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 mb-6 sm:mb-8">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -1216,9 +1735,41 @@ export default function ReportsPage() {
         
         if (loading.settlements) {
           return (
-            <div className="flex items-center justify-center py-20">
-              <Spinner className="w-8 h-8 animate-spin text-green-600" />
+            <>
+              {/* Skeleton Table */}
+              <div className="bg-white border border-gray-200 overflow-hidden fade-in">
+                <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                  <div className="hidden lg:grid grid-cols-5 gap-4">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                    ))}
             </div>
+                  <div className="lg:hidden h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                </div>
+                <div className="divide-y divide-gray-200">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="px-4 sm:px-6 py-3 sm:py-4">
+                      <div className="lg:hidden space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="h-4 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
+                            <div className="h-3 bg-gray-200 rounded w-24 animate-pulse"></div>
+                          </div>
+                          <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                        </div>
+                        <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                        <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                      </div>
+                      <div className="hidden lg:grid grid-cols-5 gap-4 items-center">
+                        {[...Array(5)].map((_, j) => (
+                          <div key={j} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           );
         }
         
@@ -1304,9 +1855,41 @@ export default function ReportsPage() {
         
         if (loading.invoices) {
           return (
-            <div className="flex items-center justify-center py-20">
-              <Spinner className="w-8 h-8 animate-spin text-green-600" />
-            </div>
+            <>
+              {/* Skeleton Table */}
+              <div className="bg-white border border-gray-200 overflow-hidden fade-in">
+                <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                  <div className="hidden lg:grid grid-cols-5 gap-4">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                    ))}
+                  </div>
+                  <div className="lg:hidden h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                </div>
+                <div className="divide-y divide-gray-200">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="px-4 sm:px-6 py-3 sm:py-4">
+                      <div className="lg:hidden space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="h-4 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
+                            <div className="h-3 bg-gray-200 rounded w-24 animate-pulse"></div>
+                          </div>
+                          <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                        </div>
+                        <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                        <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                      </div>
+                      <div className="hidden lg:grid grid-cols-5 gap-4 items-center">
+                        {[...Array(5)].map((_, j) => (
+                          <div key={j} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           );
         }
         
@@ -1551,9 +2134,32 @@ export default function ReportsPage() {
           {/* Balance Report Table */}
           <div className="bg-white border border-gray-200  overflow-hidden">
             {loading.balanceReport ? (
-              <div className="flex items-center justify-center py-20">
-                <Spinner className="w-8 h-8 animate-spin text-green-600" />
+              <>
+                {/* Skeleton Balance Report */}
+                <div className="bg-white border border-gray-200 overflow-hidden fade-in">
+                  <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                    <div className="hidden sm:grid grid-cols-2 gap-4">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
               </div>
+                    <div className="sm:hidden h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                  </div>
+                  <div className="divide-y divide-gray-200">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="px-4 sm:px-6 py-3 sm:py-4">
+                        <div className="hidden sm:grid grid-cols-2 gap-4 items-center">
+                          <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
+                          <div className="h-4 bg-gray-200 rounded w-32 animate-pulse ml-auto"></div>
+                        </div>
+                        <div className="sm:hidden space-y-2">
+                          <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                          <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
             ) : financialReport ? (
               <>
                 <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
@@ -1624,84 +2230,102 @@ export default function ReportsPage() {
           </div>
         </div>
       )}
+      </div>
 
       {/* Detail Modal */}
       {selectedItem && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm backdrop-fade-in z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedItem(null)}
         >
           <div 
-            className="bg-white  max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto modal-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">
+            {/* Modal Header with Gradient */}
+            <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 ">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold mb-0.5">
                 {selectedItem.type === 'settlement' && 'Settlement Details'}
                 {selectedItem.type === 'invoice' && 'Invoice Details'}
               </h2>
+                  <p className="text-green-100 text-xs">Transaction Information</p>
+                </div>
               <button
                 onClick={() => setSelectedItem(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 "
               >
                 <X className="w-6 h-6" />
               </button>
+              </div>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-4">
-              {selectedItem.type === 'settlement' && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm text-gray-600 font-medium">Settlement ID</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{selectedItem.id}</p>
+            <div className="p-4 space-y-4">
+              {/* Key Information Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3  border border-gray-200">
+                  <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">
+                    {selectedItem.type === 'settlement' ? 'Settlement ID' : 'Invoice ID'}
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-600 font-medium">Date</label>
-                      <p className="text-lg text-gray-900 mt-1">{selectedItem.date}</p>
+                  <div className="text-sm font-mono text-gray-900 break-all">{selectedItem.id}</div>
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-600 font-medium">Amount</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">
-                        XAF {selectedItem.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600 font-medium">Status</label>
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3  border border-gray-200">
+                  <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">Status</div>
                       <div className="mt-1">
-                        <span className={`inline-block px-3 py-1 text-sm font-medium rounded ${
-                          selectedItem.status === 'paid'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {selectedItem.status.charAt(0).toUpperCase() + selectedItem.status.slice(1)}
+                    <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${
+                      selectedItem.status === 'paid' || selectedItem.status === 'completed'
+                        ? 'bg-green-500 text-white'
+                        : selectedItem.status === 'pending'
+                        ? 'bg-yellow-500 text-white'
+                        : selectedItem.status === 'failed' || selectedItem.status === 'cancelled'
+                        ? 'bg-red-500 text-white'
+                        : selectedItem.status === 'sent'
+                        ? 'bg-gray-500 text-white'
+                        : 'bg-gray-500 text-white'
+                    }`}>
+                      {selectedItem.status ? selectedItem.status.charAt(0).toUpperCase() + selectedItem.status.slice(1) : 'Unknown'}
                         </span>
+                      </div>
+                    </div>
+                <div className="bg-gradient-to-br from-green-50 to-green-100 p-3  border border-green-200">
+                  <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Date</div>
+                  <div className="text-sm font-semibold text-green-900">{selectedItem.date || 'N/A'}</div>
+                </div>
+                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-3  border border-emerald-200">
+                  <div className="text-xs text-emerald-600 font-semibold uppercase tracking-wide mb-1">Amount</div>
+                  <div className="text-lg font-bold text-emerald-900">
+                    {formatCurrency(selectedItem.amount || 0, 'XAF')}
                       </div>
                     </div>
                   </div>
 
+              {selectedItem.type === 'settlement' && (
+                <>
                   {/* Additional Settlement Details */}
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm text-gray-600">Currency</label>
-                        <p className="text-sm text-gray-900 mt-1">XAF (Central African CFA Franc)</p>
+                  <div className="bg-gray-50  p-4 border border-gray-200">
+                    <h3 className="text-base font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-300 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-600" />
+                      Additional Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Currency</label>
+                        <p className="text-sm text-gray-900 font-medium">XAF (Central African CFA Franc)</p>
                       </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Payment Method</label>
-                        <p className="text-sm text-gray-900 mt-1">Mobile Money</p>
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Payment Method</label>
+                        <p className="text-sm text-gray-900 font-medium">Mobile Money</p>
                       </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Transaction Fee</label>
-                        <p className="text-sm text-gray-900 mt-1">XAF 0.00</p>
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Transaction Fee</label>
+                        <p className="text-sm text-gray-900 font-medium">XAF 0.00</p>
                       </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Net Amount</label>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">
-                          XAF {selectedItem.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Net Amount</label>
+                        <p className="text-base font-bold text-gray-900">
+                          {formatCurrency(selectedItem.amount || 0, 'XAF')}
                         </p>
                       </div>
                     </div>
@@ -1711,54 +2335,28 @@ export default function ReportsPage() {
 
               {selectedItem.type === 'invoice' && (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm text-gray-600 font-medium">Invoice ID</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{selectedItem.id}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600 font-medium">Date</label>
-                      <p className="text-lg text-gray-900 mt-1">{selectedItem.date}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600 font-medium">Amount</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">
-                        XAF {selectedItem.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600 font-medium">Status</label>
-                      <div className="mt-1">
-                        <span className={`inline-block px-3 py-1 text-sm font-medium rounded ${
-                          selectedItem.status === 'paid'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {selectedItem.status.charAt(0).toUpperCase() + selectedItem.status.slice(1)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Additional Invoice Details */}
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm text-gray-600">Invoice Number</label>
-                        <p className="text-sm text-gray-900 mt-1">{selectedItem.id}</p>
+                  <div className="bg-gray-50  p-4 border border-gray-200">
+                    <h3 className="text-base font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-300 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-600" />
+                      Additional Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Invoice Number</label>
+                        <p className="text-sm font-mono text-gray-900">{selectedItem.id}</p>
                       </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Due Date</label>
-                        <p className="text-sm text-gray-900 mt-1">{selectedItem.date}</p>
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Due Date</label>
+                        <p className="text-sm text-gray-900 font-medium">{selectedItem.date || 'N/A'}</p>
                       </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Currency</label>
-                        <p className="text-sm text-gray-900 mt-1">XAF (Central African CFA Franc)</p>
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Currency</label>
+                        <p className="text-sm text-gray-900 font-medium">XAF (Central African CFA Franc)</p>
                       </div>
-                      <div>
-                        <label className="text-sm text-gray-600">Payment Method</label>
-                        <p className="text-sm text-gray-900 mt-1">Mobile Money</p>
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Payment Method</label>
+                        <p className="text-sm text-gray-900 font-medium">Mobile Money</p>
                       </div>
                     </div>
                   </div>
@@ -1767,10 +2365,10 @@ export default function ReportsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-200 flex justify-end">
+            <div className="p-4 border-t border-gray-200 bg-gray-50 rounded-b-lg flex justify-end">
               <button
                 onClick={() => setSelectedItem(null)}
-                className="px-6 py-2 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors rounded"
+                className="px-5 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-200  shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm"
               >
                 Close
               </button>

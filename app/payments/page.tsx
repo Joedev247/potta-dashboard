@@ -1,12 +1,83 @@
 'use client';
 
-import { MagnifyingGlass, Plus, ArrowSquareOut, ArrowLeft, CaretDown, Calendar, X, ArrowCounterClockwise, CaretUp, ArrowRight, WarningCircle, Package, ArrowClockwise, Eye, CheckCircle, Copy, Spinner, CreditCard, UserCheck, Phone, Link as LinkIcon } from '@phosphor-icons/react';
+import { MagnifyingGlass, Plus, ArrowSquareOut, ArrowLeft, CaretDown, Calendar, X, ArrowCounterClockwise, CaretUp, ArrowRight, WarningCircle, Package, ArrowClockwise, Eye, CheckCircle, Copy, Spinner, CreditCard, UserCheck, Phone, Link as LinkIcon, CurrencyCircleDollar, User, Building, TextT, Storefront, Swap } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
-import { paymentsService, applicationsService, type Payment, type Refund, type Chargeback, type Order } from '@/lib/api';
+import { paymentsService, applicationsService, customersService, type Payment, type Refund, type Chargeback, type Order } from '@/lib/api';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
+import { useBalance } from '@/contexts/BalanceContext';
+
+// Helper functions for payment status handling
+const normalizePaymentStatus = (status: string): string => {
+  const normalized = (status || '').toLowerCase();
+  // Map various success statuses to 'successful'
+  if (['paid', 'successful', 'success', 'completed', 'complete'].includes(normalized)) {
+    return 'successful';
+  }
+  // Map various failure statuses to 'failed'
+  if (['failed', 'fail', 'error', 'cancelled', 'canceled', 'expired'].includes(normalized)) {
+    return 'failed';
+  }
+  // Keep pending as is
+  if (normalized === 'pending') {
+    return 'pending';
+  }
+  // Return original status if not recognized
+  return normalized;
+};
+
+const matchesPaymentStatus = (paymentStatus: string, filterStatus: string): boolean => {
+  if (!filterStatus) return true;
+  const normalizedPayment = normalizePaymentStatus(paymentStatus);
+  const normalizedFilter = normalizePaymentStatus(filterStatus);
+  return normalizedPayment === normalizedFilter;
+};
+
+const getPaymentStatusColor = (status: string): string => {
+  const normalized = normalizePaymentStatus(status);
+  if (normalized === 'successful') {
+    return 'bg-green-100 text-green-700';
+  }
+  if (normalized === 'pending') {
+    return 'bg-yellow-100 text-yellow-700';
+  }
+  if (normalized === 'failed') {
+    return 'bg-red-100 text-red-700';
+  }
+  // Default to red for unknown statuses
+  return 'bg-red-100 text-red-700';
+};
+
+// Format status for display - always show "successful" instead of "success"
+const formatStatusForDisplay = (status: string): string => {
+  const normalized = normalizePaymentStatus(status);
+  if (normalized === 'successful') {
+    return 'successful';
+  }
+  if (normalized === 'pending') {
+    return 'pending';
+  }
+  if (normalized === 'failed') {
+    return 'failed';
+  }
+  // Return original status if not recognized, but normalize "success" to "successful"
+  const lowerStatus = (status || '').toLowerCase();
+  if (lowerStatus === 'success' || lowerStatus === 'paid' || lowerStatus === 'completed' || lowerStatus === 'complete') {
+    return 'successful';
+  }
+  return status || 'unknown';
+};
+
+// Format filter status for display in dropdown button
+const formatFilterStatusForDisplay = (status: string): string => {
+  if (!status) return '';
+  const formatted = formatStatusForDisplay(status);
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+};
 
 export default function PaymentsPage() {
+  // Get balance context to notify of transactions
+  const { notifyTransactionCompleted } = useBalance();
   const [activeTab, setActiveTab] = useState('payments');
   const [showCreateLink, setShowCreateLink] = useState(false);
   const [showExtraOptions, setShowExtraOptions] = useState(true);
@@ -132,17 +203,150 @@ export default function PaymentsPage() {
         params.endDate = new Date().toISOString().split('T')[0];
       }
       
-      const response = await paymentsService.getPayments(params);
-      if (response.success && response.data) {
-        setPayments(response.data.payments || []);
-        if (response.data.pagination) {
-          setPagination(response.data.pagination);
+      // Fetch both DEPOSIT and COLLECTION payments and combine them
+      const [depositResponse, collectionResponse] = await Promise.all([
+        paymentsService.getPayments({ ...params, type: 'DEPOSIT' }),
+        paymentsService.getPayments({ ...params, type: 'COLLECTION' }),
+      ]);
+      
+      // Combine payments from both types
+      let paymentsList: any[] = [];
+      
+      if (depositResponse.success && depositResponse.data) {
+        paymentsList = [...paymentsList, ...(depositResponse.data.payments || [])];
+      }
+      
+      if (collectionResponse.success && collectionResponse.data) {
+        paymentsList = [...paymentsList, ...(collectionResponse.data.payments || [])];
+      }
+      
+      // Sort by creation date (newest first) and remove duplicates based on payment ID
+      paymentsList = paymentsList
+        .filter((payment, index, self) => 
+          index === self.findIndex((p) => p.id === payment.id)
+        )
+        .sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.created_at || 0).getTime();
+          const dateB = new Date(b.createdAt || b.created_at || 0).getTime();
+          return dateB - dateA;
+        });
+      
+      if (paymentsList.length > 0) {
+        
+        // Fetch customer data for payments that have customer_id but no customer object
+        const paymentsNeedingCustomerData = paymentsList.filter(
+          (payment: any) => (payment.customer_id || payment.customerId) && (!payment.customer || !payment.customer.email)
+        );
+        
+        if (paymentsNeedingCustomerData.length > 0) {
+          // Fetch customer data in parallel
+          const customerPromises = paymentsNeedingCustomerData.map(async (payment: any) => {
+            try {
+              const customerId = payment.customer_id || payment.customerId;
+              if (!customerId) return null;
+              
+              const customerResponse = await customersService.getCustomer(customerId);
+              if (customerResponse.success && customerResponse.data) {
+                const customer = customerResponse.data;
+                return {
+                  paymentId: payment.id,
+                  customer: {
+                    id: customer.id,
+                    name: customer.firstName && customer.lastName 
+                      ? `${customer.firstName} ${customer.lastName}` 
+                      : customer.firstName || customer.lastName || undefined,
+                    firstName: customer.firstName,
+                    lastName: customer.lastName,
+                    email: customer.email,
+                    phone: customer.phone,
+                  }
+                };
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch customer for payment ${payment.id}:`, error);
+            }
+            return null;
+          });
+          
+          const customerResults = await Promise.all(customerPromises);
+          
+          // Update payments with customer data
+          paymentsList = paymentsList.map((payment: any) => {
+            const customerData = customerResults.find(cr => cr?.paymentId === payment.id);
+            if (customerData) {
+              return {
+                ...payment,
+                customer: customerData.customer
+              };
+            }
+            return payment;
+          });
         }
-      } else if (response && response.error && response.error.code === '403') {
-        setPayments([]);
-        setError('Access denied: you do not have permission to view payments. Please request admin access or use admin API credentials.');
-      } else if (response && !response.success) {
-        setError(response.error?.message || 'Failed to fetch payments.');
+        
+        setPayments(paymentsList);
+        
+        // Update pagination - use the combined total from both responses
+        const depositTotal = depositResponse.data?.pagination?.total || 0;
+        const collectionTotal = collectionResponse.data?.pagination?.total || 0;
+        const combinedTotal = depositTotal + collectionTotal;
+        
+        // Use pagination from the first successful response, but update total
+        const paginationData = depositResponse.data?.pagination || collectionResponse.data?.pagination;
+        if (paginationData) {
+          setPagination({
+            ...paginationData,
+            total: combinedTotal,
+            totalPages: pagination.limit > 0 ? Math.ceil(combinedTotal / pagination.limit) : 1,
+          });
+        }
+      } else {
+        // Handle errors - show payments from successful requests even if one fails
+        const depositPayments = depositResponse.success && depositResponse.data ? depositResponse.data.payments || [] : [];
+        const collectionPayments = collectionResponse.success && collectionResponse.data ? collectionResponse.data.payments || [] : [];
+        
+        if (depositPayments.length > 0 || collectionPayments.length > 0) {
+          // At least one request succeeded, combine and show payments
+          let combinedPayments = [...depositPayments, ...collectionPayments];
+          combinedPayments = combinedPayments
+            .filter((payment, index, self) => 
+              index === self.findIndex((p) => p.id === payment.id)
+            )
+            .sort((a, b) => {
+              const dateA = new Date(a.createdAt || a.created_at || 0).getTime();
+              const dateB = new Date(b.createdAt || b.created_at || 0).getTime();
+              return dateB - dateA;
+            });
+          
+          setPayments(combinedPayments);
+          
+          // Update pagination
+          const depositTotal = depositResponse.data?.pagination?.total || 0;
+          const collectionTotal = collectionResponse.data?.pagination?.total || 0;
+          const combinedTotal = depositTotal + collectionTotal;
+          const paginationData = depositResponse.data?.pagination || collectionResponse.data?.pagination;
+          if (paginationData) {
+            setPagination({
+              ...paginationData,
+              total: combinedTotal,
+              totalPages: pagination.limit > 0 ? Math.ceil(combinedTotal / pagination.limit) : 1,
+            });
+          }
+        } else {
+          // Both requests failed
+          const hasError = depositResponse.error || collectionResponse.error;
+          if (hasError) {
+            if (hasError.code === '403') {
+              setPayments([]);
+              setError('Access denied: you do not have permission to view payments. Please request admin access or use admin API credentials.');
+            } else {
+              setPayments([]);
+              setError(hasError.message || 'Failed to fetch payments.');
+            }
+          } else {
+            // No payments found
+            setPayments([]);
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching payments:', error);
@@ -206,6 +410,13 @@ export default function PaymentsPage() {
     }
   }, [selectedStatus, pagination.page, pagination.limit]);
 
+  // Reset pagination when status filter changes
+  useEffect(() => {
+    if (pagination.page !== 1) {
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }
+  }, [selectedStatus]);
+
   // Fetch data on mount and when filters change
   useEffect(() => {
     if (activeTab === 'payments') {
@@ -217,7 +428,7 @@ export default function PaymentsPage() {
     } else if (activeTab === 'orders') {
       fetchOrders();
     }
-  }, [activeTab, fetchPayments, fetchRefunds, fetchChargebacks, fetchOrders]);
+  }, [activeTab, selectedStatus, pagination.page, fetchPayments, fetchRefunds, fetchChargebacks, fetchOrders]);
 
   // Fetch applications when the make-payment tab is opened
   const fetchApplications = useCallback(async () => {
@@ -301,14 +512,18 @@ export default function PaymentsPage() {
         });
 
         if (redeemResp.success && redeemResp.data) {
-          setMakePaymentResult(redeemResp.data);
+          // Store username with result for display
+          setMakePaymentResult({
+            ...redeemResp.data,
+            username: makePaymentForm.username,
+          });
           setMakePaymentForm({ ...makePaymentForm, amount: '', phoneNumber: '', username: '', slug: '' });
         } else {
           const code = redeemResp.error?.code || '';
           if (String(code).includes('HTTP_404') || String(code).includes('404')) {
             setMakePaymentError('Payment link not found (404). Please verify the slug.');
           } else if (String(code).includes('HTTP_410') || String(code).includes('410') || (redeemResp.error?.message && redeemResp.error.message.toLowerCase().includes('gone'))) {
-            setMakePaymentError('Payment link is no longer available (paid, expired, or cancelled).');
+            setMakePaymentError('Payment link is no longer available (successful, expired, or cancelled).');
           } else if (redeemResp.error?.code === 'BAD_REQUEST' || String(redeemResp.error?.code).includes('400')) {
             setMakePaymentError(redeemResp.error?.message || 'Invalid request to redeem payment link.');
           } else {
@@ -324,6 +539,7 @@ export default function PaymentsPage() {
           amount: parseFloat(makePaymentForm.amount),
           currency: makePaymentForm.currency,
           phoneNumber: makePaymentForm.phoneNumber,
+          username: makePaymentForm.username || undefined,
           applicationId: selectedApplicationId || undefined,
           appApiKey: appApiKey,
           type: makePaymentForm.type,
@@ -332,7 +548,24 @@ export default function PaymentsPage() {
         });
 
         if (response.success && response.data) {
-          setMakePaymentResult(response.data);
+          // Store username with result for display
+          setMakePaymentResult({
+            ...response.data,
+            username: makePaymentForm.username,
+          });
+          
+          // Notify balance context if this is a COLLECTION transaction (user collects money)
+          if (makePaymentForm.type === 'COLLECTION' && response.data.transaction_id) {
+            notifyTransactionCompleted({
+              transaction_id: response.data.transaction_id,
+              type: 'COLLECTION',
+              amount: parseFloat(makePaymentForm.amount),
+              currency: makePaymentForm.currency,
+              status: response.data.status || 'pending',
+              createdAt: new Date().toISOString(),
+            });
+          }
+          
           setMakePaymentForm({
             amount: '',
             currency: 'XAF',
@@ -564,6 +797,39 @@ export default function PaymentsPage() {
       if (response.success && response.data) {
         setCreatedLink(response.data.url);
         
+        // Save to history
+        try {
+          const url = response.data.url;
+          // Extract slug from URL (format: https://potta-payment.vercel.app/pay/{slug} or similar)
+          const urlMatch = url.match(/\/pay\/([^\/\?]+)/);
+          const slug = urlMatch ? urlMatch[1] : null;
+          
+          if (slug) {
+            const key = "recent_payment_links";
+            const raw = localStorage.getItem(key);
+            const list = raw ? JSON.parse(raw) : [];
+            const deduped = (list || []).filter((i: any) => i.slug !== slug);
+            const newEntry = {
+              slug,
+              url,
+              created_at: response.data.createdAt || new Date().toISOString(),
+              amount: response.data.amount,
+              currency: response.data.currency,
+              description: formData.description || undefined,
+              status: response.data.status || "ACTIVE",
+              max_uses: reusable ? 100 : 1,
+              current_uses: 0,
+              expires_at: formData.expiryDate || undefined,
+            };
+            deduped.unshift(newEntry);
+            const trimmed = deduped.slice(0, 20);
+            localStorage.setItem(key, JSON.stringify(trimmed));
+          }
+        } catch (e) {
+          // ignore storage errors
+          console.error("Failed to save to history:", e);
+        }
+        
         // Refresh payments list
         fetchPayments();
         
@@ -663,19 +929,23 @@ export default function PaymentsPage() {
                 }}
                 className={`px-4 py-1 bg-white border-2 ${selectedStatus ? 'border-green-500 bg-green-50' : 'border-gray-200'} text-sm text-gray-700 hover:border-green-400 hover:bg-green-50 transition-all font-medium flex items-center gap-2`}
               >
-                Status {selectedStatus && `(${selectedStatus})`}
+                Status {selectedStatus && `(${formatFilterStatusForDisplay(selectedStatus)})`}
                 <CaretDown className="w-4 h-4" />
               </button>
               {showStatusFilter && (
                 <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 shadow-lg z-10 min-w-[150px]">
-                  {activeTab === 'payments' && ['All', 'paid', 'pending', 'failed'].map((status) => (
+                  {activeTab === 'payments' && ['All', 'successful', 'pending', 'failed'].map((status) => (
                     <button
                       key={status}
                       onClick={() => {
                         setSelectedStatus(status === 'All' ? '' : status);
                         setShowStatusFilter(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
+                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                        selectedStatus === (status === 'All' ? '' : status)
+                          ? 'bg-green-100 text-green-700 font-medium'
+                          : 'text-gray-700 hover:bg-green-50'
+                      }`}
                     >
                       {status.charAt(0).toUpperCase() + status.slice(1)}
                     </button>
@@ -687,7 +957,11 @@ export default function PaymentsPage() {
                         setSelectedStatus(status === 'All' ? '' : status);
                         setShowStatusFilter(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
+                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                        selectedStatus === (status === 'All' ? '' : status)
+                          ? 'bg-green-100 text-green-700 font-medium'
+                          : 'text-gray-700 hover:bg-green-50'
+                      }`}
                     >
                       {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
@@ -699,19 +973,27 @@ export default function PaymentsPage() {
                         setSelectedStatus(status === 'All' ? '' : status);
                         setShowStatusFilter(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
+                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                        selectedStatus === (status === 'All' ? '' : status)
+                          ? 'bg-green-100 text-green-700 font-medium'
+                          : 'text-gray-700 hover:bg-green-50'
+                      }`}
                     >
                       {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
                   ))}
-                  {activeTab === 'orders' && ['All', 'paid', 'pending', 'shipped', 'cancelled'].map((status) => (
+                  {activeTab === 'orders' && ['All', 'successful', 'pending', 'shipped', 'cancelled'].map((status) => (
                     <button
                       key={status}
                       onClick={() => {
                         setSelectedStatus(status === 'All' ? '' : status);
                         setShowStatusFilter(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-green-50 transition-colors"
+                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                        selectedStatus === (status === 'All' ? '' : status)
+                          ? 'bg-green-100 text-green-700 font-medium'
+                          : 'text-gray-700 hover:bg-green-50'
+                      }`}
                     >
                       {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
@@ -724,8 +1006,11 @@ export default function PaymentsPage() {
       </div>
 
       {/* Main Content */}
+      <div>
           {/* Payments Tab Content */}
-          {activeTab === 'payments' && (() => {
+          {activeTab === 'payments' && (
+            <div className="fade-in">
+              {(() => {
             // Filter payments from API data
             let filteredPayments = payments.filter(payment => {
               const matchesSearch = !searchQuery || 
@@ -735,24 +1020,64 @@ export default function PaymentsPage() {
                 (payment.customer?.email && payment.customer.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 payment.amount.toString().includes(searchQuery);
               
-              const matchesStatus = !selectedStatus || payment.status === selectedStatus.toLowerCase();
+              const matchesStatus = matchesPaymentStatus(payment.status, selectedStatus);
               
               return matchesSearch && matchesStatus;
             });
 
-            // Calculate stats
+            // Calculate stats from ALL payments (not filtered)
             const totalPayments = payments.length;
-            const paidCount = payments.filter(p => p.status === 'paid').length;
-            const pendingCount = payments.filter(p => p.status === 'pending').length;
+            const successfulCount = payments.filter(p => normalizePaymentStatus(p.status) === 'successful').length;
+            const pendingCount = payments.filter(p => normalizePaymentStatus(p.status) === 'pending').length;
             const totalRevenue = payments
-              .filter(p => p.status === 'paid')
+              .filter(p => normalizePaymentStatus(p.status) === 'successful')
               .reduce((sum, p) => sum + p.amount, 0);
 
             if (loading.payments) {
               return (
-                <div className="flex items-center justify-center py-20">
-                  <Spinner className="w-8 h-8 animate-spin text-green-600" />
-                </div>
+                <>
+                  {/* Skeleton Stats */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="bg-white border border-gray-200 p-3 sm:p-4">
+                        <div className="h-4 bg-gray-200 rounded w-20 mb-2 animate-pulse"></div>
+                        <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Skeleton Table */}
+                  <div className="bg-white border border-gray-200 overflow-hidden">
+                    <div className="hidden lg:block bg-gray-50 border-b border-gray-200 px-6 py-4">
+                      <div className="grid grid-cols-5 gap-4">
+                        {[...Array(5)].map((_, i) => (
+                          <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="px-4 sm:px-6 py-3 sm:py-4">
+                          <div className="lg:hidden space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="h-4 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
+                                <div className="h-3 bg-gray-200 rounded w-24 animate-pulse"></div>
+                              </div>
+                              <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                            </div>
+                            <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                            <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                          <div className="hidden lg:grid grid-cols-5 gap-4 items-center">
+                            {[...Array(5)].map((_, j) => (
+                              <div key={j} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
               );
             }
 
@@ -773,8 +1098,8 @@ export default function PaymentsPage() {
                     <div className="text-xl sm:text-2xl font-bold text-gray-900">{totalPayments}</div>
                   </div>
                   <div className="bg-white border border-gray-200 p-3 sm:p-4">
-                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Paid</div>
-                    <div className="text-xl sm:text-2xl font-bold text-green-600">{paidCount}</div>
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">successful</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">{successfulCount}</div>
                   </div>
                   <div className="bg-white border border-gray-200 p-3 sm:p-4">
                     <div className="text-xs sm:text-sm text-gray-600 mb-1">Pending</div>
@@ -790,9 +1115,8 @@ export default function PaymentsPage() {
               <div className="bg-white border border-gray-200 overflow-hidden">
                 {/* Desktop Table Header */}
                 <div className="hidden lg:block bg-gray-50 border-b border-gray-200 px-6 py-4">
-                  <div className="grid grid-cols-6 gap-4 text-sm font-medium text-gray-700">
+                  <div className="grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
                     <div>Payment ID</div>
-                    <div>Customer</div>
                     <div>Amount</div>
                     <div>Status</div>
                     <div>Date</div>
@@ -809,21 +1133,11 @@ export default function PaymentsPage() {
                             <div className="font-mono text-xs sm:text-sm text-gray-900 truncate">{payment.id}</div>
                             <div className="text-sm text-gray-600 mt-1">{formatDate(payment.createdAt)}</div>
                           </div>
-                          <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${
-                            payment.status === 'paid'
-                              ? 'bg-green-100 text-green-700'
-                              : payment.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}>
-                            {payment.status}
+                          <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${getPaymentStatusColor(payment.status)}`}>
+                            {formatStatusForDisplay(payment.status)}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-xs text-gray-600">Customer</div>
-                            <div className="text-sm font-medium text-gray-900">{payment.customer?.name || payment.customer?.email || 'N/A'}</div>
-                          </div>
+                        <div className="flex items-center justify-end">
                           <div className="text-right">
                             <div className="text-xs text-gray-600">Amount</div>
                             <div className="text-sm font-semibold text-gray-900">{formatCurrency(payment.amount, payment.currency)}</div>
@@ -838,19 +1152,12 @@ export default function PaymentsPage() {
                         </button>
                       </div>
                       {/* Desktop Table Layout */}
-                      <div className="hidden lg:grid grid-cols-6 gap-4 items-center">
+                      <div className="hidden lg:grid grid-cols-5 gap-4 items-center">
                         <div className="font-mono text-sm text-gray-900">{payment.id}</div>
-                        <div className="text-sm text-gray-900">{payment.customer?.name || payment.customer?.email || 'N/A'}</div>
                         <div className="font-semibold text-gray-900">{formatCurrency(payment.amount, payment.currency)}</div>
                         <div>
-                          <span className={`px-2 py-1 text-xs font-medium rounded ${
-                            payment.status === 'paid'
-                              ? 'bg-green-100 text-green-700'
-                              : payment.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}>
-                            {payment.status}
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${getPaymentStatusColor(payment.status)}`}>
+                            {formatStatusForDisplay(payment.status)}
                           </span>
                         </div>
                         <div className="text-sm text-gray-600">{formatDate(payment.createdAt)}</div>
@@ -882,14 +1189,58 @@ export default function PaymentsPage() {
               </>
             );
           })()}
+            </div>
+          )}
 
           {/* Refunds Tab Content */}
-          {activeTab === 'refunds' && (() => {
+          {activeTab === 'refunds' && (
+            <div className="fade-in">
+              {(() => {
             if (loading.refunds) {
               return (
-                <div className="flex items-center justify-center py-20">
-                  <Spinner className="w-8 h-8 animate-spin text-green-600" />
+                <>
+                  {/* Skeleton Stats */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="bg-white border border-gray-200 p-3 sm:p-4">
+                        <div className="h-4 bg-gray-200 rounded w-20 mb-2 animate-pulse"></div>
+                        <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
                 </div>
+                    ))}
+                  </div>
+                  {/* Skeleton Table */}
+                  <div className="bg-white border border-gray-200 overflow-hidden">
+                    <div className="hidden lg:block bg-gray-50 border-b border-gray-200 px-6 py-4">
+                      <div className="grid grid-cols-6 gap-4">
+                        {[...Array(6)].map((_, i) => (
+                          <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="px-4 sm:px-6 py-3 sm:py-4">
+                          <div className="lg:hidden space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="h-4 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
+                                <div className="h-3 bg-gray-200 rounded w-24 animate-pulse"></div>
+                              </div>
+                              <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                            </div>
+                            <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                            <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                          <div className="hidden lg:grid grid-cols-6 gap-4 items-center">
+                            {[...Array(6)].map((_, j) => (
+                              <div key={j} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
               );
             }
 
@@ -965,7 +1316,7 @@ export default function PaymentsPage() {
                               ? 'bg-green-100 text-green-700'
                               : refund.status === 'pending'
                               ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-700'
                           }`}>
                             {refund.status}
                           </span>
@@ -992,7 +1343,7 @@ export default function PaymentsPage() {
                               ? 'bg-green-100 text-green-700'
                               : refund.status === 'pending'
                               ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-700'
                           }`}>
                             {refund.status}
                           </span>
@@ -1017,14 +1368,58 @@ export default function PaymentsPage() {
               </div>
             );
           })()}
+            </div>
+          )}
 
           {/* Chargebacks Tab Content */}
-          {activeTab === 'chargebacks' && (() => {
+          {activeTab === 'chargebacks' && (
+            <div className="fade-in">
+              {(() => {
             if (loading.chargebacks) {
               return (
-                <div className="flex items-center justify-center py-20">
-                  <Spinner className="w-8 h-8 animate-spin text-green-600" />
+                <>
+                  {/* Skeleton Stats */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="bg-white border border-gray-200 p-3 sm:p-4">
+                        <div className="h-4 bg-gray-200 rounded w-20 mb-2 animate-pulse"></div>
+                        <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
                 </div>
+                    ))}
+                  </div>
+                  {/* Skeleton Table */}
+                  <div className="bg-white border border-gray-200 overflow-hidden">
+                    <div className="hidden lg:block bg-gray-50 border-b border-gray-200 px-6 py-4">
+                      <div className="grid grid-cols-6 gap-4">
+                        {[...Array(6)].map((_, i) => (
+                          <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="px-4 sm:px-6 py-3 sm:py-4">
+                          <div className="lg:hidden space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="h-4 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
+                                <div className="h-3 bg-gray-200 rounded w-24 animate-pulse"></div>
+                              </div>
+                              <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                            </div>
+                            <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                            <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                          <div className="hidden lg:grid grid-cols-6 gap-4 items-center">
+                            {[...Array(6)].map((_, j) => (
+                              <div key={j} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
               );
             }
 
@@ -1166,53 +1561,91 @@ export default function PaymentsPage() {
             </div>
             );
           })()}
+            </div>
+          )}
 
           {/* Make Payment Tab Content - Right Slide Modal */}
           {activeTab === 'make-payment' && (
             <div className="fixed inset-0 z-50 flex items-center justify-end">
               {/* Backdrop */}
               <div 
-                className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out"
+                className="absolute inset-0 bg-black bg-opacity-50 backdrop-fade-in"
                 onClick={() => setActiveTab('payments')}
               />
               {/* Modal Content */}
-              <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <CreditCard className="w-6 h-6" />
+              <div 
+                className="relative bg-white h-full w-full max-w-xl shadow-2xl overflow-y-auto slide-in-right"
+              >
+                {/* Header with Gradient */}
+                <div className="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 px-4 sm:px-6 py-4 flex items-center justify-between z-10 shadow-lg">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
                     Make Payment
                   </h2>
+                    <p className="text-green-100 text-xs mt-1">Initiate a payment transaction</p>
+                  </div>
                   <button
                     onClick={() => setActiveTab('payments')}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
                     aria-label="Close modal"
                   >
-                    <X className="w-6 h-6 text-gray-500" />
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 </div>
-                <div className="p-4 sm:p-6 lg:p-8">
+                <div className="p-4 sm:p-6">
                   <div className="max-w-2xl mx-auto">
-                <div className="mb-6">
-                  <p className="text-gray-600">Initiate a payment transaction</p>
-                </div>
 
                 {makePaymentError && (
-                  <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded flex items-center gap-2">
-                    <WarningCircle className="w-5 h-5 flex-shrink-0" />
-                    <span>{makePaymentError}</span>
+                  <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <WarningCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-red-800 mb-1">Payment Error</h3>
+                        <p className="text-sm text-red-700">{makePaymentError}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {makePaymentResult && (
-                  <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                      <span className="font-semibold">Payment Initiated Successfully!</span>
+                  <div className="mb-6 p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-500 rounded-r-lg shadow-md">
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="p-2 bg-green-100 rounded-full">
+                        <CheckCircle className="w-6 h-6 text-green-600" />
                     </div>
-                    <div className="space-y-1 text-sm">
-                      <div><strong>Transaction ID:</strong> {makePaymentResult.transaction_id}</div>
-                      <div><strong>Status:</strong> {makePaymentResult.status}</div>
-                      <div><strong>Amount:</strong> {formatCurrency(makePaymentResult.amount, makePaymentResult.currency)}</div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-green-800 mb-1">Payment Initiated Successfully!</h3>
+                        <p className="text-sm text-green-700">Your payment transaction has been processed</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                      <div className="bg-white/60 p-3  border border-green-200">
+                        <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Transaction ID</div>
+                        <div className="text-sm font-mono text-green-900 break-all">{makePaymentResult.transaction_id}</div>
+                      </div>
+                      <div className="bg-white/60 p-3  border border-green-200">
+                        <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Customer Name</div>
+                        <div className="text-sm font-medium text-green-900">{makePaymentResult.username || 'N/A'}</div>
+                      </div>
+                      <div className="bg-white/60 p-3  border border-green-200">
+                        <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Status</div>
+                        <div className="mt-1">
+                          <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${
+                            normalizePaymentStatus(makePaymentResult.status) === 'successful'
+                              ? 'bg-green-500 text-white'
+                              : normalizePaymentStatus(makePaymentResult.status) === 'pending'
+                              ? 'bg-yellow-500 text-white'
+                              : 'bg-red-500 text-white'
+                          }`}>
+                            {formatStatusForDisplay(makePaymentResult.status)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="bg-white/60 p-3  border border-green-200">
+                        <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Amount</div>
+                        <div className="text-lg font-bold text-green-900">{formatCurrency(makePaymentResult.amount, makePaymentResult.currency)}</div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1222,27 +1655,35 @@ export default function PaymentsPage() {
                     e.preventDefault();
                     handleMakePayment();
                   }}
-                  className="space-y-4"
+                  className="space-y-5"
                 >
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {/* Application Section */}
+                  <div className="bg-gray-50 p-4  border border-gray-200">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <Building className="w-4 h-4 text-gray-500" />
                       Application (optional)
                     </label>
                     <select
                       value={selectedApplicationId || ''}
                       onChange={(e) => setSelectedApplicationId(e.target.value || null)}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-all"
                     >
                       <option value="">Use default application (env) — or select one</option>
                       {applicationsLoading && <option disabled>Loading applications...</option>}
                       {applications.map((app) => (
-                        <option key={app.id} value={app.id}>{app.name} — {app.id}</option>
+                        <option key={app.id} value={app.id}>{app.name}</option>
                       ))}
                     </select>
-                    <p className="mt-1 text-xs text-gray-500">If you select an application, its `application_id` will be sent with the payment request. Otherwise the app id from environment will be used.</p>
+                    <p className="mt-2 text-xs text-gray-500 flex items-start gap-1">
+                      <span>If you select an application, its `application_id` will be sent with the payment request. Otherwise the app id from environment will be used.</span>
+                    </p>
                   </div>
+
+                  {/* Payment Amount Section */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <CurrencyCircleDollar className="w-4 h-4 text-green-600" />
                       Amount <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1251,89 +1692,99 @@ export default function PaymentsPage() {
                       min="0"
                       value={makePaymentForm.amount}
                       onChange={(e) => setMakePaymentForm({ ...makePaymentForm, amount: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                        className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                       placeholder="0.00"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <CurrencyCircleDollar className="w-4 h-4 text-green-600" />
                       Currency <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={makePaymentForm.currency}
                       onChange={(e) => setMakePaymentForm({ ...makePaymentForm, currency: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                        className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-all"
                       required
                     >
-                      <option value="XAF">XAF</option>
-                      <option value="USD">USD</option>
+                        <option value="XAF">XAF - Central African CFA Franc</option>
+                        <option value="USD">USD - US Dollar</option>
                     </select>
+                    </div>
                   </div>
 
+                  {/* Contact Information Section */}
+                  <div className="bg-gray-50 p-4  border border-gray-200">
+                   
+                    <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-gray-600" />
                       Phone Number <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="tel"
                       value={makePaymentForm.phoneNumber}
                       onChange={(e) => setMakePaymentForm({ ...makePaymentForm, phoneNumber: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                          className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-all bg-white"
                       placeholder="+237 6XX XXX XXX"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                          <User className="w-4 h-4 text-gray-600" />
                       Mobile Money Username <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={makePaymentForm.username}
                       onChange={(e) => setMakePaymentForm({ ...makePaymentForm, username: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
-                      placeholder="e.g., johnsmith, user123, myaccount"
+                          className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-all bg-white"
+                      placeholder="username"
                       minLength={4}
                       maxLength={15}
                       required
                     />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Enter your mobile money account username (4-15 characters, letters and numbers only, lowercase, no spaces).
-                      This is the username you registered with {makePaymentForm.provider === 'MTN_CAM' ? 'MTN Mobile Money' : 'Orange Money'}.
-                    </p>
-                    <p className="mt-1 text-xs text-blue-600">
-                      <strong>Examples:</strong> johnsmith (9), user123 (7), myaccount (9), payuser01 (9)
-                    </p>
-                    <p className="mt-1 text-xs text-red-500">
-                      <strong>Note:</strong> Username will be converted to lowercase. Spaces and special characters will be automatically removed.
-                    </p>
+                        <p className="mt-1.5 text-xs text-gray-500">4-15 characters, lowercase letters and numbers only</p>
+                      </div>
+                    </div>
                   </div>
 
+                  {/* Payment Link Section */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4 text-gray-600" />
                       Payment Link Slug (optional)
                     </label>
                     <input
                       type="text"
                       value={makePaymentForm.slug}
                       onChange={(e) => setMakePaymentForm({ ...makePaymentForm, slug: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-all bg-white"
                       placeholder="e.g., pay_abc123xyz"
                     />
-                    <p className="mt-1 text-xs text-gray-500">If you already have a payment link slug, provide it to redeem the link directly (public endpoint).</p>
+                    <p className="mt-1.5 text-xs text-gray-500 flex items-start gap-1">
+                      <span>If you already have a payment link slug, provide it to redeem the link directly (public endpoint).</span>
+                    </p>
                   </div>
 
+                  {/* Payment Configuration Section */}
+                  <div className="bg-gray-50 p-4  border border-gray-200">
+                   
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                          <Storefront className="w-4 h-4 text-gray-600" />
                       Payment Provider <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={makePaymentForm.provider}
                       onChange={(e) => setMakePaymentForm({ ...makePaymentForm, provider: e.target.value as 'MTN_CAM' | 'ORANGE_CAM' })}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                          className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 bg-white transition-all"
                       required
                     >
                       <option value="MTN_CAM">MTN Mobile Money</option>
@@ -1342,45 +1793,53 @@ export default function PaymentsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                          <Swap className="w-4 h-4 text-gray-600" />
                       Payment Type <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={makePaymentForm.type}
                       onChange={(e) => setMakePaymentForm({ ...makePaymentForm, type: e.target.value as any })}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                          className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 bg-white transition-all"
                       required
                     >
                       <option value="DEPOSIT">Deposit</option>
                       <option value="COLLECTION">Collection</option>
                     </select>
+                      </div>
+                    </div>
                   </div>
 
+                  {/* Description Section */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <TextT className="w-4 h-4 text-gray-600" />
+                      Description (optional)
+                    </label>
                     <textarea
                       value={makePaymentForm.description}
                       onChange={(e) => setMakePaymentForm({ ...makePaymentForm, description: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all resize-none bg-white"
                       placeholder="Optional payment description"
                       rows={3}
                     />
                   </div>
 
+                  {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={makePaymentLoading}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                    className="w-full px-6 py-3.5 bg-gradient-to-r from-green-600 to-green-700 text-white font-bold text-base hover:from-green-700 hover:to-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed  shadow-lg hover:shadow-xl flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-[0.98]"
                   >
                     {makePaymentLoading ? (
                       <>
                         <Spinner className="w-5 h-5 animate-spin" />
-                        Processing...
+                        <span>Processing Payment...</span>
                       </>
                     ) : (
                       <>
                         <CreditCard className="w-5 h-5" />
-                        Make Payment
+                        <span>Make Payment</span>
                       </>
                     )}
                   </button>
@@ -1396,69 +1855,80 @@ export default function PaymentsPage() {
             <div className="fixed inset-0 z-50 flex items-center justify-end">
               {/* Backdrop */}
               <div 
-                className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out"
+                className="absolute inset-0 bg-black bg-opacity-50 backdrop-fade-in"
                 onClick={() => setActiveTab('payments')}
               />
               {/* Modal Content */}
-              <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <CheckCircle className="w-6 h-6" />
+              <div className="relative bg-white h-full w-full max-w-xl shadow-2xl overflow-y-auto slide-in-right">
+                {/* Header with Gradient */}
+                <div className="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 px-4 sm:px-6 py-4 flex items-center justify-between z-10 shadow-lg">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                     Payment Status
                   </h2>
+                    <p className="text-green-100 text-xs mt-1">Check the status of a payment transaction</p>
+                  </div>
                   <button
                     onClick={() => setActiveTab('payments')}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
                     aria-label="Close modal"
                   >
-                    <X className="w-6 h-6 text-gray-500" />
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 </div>
-                <div className="p-4 sm:p-6 lg:p-8">
+                <div className="p-4 sm:p-6">
                   <div className="max-w-2xl mx-auto">
-                <div className="mb-6">
-                  <p className="text-gray-600">Check the status of a payment transaction</p>
-                </div>
 
                 {statusError && (
-                  <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded flex items-center gap-2">
-                    <WarningCircle className="w-5 h-5 flex-shrink-0" />
-                    <span>{statusError}</span>
+                  <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <WarningCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-red-800 mb-1">Status Check Error</h3>
+                        <p className="text-sm text-red-700">{statusError}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {statusResult && (
-                  <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="font-semibold text-green-900">Payment Status</span>
+                  <div className="mb-6 p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-500 rounded-r-lg shadow-md">
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="p-2 bg-green-100 rounded-full">
+                        <CheckCircle className="w-6 h-6 text-green-600" />
                     </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-gray-600">Transaction ID:</span>
-                          <p className="font-mono text-gray-900">{statusResult.transaction_id}</p>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-green-800 mb-1">Payment Status Retrieved</h3>
+                        <p className="text-sm text-green-700">Transaction details retrieved successfully</p>
                         </div>
-                        <div>
-                          <span className="text-gray-600">Status:</span>
-                          <p className={`font-semibold ${
-                            statusResult.status === 'paid' || statusResult.status === 'success'
-                              ? 'text-green-600'
-                              : statusResult.status === 'pending'
-                              ? 'text-yellow-600'
-                              : 'text-red-600'
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                      <div className="bg-white/60 p-3  border border-green-200">
+                        <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Transaction ID</div>
+                        <div className="text-sm font-mono text-green-900 break-all">{statusResult.transaction_id}</div>
+                      </div>
+                      <div className="bg-white/60 p-3  border border-green-200">
+                        <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Status</div>
+                        <div className="mt-1">
+                          <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${
+                            normalizePaymentStatus(statusResult.status) === 'successful'
+                              ? 'bg-green-500 text-white'
+                              : normalizePaymentStatus(statusResult.status) === 'pending'
+                              ? 'bg-yellow-500 text-white'
+                              : 'bg-red-500 text-white'
                           }`}>
-                            {statusResult.status}
-                          </p>
+                            {formatStatusForDisplay(statusResult.status)}
+                          </span>
                         </div>
-                        <div>
-                          <span className="text-gray-600">Amount:</span>
-                          <p className="font-semibold text-gray-900">{formatCurrency(statusResult.amount, statusResult.currency)}</p>
                         </div>
-                        <div>
-                          <span className="text-gray-600">Currency:</span>
-                          <p className="text-gray-900">{statusResult.currency}</p>
+                      <div className="bg-white/60 p-3  border border-green-200">
+                        <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Amount</div>
+                        <div className="text-lg font-bold text-green-900">{formatCurrency(statusResult.amount, statusResult.currency)}</div>
                         </div>
+                      <div className="bg-white/60 p-3  border border-green-200">
+                        <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Currency</div>
+                        <div className="text-sm font-medium text-green-900">{statusResult.currency}</div>
                       </div>
                     </div>
                   </div>
@@ -1469,17 +1939,18 @@ export default function PaymentsPage() {
                     e.preventDefault();
                     handleGetPaymentStatus();
                   }}
-                  className="space-y-4"
+                  className="space-y-5"
                 >
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="bg-gray-50 p-4  border border-gray-200">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-gray-600" />
                       Transaction ID <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={statusTransactionId}
                       onChange={(e) => setStatusTransactionId(e.target.value)}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-all bg-white"
                       placeholder="Enter transaction ID"
                       required
                     />
@@ -1488,17 +1959,17 @@ export default function PaymentsPage() {
                   <button
                     type="submit"
                     disabled={statusLoading}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                    className="w-full px-6 py-3.5 bg-gradient-to-r from-green-600 to-green-700 text-white font-bold text-base hover:from-green-700 hover:to-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed  shadow-lg hover:shadow-xl flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-[0.98]"
                   >
                     {statusLoading ? (
                       <>
                         <Spinner className="w-5 h-5 animate-spin" />
-                        Checking...
+                        <span>Checking Status...</span>
                       </>
                     ) : (
                       <>
                         <CheckCircle className="w-5 h-5" />
-                        Check Status
+                        <span>Check Status</span>
                       </>
                     )}
                   </button>
@@ -1514,41 +1985,42 @@ export default function PaymentsPage() {
             <div className="fixed inset-0 z-50 flex items-center justify-end">
               {/* Backdrop */}
               <div 
-                className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out"
+                className="absolute inset-0 bg-black bg-opacity-50 backdrop-fade-in"
                 onClick={() => setActiveTab('payments')}
               />
               {/* Modal Content */}
-              <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <UserCheck className="w-6 h-6" />
+              <div className="relative bg-white h-full w-full max-w-xl shadow-2xl overflow-y-auto slide-in-right">
+                {/* Header with Gradient */}
+                <div className="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 px-4 sm:px-6 py-4 flex items-center justify-between z-10 shadow-lg">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                      <UserCheck className="w-5 h-5 sm:w-6 sm:h-6" />
                     Verify Account Holder
                   </h2>
+                    <p className="text-green-100 text-xs mt-1">Verify account holder status and get basic information</p>
+                  </div>
                   <button
                     onClick={() => setActiveTab('payments')}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
                     aria-label="Close modal"
                   >
-                    <X className="w-6 h-6 text-gray-500" />
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 </div>
-                <div className="p-4 sm:p-6 lg:p-8">
+                <div className="p-4 sm:p-6">
                   <div className="max-w-2xl mx-auto">
-                <div className="mb-6">
-                  <p className="text-gray-600">Verify account holder status and get basic information</p>
-                </div>
-
-                <div className="mb-6 flex gap-2 border-b border-gray-200">
+                {/* Tab Switcher */}
+                <div className="mb-6 flex gap-2 bg-gray-100 p-1 ">
                   <button
                     onClick={() => {
                       setVerifyType('active');
                       setVerifyResult(null);
                       setVerifyError(null);
                     }}
-                    className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                    className={`flex-1 px-4 py-2.5 font-semibold text-sm transition-all  ${
                       verifyType === 'active'
-                        ? 'border-green-500 text-green-600'
-                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                        ? 'bg-green-600 text-white shadow-md'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
                     }`}
                   >
                     Verify Active Status
@@ -1559,10 +2031,10 @@ export default function PaymentsPage() {
                       setVerifyResult(null);
                       setVerifyError(null);
                     }}
-                    className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                    className={`flex-1 px-4 py-2.5 font-semibold text-sm transition-all  ${
                       verifyType === 'basic-info'
-                        ? 'border-green-500 text-green-600'
-                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                        ? 'bg-green-600 text-white shadow-md'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
                     }`}
                   >
                     Get Basic Info
@@ -1570,47 +2042,61 @@ export default function PaymentsPage() {
                 </div>
 
                 {verifyError && (
-                  <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded flex items-center gap-2">
-                    <WarningCircle className="w-5 h-5 flex-shrink-0" />
-                    <span>{verifyError}</span>
+                  <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <WarningCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-red-800 mb-1">Verification Error</h3>
+                        <p className="text-sm text-red-700">{verifyError}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {verifyResult && (
-                  <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="font-semibold text-green-900">
+                  <div className="mb-6 p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-500 rounded-r-lg shadow-md">
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="p-2 bg-green-100 rounded-full">
+                        <CheckCircle className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-green-800 mb-1">
                         {verifyResult.type === 'active' ? 'Account Status' : 'Account Information'}
-                      </span>
+                        </h3>
+                        <p className="text-sm text-green-700">Verification completed successfully</p>
                     </div>
-                    <div className="space-y-2 text-sm">
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                       {verifyResult.type === 'active' ? (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <span className="text-gray-600">Phone Number:</span>
-                            <p className="font-mono text-gray-900">{verifyResult.phoneNumber}</p>
+                        <>
+                          <div className="bg-white/60 p-3  border border-green-200">
+                            <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Phone Number</div>
+                            <div className="text-sm font-mono text-green-900">{verifyResult.phoneNumber}</div>
                           </div>
-                          <div>
-                            <span className="text-gray-600">Status:</span>
-                            <p className={`font-semibold ${
-                              verifyResult.isActive ? 'text-green-600' : 'text-red-600'
+                          <div className="bg-white/60 p-3  border border-green-200">
+                            <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Status</div>
+                            <div className="mt-1">
+                              <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${
+                                verifyResult.isActive 
+                                  ? 'bg-green-500 text-white' 
+                                  : 'bg-red-500 text-white'
                             }`}>
                               {verifyResult.isActive ? 'Active' : 'Inactive'}
-                            </p>
+                              </span>
                           </div>
                         </div>
+                        </>
                       ) : (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <span className="text-gray-600">Name:</span>
-                            <p className="font-semibold text-gray-900">{verifyResult.name || 'N/A'}</p>
+                        <>
+                          <div className="bg-white/60 p-3  border border-green-200">
+                            <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Name</div>
+                            <div className="text-sm font-medium text-green-900">{verifyResult.name || 'N/A'}</div>
                           </div>
-                          <div>
-                            <span className="text-gray-600">Phone Number:</span>
-                            <p className="font-mono text-gray-900">{verifyResult.phoneNumber}</p>
+                          <div className="bg-white/60 p-3  border border-green-200">
+                            <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Phone Number</div>
+                            <div className="text-sm font-mono text-green-900">{verifyResult.phoneNumber}</div>
                           </div>
-                        </div>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1625,30 +2111,32 @@ export default function PaymentsPage() {
                       handleVerifyAccountBasicInfo();
                     }
                   }}
-                  className="space-y-4"
+                  className="space-y-5"
                 >
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="bg-gray-50 p-4  border border-gray-200">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-gray-600" />
                       Phone Number <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="tel"
                       value={verifyForm.phoneNumber}
                       onChange={(e) => setVerifyForm({ ...verifyForm, phoneNumber: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-all bg-white"
                       placeholder="+237 6XX XXX XXX"
                       required
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="bg-gray-50 p-4  border border-gray-200">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <Swap className="w-4 h-4 text-gray-600" />
                       Payment Type <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={verifyForm.type}
                       onChange={(e) => setVerifyForm({ ...verifyForm, type: e.target.value as any })}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                      className="w-full px-4 py-2.5 border-2 border-gray-300  focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 bg-white transition-all"
                       required
                     >
                       <option value="DEPOSIT">Deposit</option>
@@ -1659,17 +2147,17 @@ export default function PaymentsPage() {
                   <button
                     type="submit"
                     disabled={verifyLoading}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                    className="w-full px-6 py-3.5 bg-gradient-to-r from-green-600 to-green-700 text-white font-bold text-base hover:from-green-700 hover:to-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed  shadow-lg hover:shadow-xl flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-[0.98]"
                   >
                     {verifyLoading ? (
                       <>
                         <Spinner className="w-5 h-5 animate-spin" />
-                        Verifying...
+                        <span>Verifying...</span>
                       </>
                     ) : (
                       <>
                         <UserCheck className="w-5 h-5" />
-                        {verifyType === 'active' ? 'Verify Active Status' : 'Get Basic Info'}
+                        <span>{verifyType === 'active' ? 'Verify Active Status' : 'Get Basic Info'}</span>
                       </>
                     )}
                   </button>
@@ -1681,12 +2169,54 @@ export default function PaymentsPage() {
           )}
 
           {/* Orders Tab Content */}
-          {activeTab === 'orders' && (() => {
+          {activeTab === 'orders' && (
+            <div className="fade-in">
+              {(() => {
             if (loading.orders) {
               return (
-                <div className="flex items-center justify-center py-20">
-                  <Spinner className="w-8 h-8 animate-spin text-green-600" />
-                </div>
+                <>
+                  {/* Skeleton Stats */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="bg-white border border-gray-200 p-3 sm:p-4">
+                        <div className="h-4 bg-gray-200 rounded w-20 mb-2 animate-pulse"></div>
+                        <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Skeleton Table */}
+                  <div className="bg-white border border-gray-200 overflow-hidden">
+                    <div className="hidden lg:block bg-gray-50 border-b border-gray-200 px-6 py-4">
+                      <div className="grid grid-cols-7 gap-4">
+                        {[...Array(7)].map((_, i) => (
+                          <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="px-4 sm:px-6 py-3 sm:py-4">
+                          <div className="lg:hidden space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="h-4 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
+                                <div className="h-3 bg-gray-200 rounded w-24 animate-pulse"></div>
+                              </div>
+                              <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                            </div>
+                            <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                            <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                          <div className="hidden lg:grid grid-cols-7 gap-4 items-center">
+                            {[...Array(7)].map((_, j) => (
+                              <div key={j} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
               );
             }
 
@@ -1703,10 +2233,10 @@ export default function PaymentsPage() {
 
             // Calculate stats
             const totalOrders = orders.length;
-            const paidCount = orders.filter(o => o.status === 'paid').length;
+            const successfulCount = orders.filter(o => o.status === 'successful').length;
             const pendingCount = orders.filter(o => o.status === 'pending').length;
             const totalRevenue = orders
-              .filter(o => o.status === 'paid')
+              .filter(o => o.status === 'successful')
               .reduce((sum, o) => sum + o.amount, 0);
 
             return (
@@ -1718,8 +2248,8 @@ export default function PaymentsPage() {
                     <div className="text-xl sm:text-2xl font-bold text-gray-900">{totalOrders}</div>
                   </div>
                   <div className="bg-white border border-gray-200 p-3 sm:p-4">
-                    <div className="text-xs sm:text-sm text-gray-600 mb-1">Paid</div>
-                    <div className="text-xl sm:text-2xl font-bold text-green-600">{paidCount}</div>
+                    <div className="text-xs sm:text-sm text-gray-600 mb-1">successful</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">{successfulCount}</div>
                   </div>
                   <div className="bg-white border border-gray-200 p-3 sm:p-4">
                     <div className="text-xs sm:text-sm text-gray-600 mb-1">Pending</div>
@@ -1759,12 +2289,12 @@ export default function PaymentsPage() {
                             )}
                           </div>
                           <span className={`px-2 py-1 text-xs font-medium rounded flex-shrink-0 ml-2 ${
-                            order.status === 'paid'
+                            order.status === 'successful'
                               ? 'bg-green-100 text-green-700'
                               : order.status === 'pending'
                               ? 'bg-yellow-100 text-yellow-700'
                               : order.status === 'shipped'
-                              ? 'bg-blue-100 text-blue-700'
+                              ? 'bg-gray-100 text-gray-700'
                               : 'bg-gray-100 text-gray-700'
                           }`}>
                             {order.status}
@@ -1804,15 +2334,13 @@ export default function PaymentsPage() {
                         <div className="text-sm text-gray-600">{order.items.length} items</div>
                         <div>
                           <span className={`px-2 py-1 text-xs font-medium rounded ${
-                            order.status === 'paid'
+                            normalizePaymentStatus(order.status) === 'successful'
                               ? 'bg-green-100 text-green-700'
-                              : order.status === 'pending'
+                              : normalizePaymentStatus(order.status) === 'pending'
                               ? 'bg-yellow-100 text-yellow-700'
-                              : order.status === 'shipped'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-100 text-gray-700'
+                              : 'bg-red-100 text-red-700'
                           }`}>
-                            {order.status}
+                            {formatStatusForDisplay(order.status)}
                           </span>
                         </div>
                         <div className="text-sm text-gray-600">{order.createdAt ? formatDate(order.createdAt) : 'N/A'}</div>
@@ -1833,153 +2361,194 @@ export default function PaymentsPage() {
               </div>
             );
           })()}
+            </div>
+          )}
+      </div>
 
       {/* Payment Detail Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
-          <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
+          <div className="bg-white shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header with Gradient */}
+            <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold mb-0.5">
                 {selectedItem.type === 'payment' && 'Payment Details'}
                 {selectedItem.type === 'refund' && 'Refund Details'}
                 {selectedItem.type === 'chargeback' && 'Chargeback Details'}
                 {selectedItem.type === 'order' && 'Order Details'}
               </h2>
+                  <p className="text-green-100 text-xs">Transaction Information</p>
+                </div>
               <button
                 onClick={() => setSelectedItem(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            </div>
+            <div className="p-4 space-y-4">
               {selectedItem.type === 'payment' && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm text-gray-600">Payment ID</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedItem.id}</p>
+                  {/* Key Information Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 border border-gray-200">
+                      <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">Payment ID</div>
+                      <div className="text-xs font-mono text-gray-900 break-all">{selectedItem.id}</div>
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Transaction ID</label>
-                      <p className="text-lg font-mono text-gray-900">{selectedItem.paymentId}</p>
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 border border-gray-200">
+                      <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">Transaction ID</div>
+                      <div className="text-xs font-mono text-gray-900 break-all">{selectedItem.paymentId}</div>
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Customer</label>
-                      <p className="text-lg text-gray-900">{selectedItem.customer}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Payment Method</label>
-                      <p className="text-lg text-gray-900">{selectedItem.paymentMethod}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Amount</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedItem.amount}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Status</label>
-                      <span className={`inline-block px-3 py-1 text-sm font-medium rounded ${
-                        selectedItem.status === 'paid'
-                          ? 'bg-green-100 text-green-700'
-                          : selectedItem.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-red-100 text-red-700'
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 border border-green-200">
+                      <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Status</div>
+                      <div className="mt-1">
+                        <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${
+                          normalizePaymentStatus(selectedItem.status) === 'successful'
+                            ? 'bg-green-500 text-white'
+                          : normalizePaymentStatus(selectedItem.status) === 'pending'
+                            ? 'bg-yellow-500 text-white'
+                            : 'bg-red-500 text-white'
                       }`}>
-                        {selectedItem.status}
+                        {formatStatusForDisplay(selectedItem.status)}
                       </span>
                     </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-3 border border-emerald-200">
+                      <div className="text-xs text-emerald-600 font-semibold uppercase tracking-wide mb-1">Amount</div>
+                      <div className="text-lg font-bold text-emerald-900">{selectedItem.amount}</div>
+                    </div>
+                  </div>
+
+                  {/* Additional Information */}
+                  <div className="bg-gray-50 p-4 border border-gray-200">
+                    <h3 className="text-base font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-300 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-gray-600" />
+                      Payment Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm text-gray-600">Date</label>
-                      <p className="text-lg text-gray-900">{selectedItem.date}</p>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Payment Method</div>
+                        <div className="text-sm text-gray-900 font-medium">{selectedItem.paymentMethod}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Date</div>
+                        <div className="text-sm text-gray-900 font-medium">{selectedItem.date}</div>
+                      </div>
                     </div>
                   </div>
                 </>
               )}
               {(selectedItem.type === 'refund' || selectedItem.type === 'chargeback') && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm text-gray-600">{selectedItem.type === 'refund' ? 'Refund ID' : 'Chargeback ID'}</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedItem.id}</p>
+                  {/* Key Information Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 border border-gray-200">
+                      <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">{selectedItem.type === 'refund' ? 'Refund ID' : 'Chargeback ID'}</div>
+                      <div className="text-xs font-mono text-gray-900 break-all">{selectedItem.id}</div>
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Payment ID</label>
-                      <p className="text-lg font-mono text-gray-900">{selectedItem.paymentId}</p>
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 border border-gray-200">
+                      <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">Payment ID</div>
+                      <div className="text-xs font-mono text-gray-900 break-all">{selectedItem.paymentId}</div>
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Amount</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedItem.amount}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Status</label>
-                      <span className={`inline-block px-3 py-1 text-sm font-medium rounded ${
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 border border-green-200">
+                      <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Status</div>
+                      <div className="mt-1">
+                        <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${
                         selectedItem.status === 'completed' || selectedItem.status === 'won'
-                          ? 'bg-green-100 text-green-700'
+                            ? 'bg-green-500 text-white'
                           : selectedItem.status === 'pending' || selectedItem.status === 'processing'
-                          ? 'bg-yellow-100 text-yellow-700'
+                            ? 'bg-yellow-500 text-white'
                           : selectedItem.status === 'open'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-gray-100 text-gray-700'
+                            ? 'bg-red-500 text-white'
+                            : 'bg-gray-500 text-white'
                       }`}>
                         {selectedItem.status}
                       </span>
                     </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-3 border border-emerald-200">
+                      <div className="text-xs text-emerald-600 font-semibold uppercase tracking-wide mb-1">Amount</div>
+                      <div className="text-lg font-bold text-emerald-900">{selectedItem.amount}</div>
+                    </div>
+                  </div>
+
+                  {/* Additional Information */}
+                  <div className="bg-gray-50 p-4 border border-gray-200">
+                    <h3 className="text-base font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-300 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-600" />
+                      Transaction Information
+                    </h3>
                     <div>
-                      <label className="text-sm text-gray-600">Date</label>
-                      <p className="text-lg text-gray-900">{selectedItem.date}</p>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Date</div>
+                      <div className="text-sm text-gray-900 font-medium">{selectedItem.date}</div>
                     </div>
                   </div>
                 </>
               )}
               {selectedItem.type === 'order' && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Key Information Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 border border-gray-200">
+                      <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">Order ID</div>
+                      <div className="text-xs font-mono text-gray-900 break-all">{selectedItem.id}</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 border border-gray-200">
+                      <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">Status</div>
+                      <div className="mt-1">
+                        <span className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${
+                          normalizePaymentStatus(selectedItem.status) === 'successful'
+                            ? 'bg-green-500 text-white'
+                            : normalizePaymentStatus(selectedItem.status) === 'pending'
+                            ? 'bg-yellow-500 text-white'
+                            : 'bg-red-500 text-white'
+                        }`}>
+                          {formatStatusForDisplay(selectedItem.status)}
+                        </span>
+                    </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 border border-green-200">
+                      <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Amount</div>
+                      <div className="text-lg font-bold text-green-900">{selectedItem.amount}</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-3 border border-emerald-200">
+                      <div className="text-xs text-emerald-600 font-semibold uppercase tracking-wide mb-1">Items</div>
+                      <div className="text-sm font-semibold text-emerald-900">{selectedItem.items} items</div>
+                    </div>
+                  </div>
+
+                  {/* Additional Information */}
+                  <div className="bg-gray-50 p-4 border border-gray-200">
+                    <h3 className="text-base font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-300 flex items-center gap-2">
+                      <Package className="w-4 h-4 text-gray-600" />
+                      Order Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm text-gray-600">Order ID</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedItem.id}</p>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Customer</div>
+                        <div className="text-sm text-gray-900 font-medium">{selectedItem.customer}</div>
                     </div>
                     <div>
-                      <label className="text-sm text-gray-600">Date</label>
-                      <p className="text-lg text-gray-900">{selectedItem.date}</p>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Email</div>
+                        <div className="text-sm text-gray-900 font-medium break-all">{selectedItem.email}</div>
                     </div>
                     <div>
-                      <label className="text-sm text-gray-600">Customer</label>
-                      <p className="text-lg text-gray-900">{selectedItem.customer}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Email</label>
-                      <p className="text-lg text-gray-900">{selectedItem.email}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Amount</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedItem.amount}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Items</label>
-                      <p className="text-lg text-gray-900">{selectedItem.items} items</p>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Status</label>
-                      <span className={`inline-block px-3 py-1 text-sm font-medium rounded ${
-                        selectedItem.status === 'paid'
-                          ? 'bg-green-100 text-green-700'
-                          : selectedItem.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : selectedItem.status === 'shipped'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {selectedItem.status}
-                      </span>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Date</div>
+                        <div className="text-sm text-gray-900 font-medium">{selectedItem.date}</div>
+                      </div>
                     </div>
                   </div>
                 </>
               )}
             </div>
-            <div className="p-6 border-t border-gray-200 flex justify-end">
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
               <button
                 onClick={() => setSelectedItem(null)}
-                className="px-6 py-2 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors rounded"
+                className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 rounded"
               >
                 Close
               </button>

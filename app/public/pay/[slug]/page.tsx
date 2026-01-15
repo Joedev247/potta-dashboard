@@ -120,7 +120,7 @@ export default function PaymentLinkPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Spinner className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Loading payment link...</p>
@@ -132,7 +132,7 @@ export default function PaymentLinkPage() {
   // Error state
   if (error && !paymentLink) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-gray-50 flex items-center justify-center p-4">
         <div className="bg-white  shadow-lg p-8 max-w-md w-full text-center">
           <WarningCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Link Not Available</h1>
@@ -152,7 +152,7 @@ export default function PaymentLinkPage() {
   // Payment link expired or unavailable
   if (paymentLink && paymentLink.status !== 'ACTIVE') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-gray-50 flex items-center justify-center p-4">
         <div className="bg-white  shadow-lg p-8 max-w-md w-full text-center">
           <WarningCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -174,7 +174,7 @@ export default function PaymentLinkPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-gray-50 p-4">
       <div className="max-w-md mx-auto py-8">
         {/* Header */}
         <div className="mb-8">
@@ -199,7 +199,7 @@ export default function PaymentLinkPage() {
             )}
 
             {/* Amount */}
-            <div className="mb-6 p-6 bg-gradient-to-r from-green-50 to-blue-50  border-2 border-green-100">
+            <div className="mb-6 p-6 bg-gradient-to-r from-green-50 to-gray-50  border-2 border-green-100">
               <p className="text-sm text-gray-600 mb-2">Amount Due</p>
               <p className="text-4xl font-bold text-green-600">
                 {formatCurrency(paymentLink.amount, paymentLink.currency)}
@@ -340,8 +340,8 @@ export default function PaymentLinkPage() {
             </button>
 
             {/* Security Notice */}
-            <div className="mt-6 p-4 bg-blue-50  border border-blue-200">
-              <p className="text-xs text-blue-700">
+            <div className="mt-6 p-4 bg-gray-50  border border-gray-200">
+              <p className="text-xs text-gray-700">
                 🔒 Your payment is secure. We use industry-standard encryption to protect your data.
               </p>
             </div>

@@ -491,11 +491,43 @@ export default function CustomersPage() {
 
       {/* Customers List */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Spinner className="w-8 h-8 animate-spin text-green-600" />
-        </div>
+        <>
+          {/* Skeleton Table */}
+          <div className="bg-white border border-gray-200 rounded overflow-hidden fade-in">
+            <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+              <div className="hidden lg:grid grid-cols-5 gap-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                ))}
+              </div>
+              <div className="lg:hidden h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+            </div>
+            <div className="divide-y divide-gray-200">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="px-4 sm:px-6 py-3 sm:py-4">
+                  <div className="lg:hidden space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
+                        <div className="h-3 bg-gray-200 rounded w-24 animate-pulse"></div>
+                      </div>
+                      <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                    </div>
+                    <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                    <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div className="hidden lg:grid grid-cols-5 gap-4 items-center">
+                    {[...Array(5)].map((_, j) => (
+                      <div key={j} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
       ) : (
-        <div className="bg-white border border-gray-200 rounded overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded overflow-hidden fade-in">
           <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
             <div className="hidden lg:grid grid-cols-5 gap-4 text-sm font-medium text-gray-700">
               <div>Customer</div>
@@ -615,101 +647,137 @@ export default function CustomersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-end">
           {/* Backdrop */}
           <div 
-            className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out"
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-fade-in"
             onClick={() => {
               resetForm();
               setShowCreateModal(false);
             }}
           />
           {/* Modal Content */}
-          <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto">
-            {/* Sticky Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Users className="w-6 h-6" />
-                Create Customer
-              </h2>
+          <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl slide-in-right overflow-y-auto">
+            {/* Sticky Header with Gradient */}
+            <div className="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 text-white px-5 py-4 flex items-center justify-between z-10 shadow-lg">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                <h1 className="text-xl font-bold">Create Customer</h1>
+              </div>
               <button
                 onClick={() => {
                   resetForm();
                   setShowCreateModal(false);
                 }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-1.5 hover:bg-white/10  transition-colors"
                 aria-label="Close modal"
               >
-                <X className="w-6 h-6 text-gray-500" />
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
+            
             {/* Form Content */}
-            <div className="p-6">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleCreateCustomer();
-                }}
-                className="space-y-4"
-              >
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleCreateCustomer();
+              }}
+              className="p-5 space-y-5"
+            >
+              {/* Success/Error Messages */}
+              {errorMessage && (
+                <div className="p-4 bg-red-50 border border-red-200  flex items-start gap-3">
+                  <WarningCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-800 font-medium">{errorMessage}</p>
+                  </div>
+                  <button
+                    onClick={() => setErrorMessage('')}
+                    className="text-red-400 hover:text-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              {successMessage && (
+                <div className="p-4 bg-green-50 border border-green-200  flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-green-800 font-semibold">Customer created successfully!</p>
+                    <p className="text-xs text-green-700 mt-1">{successMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Name Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="p-4 bg-gray-50 border border-gray-200 ">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     First Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                     placeholder="John"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="p-4 bg-gray-50 border border-gray-200 ">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Last Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                     placeholder="Doe"
                     required
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+
+              {/* Email Field */}
+              <div className="p-4 bg-gray-50 border border-gray-200 ">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                   placeholder="john.doe@example.com"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+
+              {/* Phone Field */}
+              <div className="p-4 bg-gray-50 border border-gray-200 ">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Phone</label>
                 <input
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                   placeholder="+237 6 12 34 56 78"
                 />
+                <p className="text-xs text-gray-700 mt-2">Optional: Include country code</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+
+              {/* Address Field */}
+              <div className="p-4 bg-yellow-50 border border-yellow-200 ">
+                <label className="block text-sm font-semibold text-yellow-900 mb-2">Address</label>
                 <textarea
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
-                  placeholder="Douala, Cameroon"
+                  className="w-full px-3 py-2 bg-white border border-yellow-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm"
                   rows={3}
+                  placeholder="Douala, Cameroon"
                 />
+                <p className="text-xs text-yellow-700 mt-2">Optional: Full address or location</p>
               </div>
+
+              {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
@@ -717,14 +785,14 @@ export default function CustomersPage() {
                     resetForm();
                     setShowCreateModal(false);
                   }}
-                  className="flex-1 px-4 py-2 border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded"
+                  className="flex-1 px-4 py-2 border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-white text-green-700 font-medium hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2 text-sm shadow-sm border border-green-200"
                 >
                   {actionLoading ? (
                     <>
@@ -732,97 +800,155 @@ export default function CustomersPage() {
                       Creating...
                     </>
                   ) : (
-                    'Create Customer'
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Create Customer
+                    </>
                   )}
                 </button>
               </div>
-              </form>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Edit Customer Modal */}
+      {/* Edit Customer Modal - Right Slide */}
       {showEditModal && selectedCustomer && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white  max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Edit Customer</h2>
-                <button
-                  onClick={() => {
-                    resetForm();
-                    setShowEditModal(false);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-end">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-fade-in"
+            onClick={() => {
+              resetForm();
+              setShowEditModal(false);
+            }}
+          />
+          {/* Modal Content */}
+          <div className="relative bg-white h-full w-full max-w-2xl shadow-2xl slide-in-right overflow-y-auto">
+            {/* Sticky Header with Gradient */}
+            <div className="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 text-white px-5 py-4 flex items-center justify-between z-10 shadow-lg">
+              <div className="flex items-center gap-2">
+                <PencilSimple className="w-5 h-5" />
+                <h1 className="text-xl font-bold">Edit Customer</h1>
+                {selectedCustomer.firstName && selectedCustomer.lastName && (
+                  <span className="text-xs text-white/80">({selectedCustomer.firstName} {selectedCustomer.lastName})</span>
+                )}
               </div>
+              <button
+                onClick={() => {
+                  resetForm();
+                  setShowEditModal(false);
+                }}
+                className="p-1.5 hover:bg-white/10  transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
             </div>
+            
+            {/* Form Content */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleUpdateCustomer();
               }}
-              className="p-6 space-y-4"
+              className="p-5 space-y-5"
             >
+              {/* Success/Error Messages */}
+              {errorMessage && (
+                <div className="p-4 bg-red-50 border border-red-200  flex items-start gap-3">
+                  <WarningCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-800 font-medium">{errorMessage}</p>
+                  </div>
+                  <button
+                    onClick={() => setErrorMessage('')}
+                    className="text-red-400 hover:text-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              {successMessage && (
+                <div className="p-4 bg-green-50 border border-green-200  flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-green-800 font-semibold">Customer updated successfully!</p>
+                    <p className="text-xs text-green-700 mt-1">{successMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Name Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="p-4 bg-gray-50 border border-gray-200 ">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     First Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                    placeholder="John"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="p-4 bg-gray-50 border border-gray-200 ">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Last Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                    placeholder="Doe"
                     required
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+
+              {/* Email Field */}
+              <div className="p-4 bg-gray-50 border border-gray-200 ">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  placeholder="john.doe@example.com"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+
+              {/* Phone Field */}
+              <div className="p-4 bg-gray-50 border border-gray-200 ">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Phone</label>
                 <input
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  placeholder="+237 6 12 34 56 78"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+
+              {/* Address Field */}
+              <div className="p-4 bg-yellow-50 border border-yellow-200 ">
+                <label className="block text-sm font-semibold text-yellow-900 mb-2">Address</label>
                 <textarea
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-green-500"
+                  className="w-full px-3 py-2 bg-white border border-yellow-200 text-gray-900  focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm"
                   rows={3}
+                  placeholder="Douala, Cameroon"
                 />
               </div>
+
+              {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
@@ -830,14 +956,14 @@ export default function CustomersPage() {
                     resetForm();
                     setShowEditModal(false);
                   }}
-                  className="flex-1 px-4 py-2 border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded"
+                  className="flex-1 px-4 py-2 border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-white text-green-700 font-medium hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2 text-sm shadow-sm border border-green-200"
                 >
                   {actionLoading ? (
                     <>
@@ -845,7 +971,10 @@ export default function CustomersPage() {
                       Updating...
                     </>
                   ) : (
-                    'Update Customer'
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Update Customer
+                    </>
                   )}
                 </button>
               </div>
@@ -856,90 +985,125 @@ export default function CustomersPage() {
 
       {/* View Customer Modal */}
       {showViewModal && selectedCustomer && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white  max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 backdrop-fade-in">
+          <div className="bg-white shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto modal-fade-in">
+            {/* Modal Header with Gradient */}
+            <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Customer Details</h2>
+                <div>
+                  <h2 className="text-xl font-bold mb-0.5">Customer Details</h2>
+                  <p className="text-green-100 text-xs">Customer Information</p>
+                </div>
                 <button
                   onClick={() => {
                     setShowViewModal(false);
                     setSelectedCustomer(null);
                   }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
+
+            <div className="p-4 space-y-4">
               {errorMessage && (
-                <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded flex items-center gap-2">
-                  <WarningCircle className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm">{errorMessage}</span>
+                <div className="p-3 bg-red-50 border-l-4 border-red-500 text-red-700 rounded flex items-center gap-2">
+                  <WarningCircle className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-xs">{errorMessage}</span>
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-600 font-medium">Customer ID</label>
-                  <p className="text-sm font-mono text-gray-500 mt-1 break-all">{selectedCustomer.id}</p>
+
+              {/* Key Information Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 border border-gray-200">
+                  <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">Customer ID</div>
+                  <div className="text-xs font-mono text-gray-900 break-all">{selectedCustomer.id}</div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600 font-medium">Organization ID</label>
-                  <p className="text-sm font-mono text-gray-500 mt-1 break-all">{selectedCustomer.organization_id || 'N/A'}</p>
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 border border-gray-200">
+                  <div className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">Organization ID</div>
+                  <div className="text-xs font-mono text-gray-900 break-all">{selectedCustomer.organization_id || 'N/A'}</div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600 font-medium">First Name</label>
-                  <p className="text-lg font-semibold text-gray-900 mt-1">{selectedCustomer.firstName}</p>
+                <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 border border-green-200">
+                  <div className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">First Name</div>
+                  <div className="text-sm font-semibold text-green-900">{selectedCustomer.firstName}</div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600 font-medium">Last Name</label>
-                  <p className="text-lg font-semibold text-gray-900 mt-1">{selectedCustomer.lastName}</p>
+                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-3 border border-emerald-200">
+                  <div className="text-xs text-emerald-600 font-semibold uppercase tracking-wide mb-1">Last Name</div>
+                  <div className="text-sm font-semibold text-emerald-900">{selectedCustomer.lastName}</div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-600 font-medium flex items-center gap-1">
-                    <Envelope className="w-4 h-4" />
-                    Email
-                  </label>
-                  <p className="text-lg text-gray-900 mt-1 break-all">{selectedCustomer.email}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 font-medium flex items-center gap-1">
-                    <Phone className="w-4 h-4" />
-                    Phone
-                  </label>
-                  <p className="text-lg text-gray-900 mt-1">{selectedCustomer.phone || 'N/A'}</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-sm text-gray-600 font-medium flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    Address
-                  </label>
-                  <p className="text-lg text-gray-900 mt-1">{selectedCustomer.address || 'N/A'}</p>
-                </div>
-                {selectedCustomer.createdAt && (
-                  <div>
-                    <label className="text-sm text-gray-600 font-medium">Created At</label>
-                    <p className="text-lg text-gray-900 mt-1">{formatDate(selectedCustomer.createdAt)}</p>
-                  </div>
-                )}
-                {selectedCustomer.updatedAt && (
-                  <div>
-                    <label className="text-sm text-gray-600 font-medium">Updated At</label>
-                    <p className="text-lg text-gray-900 mt-1">{formatDate(selectedCustomer.updatedAt)}</p>
-                  </div>
-                )}
               </div>
+
+              {/* Contact Information */}
+              <div className="bg-gray-50 p-4 border border-gray-200">
+                <h3 className="text-base font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-300 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-gray-600" />
+                  Contact Information
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                      <Envelope className="w-3 h-3" />
+                      Email
+                    </div>
+                    <div className="text-sm text-gray-900 break-all font-medium">{selectedCustomer.email}</div>
+                  </div>
+                  {selectedCustomer.phone && (
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        Phone
+                      </div>
+                      <div className="text-sm text-gray-900 font-medium">{selectedCustomer.phone}</div>
+                    </div>
+                  )}
+                  {selectedCustomer.address && (
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        Address
+                      </div>
+                      <div className="text-sm text-gray-900 font-medium">{selectedCustomer.address}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Metadata */}
+              {(selectedCustomer.createdAt || selectedCustomer.updatedAt) && (
+                <div className="bg-gray-50 p-4 border border-gray-200">
+                  <h3 className="text-base font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-300 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-600" />
+                    Metadata
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedCustomer.createdAt && (
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Created At</div>
+                        <div className="text-sm text-gray-900 font-medium">{formatDate(selectedCustomer.createdAt)}</div>
+                      </div>
+                    )}
+                    {selectedCustomer.updatedAt && (
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Updated At</div>
+                        <div className="text-sm text-gray-900 font-medium">{formatDate(selectedCustomer.updatedAt)}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-4">
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
               <button
                 onClick={() => {
                   setShowViewModal(false);
                   handleEditCustomer(selectedCustomer);
                 }}
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-2"
+                className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded flex items-center gap-1.5"
               >
-                <PencilSimple className="w-4 h-4" />
+                <PencilSimple className="w-3.5 h-3.5" />
                 Edit
               </button>
               <button
@@ -947,7 +1111,7 @@ export default function CustomersPage() {
                   setShowViewModal(false);
                   setSelectedCustomer(null);
                 }}
-                className="px-6 py-2 bg-green-500 text-white font-medium hover:bg-green-600 transition-colors rounded"
+                className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 rounded"
               >
                 Close
               </button>
@@ -958,36 +1122,40 @@ export default function CustomersPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white  max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <WarningCircle className="w-6 h-6 text-red-500" />
-              <h3 className="text-lg font-bold text-gray-900">Delete Customer</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white shadow-2xl max-w-sm w-full  overflow-hidden">
+            <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-4">
+              <div className="flex items-center gap-2">
+                <WarningCircle className="w-5 h-5" />
+                <h3 className="text-lg font-bold">Delete Customer</h3>
+              </div>
             </div>
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to delete this customer? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 px-4 py-2 border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteCustomer}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 bg-red-500 text-white font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
-              >
-                {actionLoading ? (
-                  <>
-                    <Spinner className="w-4 h-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
-                )}
-              </button>
+            <div className="p-4">
+              <p className="text-sm text-gray-600 mb-4">
+                Are you sure you want to delete this customer? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="flex-1 px-3 py-2 border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteCustomer}
+                  disabled={actionLoading}
+                  className="flex-1 px-3 py-2 bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded flex items-center justify-center gap-2"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Spinner className="w-3.5 h-3.5 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

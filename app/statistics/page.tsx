@@ -14,6 +14,11 @@ export default function StatisticsPage() {
   const [overview, setOverview] = useState<any>(null);
   const [timeSeries, setTimeSeries] = useState<Array<any>>([]);
   const [previousTimeSeries, setPreviousTimeSeries] = useState<Array<any>>([]);
+  const [breakdown, setBreakdown] = useState<Array<any>>([]);
+  const [breakdownDimension, setBreakdownDimension] = useState<'payment_method' | 'status' | 'currency' | 'product'>('payment_method');
+  const [events, setEvents] = useState<Array<any>>([]);
+  const [eventsPage, setEventsPage] = useState(1);
+  const [eventsLoading, setEventsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const selectorScrollRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<SVGSVGElement>(null);
@@ -80,6 +85,22 @@ export default function StatisticsPage() {
         setTimeSeries([]);
       }
 
+      // Breakdown by payment method
+      const breakdownResp = await statisticsService.getBreakdown({ startDate: startISO, endDate: endISO, dimension: breakdownDimension });
+      if (breakdownResp.success && breakdownResp.data) {
+        setBreakdown(Array.isArray(breakdownResp.data) ? breakdownResp.data : (breakdownResp.data?.breakdown || []));
+      } else {
+        setBreakdown([]);
+      }
+
+      // Events
+      const eventsResp = await statisticsService.getEvents({ startDate: startISO, endDate: endISO, page: 1, limit: 10 });
+      if (eventsResp.success && eventsResp.data) {
+        setEvents(Array.isArray(eventsResp.data) ? eventsResp.data : (eventsResp.data?.events || []));
+      } else {
+        setEvents([]);
+      }
+
       // Previous period (if requested)
       if (showPreviousPeriod) {
         // Compute previous range length
@@ -98,11 +119,13 @@ export default function StatisticsPage() {
       console.error('Error fetching statistics:', error);
       setOverview(null);
       setTimeSeries([]);
+      setBreakdown([]);
+      setEvents([]);
       setPreviousTimeSeries([]);
     } finally {
       setLoading(false);
     }
-  }, [activePeriod, selectedValue, showPreviousPeriod]);
+  }, [activePeriod, selectedValue, showPreviousPeriod, breakdownDimension]);
 
   // Fetch statistics when period or value changes
   useEffect(() => {
@@ -312,7 +335,7 @@ export default function StatisticsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto fade-in">
       <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
         <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
           <TrendUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -321,10 +344,81 @@ export default function StatisticsPage() {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-12 sm:py-20">
-          <Spinner className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-green-600" />
-        </div>
+        <>
+          {/* Skeleton Period Selector */}
+          <div className="flex gap-1 mb-3 sm:mb-4 border-b-2 border-gray-200">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-10 bg-gray-200 rounded-t w-20 animate-pulse"></div>
+            ))}
+          </div>
+
+          {/* Skeleton Dynamic Selector */}
+          <div className="flex items-center gap-2 mb-6 sm:mb-8">
+            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+            <div className="flex gap-2 flex-1">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
+              ))}
+            </div>
+            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+
+          {/* Skeleton Revenue Display */}
+          <div className="mb-4 sm:mb-6">
+            <div className="h-12 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-20 mb-2 animate-pulse"></div>
+            <div className="flex items-center gap-2">
+              <div className="h-4 bg-gray-200 rounded w-12 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+            </div>
+          </div>
+
+          {/* Skeleton Chart Area */}
+          <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+            <div className="flex items-center justify-end mb-4">
+              <div className="h-6 bg-gray-200 rounded w-32 animate-pulse"></div>
+            </div>
+            <div className="flex gap-4 h-64">
+              <div className="flex flex-col justify-between h-full">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
+                ))}
+              </div>
+              <div className="flex-1 bg-gray-100 rounded animate-pulse"></div>
+            </div>
+          </div>
+
+          {/* Skeleton Info Note */}
+          <div className="mb-8">
+            <div className="h-4 bg-gray-200 rounded w-64 animate-pulse"></div>
+          </div>
+
+          {/* Skeleton Totals Section */}
+          <div className="mb-8">
+            <div className="h-6 bg-gray-200 rounded w-24 mb-4 animate-pulse"></div>
+            <div className="grid grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white p-6 border border-gray-200">
+                  <div className="h-4 bg-gray-200 rounded w-20 mb-3 animate-pulse"></div>
+                  <div className="h-8 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Skeleton Per Day Section */}
+          <div>
+            <div className="h-6 bg-gray-200 rounded w-24 mb-4 animate-pulse"></div>
+            <div className="bg-white border border-gray-200 p-12">
+              <div className="h-32 bg-gray-100 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </>
       )}
+
+      {!loading && (
+        <div className="fade-in">
 
       {/* Period Selector */}
       <div className="flex gap-1 mb-3 sm:mb-4 border-b-2 border-gray-200 overflow-x-auto">
@@ -645,6 +739,115 @@ export default function StatisticsPage() {
       </div>
 
       {/* Per day Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Breakdown by {breakdownDimension.replace('_', ' ')}</h2>
+        <div className="flex gap-2 mb-4">
+          {(['payment_method', 'status', 'currency', 'product'] as const).map((dim) => (
+            <button
+              key={dim}
+              onClick={() => setBreakdownDimension(dim)}
+              className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+                breakdownDimension === dim
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {dim.replace('_', ' ')}
+            </button>
+          ))}
+        </div>
+        {breakdown.length > 0 ? (
+          <div className="bg-white border border-gray-200 rounded overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">{breakdownDimension.replace('_', ' ')}</th>
+                    <th className="px-6 py-3 text-right font-semibold text-gray-900">Volume</th>
+                    <th className="px-6 py-3 text-right font-semibold text-gray-900">Count</th>
+                    <th className="px-6 py-3 text-right font-semibold text-gray-900">Percentage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {breakdown.map((item: any, idx: number) => {
+                    const totalVolume = breakdown.reduce((sum: number, x: any) => sum + (x.total_volume || x.volume || 0), 0);
+                    const percentage = totalVolume > 0 ? ((item.total_volume || item.volume || 0) / totalVolume * 100).toFixed(1) : '0.0';
+                    return (
+                      <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="px-6 py-4 text-gray-900 font-medium">{item.dimension_value || item.name || '-'}</td>
+                        <td className="px-6 py-4 text-right text-gray-700">{formatCurrency(item.total_volume || item.volume || 0)}</td>
+                        <td className="px-6 py-4 text-right text-gray-700">{(item.total_count || item.count || 0).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-right text-gray-700">{percentage}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white border border-gray-200 p-12">
+            <div className="flex flex-col items-center justify-center text-center">
+              <SquaresFour className="w-8 h-8 text-gray-400 mb-3" />
+              <p className="text-sm text-gray-500">No breakdown data found for this period</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Events Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Payment Events</h2>
+        {events.length > 0 ? (
+          <div className="bg-white border border-gray-200 rounded overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Event</th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Type</th>
+                    <th className="px-6 py-3 text-right font-semibold text-gray-900">Amount</th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Status</th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((event: any, idx: number) => (
+                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="px-6 py-4 text-gray-900 font-medium">{event.id || event.transaction_id || '-'}</td>
+                      <td className="px-6 py-4 text-gray-700">{event.type || event.event_type || '-'}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatCurrency(event.amount || 0)}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          event.status === 'completed' || event.status === 'success'
+                            ? 'bg-green-100 text-green-800'
+                            : event.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : event.status === 'failed'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {event.status || '-'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">{new Date(event.created_at || event.timestamp).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white border border-gray-200 p-12">
+            <div className="flex flex-col items-center justify-center text-center">
+              <SquaresFour className="w-8 h-8 text-gray-400 mb-3" />
+              <p className="text-sm text-gray-500">No events found for this period</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Per day Section */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Per day</h2>
         <div className="bg-white border border-gray-200  p-12">
@@ -654,6 +857,8 @@ export default function StatisticsPage() {
           </div>
         </div>
       </div>
+        </div>
+      )}
       </div>
     </div>
   );
